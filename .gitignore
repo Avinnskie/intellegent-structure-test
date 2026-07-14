@@ -44,9 +44,6 @@ next-env.d.ts
 .codegraph
 .codegraph*
 .codegraph/*
-docs
-docs/*
-/docs/*
 
 # local evidence/screenshots
 .omo/

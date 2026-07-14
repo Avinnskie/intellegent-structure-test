@@ -27,7 +27,10 @@ function withEnv(overrides: Record<string, string | undefined>, run: () => void)
     }
   }
   try {
-    run();
+    const result: unknown = run();
+    if (result instanceof Promise) {
+      throw new Error("withEnv is sync-only");
+    }
   } finally {
     for (const [key, value] of saved) {
       if (value === undefined) {
@@ -64,4 +67,69 @@ test("getServerConfig returns typed values when all required vars are set", () =
     assert.equal(config.SESSION_TOKEN_SECRET, REQUIRED_ENV.SESSION_TOKEN_SECRET);
     assert.equal(config.ERROR_MONITORING_DSN, undefined);
   });
+});
+
+test("getServerConfig treats an empty ERROR_MONITORING_DSN as not configured", () => {
+  withEnv({ ...REQUIRED_ENV, ERROR_MONITORING_DSN: "" }, () => {
+    assert.equal(getServerConfig().ERROR_MONITORING_DSN, undefined);
+  });
+});
+
+test("getServerConfig throws naming SESSION_TOKEN_SECRET when it is shorter than 32 chars", () => {
+  withEnv({ ...REQUIRED_ENV, SESSION_TOKEN_SECRET: "s".repeat(31) }, () => {
+    assert.throws(
+      () => getServerConfig(),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /SESSION_TOKEN_SECRET/);
+        return true;
+      },
+    );
+  });
+});
+
+test("getServerConfig throws naming APP_BASE_URL when it is not a valid URL", () => {
+  withEnv({ ...REQUIRED_ENV, APP_BASE_URL: "bukan-url" }, () => {
+    assert.throws(
+      () => getServerConfig(),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /APP_BASE_URL/);
+        return true;
+      },
+    );
+  });
+});
+
+test("getServerConfig error message starts with the Indonesian config prefix", () => {
+  withEnv({ ...REQUIRED_ENV, DATABASE_URL: undefined }, () => {
+    assert.throws(
+      () => getServerConfig(),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.ok(error.message.startsWith("Konfigurasi environment tidak lengkap/invalid:"));
+        return true;
+      },
+    );
+  });
+});
+
+test("getServerConfig names every missing var, comma-joined", () => {
+  withEnv(
+    { ...REQUIRED_ENV, DATABASE_URL: undefined, SUPABASE_SECRET_KEY: undefined },
+    () => {
+      assert.throws(
+        () => getServerConfig(),
+        (error: unknown) => {
+          assert.ok(error instanceof Error);
+          const paths = error.message
+            .slice("Konfigurasi environment tidak lengkap/invalid: ".length)
+            .split(", ");
+          assert.ok(paths.includes("DATABASE_URL"));
+          assert.ok(paths.includes("SUPABASE_SECRET_KEY"));
+          return true;
+        },
+      );
+    },
+  );
 });
