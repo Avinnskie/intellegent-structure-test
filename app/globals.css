@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --surface-base: #ffffff;
+  --surface-panel: #ffffff;
+  --surface-subtle: #eceee7;
+  --surface-strong: #dfe5dc;
+  --text-primary: #17211d;
+  --text-secondary: #526159;
+  --text-muted: #5f6c64;
+  --border-default: #d8ddd5;
+  --border-subtle: #e7eae4;
+  --accent-primary: #1f6653;
+  --accent-hover: #174f40;
+  --accent-soft: #dcece6;
+  --accent-warm: #e7a63f;
+  --accent-warm-soft: #fbefd9;
+  --status-success: #198754;
+  --status-warning: #8a5a00;
+  --status-error: #c53f3f;
+  --status-info: #2f66d0;
+  --shadow-subtle: 0 8px 24px rgba(25, 50, 40, 0.07);
+  --shadow-elevated: 0 18px 44px rgba(25, 50, 40, 0.12);
+  --background: var(--surface-base);
+  --foreground: var(--text-primary);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-manrope);
+  --font-mono: var(--font-ibm-plex-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  background-image:
+    radial-gradient(
+      circle at 12% 0%,
+      color-mix(in srgb, var(--accent-soft) 56%, transparent) 0,
+      transparent 28rem
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-panel) 32%, transparent),
+      transparent 22rem
+    );
+  background-attachment: fixed;
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  transition:
+    border-color 140ms ease-out,
+    background-color 140ms ease-out,
+    color 140ms ease-out,
+    transform 140ms ease-out;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent-primary) 55%, white);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent-primary) 22%, white);
+}
+
+.lms-grid-pattern {
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--text-muted) 18%, transparent) 0.75px,
+    transparent 0.75px
+  );
+  background-size: 18px 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
