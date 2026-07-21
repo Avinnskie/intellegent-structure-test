@@ -1,0 +1,1 @@
+ALTER TABLE "assessment_results" ALTER COLUMN "calculated_by" DROP NOT NULL;
