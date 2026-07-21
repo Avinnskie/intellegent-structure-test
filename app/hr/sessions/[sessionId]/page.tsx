@@ -49,7 +49,7 @@ export default async function HrSessionDetailPage({
   return (
     <AppShell title={`Detail sesi — ${detail.candidate.fullName}`}>
       <section className="space-y-4 pb-5">
-        <div className="space-x-4 flex w-full">
+        <div className="space-x-4 space-y-4 md:flex w-full">
           <article className="w-full rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
             <div className="flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center rounded-full bg-[var(--accent-warm-soft)] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-primary)]">
