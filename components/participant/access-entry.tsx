@@ -145,14 +145,6 @@ export function AccessEntry() {
                 </p>
               ) : null}
             </form>
-
-            <div className="mt-7 border-t border-[var(--border-subtle)] pt-5">
-              <div className="mt-4 flex flex-wrap gap-4 text-sm font-semibold">
-                <Link className="text-[var(--accent-primary)] hover:underline" href="/login">
-                  Masuk sebagai HR
-                </Link>
-              </div>
-            </div>
           </div>
         </div>
       </div>
