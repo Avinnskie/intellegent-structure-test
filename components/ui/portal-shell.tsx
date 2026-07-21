@@ -104,6 +104,14 @@ export function PortalShell({ displayName, role, children }: PortalShellProps) {
               </Link>
             );
           })}
+          <form action={signOut}>
+            <button
+              type="submit"
+              className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]`}
+            >
+              Keluar
+            </button>
+          </form>
         </nav>
       </aside>
       <div className="min-w-0">
@@ -115,12 +123,10 @@ export function PortalShell({ displayName, role, children }: PortalShellProps) {
               </span>
               <span className="block text-xs text-[var(--text-muted)]">{roleLabels[role]}</span>
             </span>
-            {/* A form, not a link: signing out is a mutation, and a GET logout can be triggered by
-                any image tag on any page. */}
             <form action={signOut}>
               <button
                 type="submit"
-                className="inline-flex h-9 items-center rounded-lg border border-[var(--border-default)] px-3 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]"
+                className="hidden md:inline-flex h-9 items-center rounded-lg border border-[var(--border-default)] px-3 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]"
               >
                 Keluar
               </button>
