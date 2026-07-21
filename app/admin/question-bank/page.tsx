@@ -1,5 +1,6 @@
-import { QuestionBankManagementPage } from "@/components/hr/question-bank-management-page";
+import { redirect } from "next/navigation";
 
+/** The portals are unified: question bank management lives at /hr/question-bank for both roles. */
 export default function AdminQuestionBankPage() {
-  return <QuestionBankManagementPage eyebrow="Super Admin" />;
+  redirect("/hr/question-bank");
 }

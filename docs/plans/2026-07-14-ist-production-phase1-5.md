@@ -38,7 +38,7 @@
 - `tests/ist-logic.test.ts` — the existing node:test style to imitate.
 
 **Conventions:**
-- Tests: `npm test` runs `node --experimental-strip-types --test tests/**/*.test.ts` (Node 25 installed). Unit tests in `tests/unit/`, integration in `tests/integration/`, shared helpers in `tests/helpers/`. Move the two existing test files into `tests/unit/` in T1.
+- Tests: `npm test` runs `node --experimental-strip-types --test "tests/**/*.test.ts"` (Node 25 installed). The glob **must stay quoted** so Node expands it — `sh` has globstar off, so an unquoted `**` collapses to `*` and silently skips tests nested deeper than one directory (fixed 2026-07-15). Unit tests in `tests/unit/`, integration in `tests/integration/`, shared helpers in `tests/helpers/`. Move the two existing test files into `tests/unit/` in T1.
 - Imports between local TS files use explicit `.ts` extension (existing style, required by strip-types).
 - Commits: conventional (`feat:`, `fix:`, `test:`, `chore:`). No attribution footers (disabled in user settings).
 - Immutability, early returns, files <800 lines, no `console.log` in production code (use the logger from T6).
@@ -507,6 +507,8 @@ export type DbLike = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 **Step 5:** `npx tsc --noEmit` → clean. Commit `feat: add drizzle schema, client, and initial migration`.
 
+> **Hardening applied after code review (2026-07-15) — `lib/db/schema.ts` is authoritative, this listing is not.** Added: 8 hot-path indexes on FK columns (`candidate_org_ix`, `session_candidate_ix`, `access_code_session_ix`, `participant_token_session_ix`, `response_session_ix`, `result_session_ix`, `subtest_score_session_ix`, and `session_org_status_ix` replacing the status-only index); unique `(parent, version)` on `scoring_key_versions`, `norm_set_versions`, `tutorial_versions`; self-referencing FKs for `regenerated_from_id`/`superseded_by_id` lineage; `created_at` on the two scoring/norm version tables; `$onUpdate` on `responses.updated_at`; CHECK `min_age <= max_age` on `norm_age_bands`. `client.ts` uses a `globalThis` pool stash with `max`/`idle_timeout`/`connect_timeout` (dev hot-reload leaked pools otherwise). `drizzle.config.ts` fails fast on missing `DIRECT_DATABASE_URL` only for commands that actually connect (`migrate`/`push`/`pull`/`studio`), so `generate` still works without `.env.local`. Decision recorded: `attempt_session_subtest_ux` is intentionally one-attempt-ever per (session, subtest) — a retest is always a new session (spec §11, brief §4.1).
+
 ### Task 4: PGlite test harness
 
 **Files:** Create `tests/helpers/test-db.ts`; Test `tests/integration/schema.test.ts`.
@@ -531,6 +533,8 @@ export type TestDb = Awaited<ReturnType<typeof createTestDb>>["db"];
 **Step 2:** Write `tests/integration/schema.test.ts`: create test db → insert an organization → insert a user referencing it → select back → assert. Also assert inserting `users` with bad `organization_id` rejects (FK).
 
 **Step 3:** `npm test` → PASS (PGlite runs in-process; no Docker). Commit `test: add pglite integration harness`.
+
+> **Adjusted during implementation (2026-07-15).** The harness resolves `migrationsFolder` from `import.meta.url` instead of the CWD-relative `"./lib/db/migrations"`. This task also proved the plan's `DbLike` concern real: the postgres-js-derived union rejected the PGlite database, so `lib/db/client.ts` now uses the driver-agnostic `PgDatabase<PgQueryResultHKT, typeof schema>` (better than the plan's `PgDatabase<any, …>` fallback — no `any`, still schema-bound). Verified by type probe: it accepts the pool, a transaction handle, and `TestDb`. Note PGlite boot + migration replay costs ~3s per `createTestDb()`; if suites later slow down, dump/restore the data dir instead of re-migrating (matters most for Tasks 18 and 28).
 
 ### Task 5: Apply migration to Supabase cloud — STOP-AND-ASK gate
 
@@ -841,6 +845,8 @@ export function assertSessionTransition(from: SessionStatus, to: SessionStatus):
 
 **Step 3:** Also export `SUBTEST_ORDER` (re-export `SUBTEST_CODES` from `ist-subtests.ts`) and `nextSubtestCode(code): code | null`. Test both. Commit `feat: add session state machine domain module`.
 
+> **Resolved during implementation (2026-07-15) — `lib/domain/session-state.ts` is authoritative.** `calculated → reviewed | final | needs_review`; recalculation does NOT move the session (Task 27 writes a new result row and leaves it at `calculated`), so `needs_ge_scoring` was removed from `calculated`'s targets and the special-case clause in `canTransition` was deleted. `needs_review` is reachable from BOTH `needs_ge_scoring` and `calculated`: the first calculation runs from `needs_ge_scoring`, and a no-age-band outcome creates no result row (spec §15) — it stays out of the admin fast-path either way. Self-transitions (`from === to`) are rejected. The snippet above uses constructor parameter properties, which **Node's `--experimental-strip-types` rejects at runtime** — declare fields explicitly (same trap as Task 6).
+
 ### Task 11: Access-code validation service + endpoint + rate limiting
 
 **Files:** Create `lib/server/rate-limit.ts`, `lib/server/participant-access.ts`, `app/api/access-codes/validate/route.ts`; Tests `tests/integration/participant-access.test.ts`.
@@ -908,6 +914,11 @@ export const POST = withApiHandler(async (request: Request) => {
 (Zod errors: extend `withApiHandler` to map `ZodError` → 422 `VALIDATION_ERROR` — add that mapping + unit test now.)
 
 **Step 5:** `npm test` → PASS. Commit `feat: add access-code validation with rate limiting and participant tokens`.
+
+**Amendments made during T11 implementation (both are binding for later tasks):**
+
+1. **Response contract changed:** `sessionStatus` is the session's LIVE persisted status, so a successful validate returns `"tutorial"` — NOT `"code_validated"` as Step 1 and `DEVELOPMENT_SPEC.md` §18 originally showed. The row is already at `tutorial` when the response is built (both hops commit in one transaction), so returning `code_validated` was a field that contradicted the row it names. The service reads the status back via `RETURNING` from the `UPDATE` and types it as `SessionStatus`; `tests/integration/participant-access.test.ts` pins the returned value against the row read back from the DB. Spec §18 updated to match.
+2. **The Step 2 rate-limit snippet is superseded — do not reintroduce it.** Raw `db.execute` with a tagged SQL template returns a bare array on postgres-js but a `{ rows }` object on PGlite, so `rows[0]?.count` reads `undefined` under PGlite → `Number(undefined ?? 0) <= 10` → **true forever: the limiter is silently disabled in every test while looking correct.** `lib/server/rate-limit.ts` uses drizzle's insert / `onConflictDoUpdate` / `.returning()` instead, which normalizes both drivers onto one typed shape, plus `make_interval(mins => ...)` so `WINDOW_MINUTES` has a single definition. Same single atomic statement; verified on PGlite AND on real Supabase Postgres (transaction pooler, `prepare:false`). Any future limiter (login, HR endpoints) should reuse `consumeRateLimit` / `rateLimitKey` rather than re-deriving raw SQL.
 
 ### Task 12: Session state service + GET state + heartbeat
 

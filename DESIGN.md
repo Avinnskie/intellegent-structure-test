@@ -9,7 +9,7 @@
 
 ## 1. Atmosphere & Identity
 
-Calm learning workspace. The participant surface borrows the familiar grammar of a modern LMS: course header, module progress, lesson content, and a persistent learning rail. The HR surface behaves like a learning-operations portal with a stable sidebar, compact activity tables, and clear action queues. The signature is a deep academic green paired with a warm amber progress signal on softly tinted paper surfaces.
+Calm learning workspace. The participant surface borrows the familiar grammar of a modern LMS: course header, module progress, lesson content, and a persistent learning rail. The HR surface behaves like a learning-operations portal with a stable sidebar, compact activity tables, and clear action queues. The signature is a regal plum action system paired with a focused golden progress signal on clean, lightly purple-tinted paper surfaces.
 
 ## 2. Color
 
@@ -19,18 +19,18 @@ Calm learning workspace. The participant surface borrows the familiar grammar of
 | ---------------- | -------------------- | --------- | --------- | ----------------------------------------- |
 | Surface/base     | `--surface-base`     | `#ffffff` | `#101613` | App canvas                                |
 | Surface/panel    | `--surface-panel`    | `#ffffff` | `#10192b` | Cards, forms                              |
-| Surface/subtle   | `--surface-subtle`   | `#eceee7` | `#17201c` | Secondary panels                          |
-| Surface/strong   | `--surface-strong`   | `#dfe5dc` | `#203029` | Highlight bars                            |
-| Text/primary     | `--text-primary`     | `#17211d` | `#f0f5f1` | Headings, body                            |
-| Text/secondary   | `--text-secondary`   | `#526159` | `#a7b8ae` | Supporting copy                           |
-| Text/muted       | `--text-muted`       | `#5f6c64` | `#87998f` | Helper labels                             |
-| Border/default   | `--border-default`   | `#d8ddd5` | `#2a3a32` | Standard dividers                         |
-| Border/subtle    | `--border-subtle`    | `#e7eae4` | `#202e27` | Soft separations                          |
-| Accent/primary   | `--accent-primary`   | `#1f6653` | `#68bda5` | Primary CTA, focus                        |
-| Accent/hover     | `--accent-hover`     | `#174f40` | `#83cdb7` | CTA hover                                 |
-| Accent/soft      | `--accent-soft`      | `#dcece6` | `#193c31` | Active navigation, informational emphasis |
-| Accent/warm      | `--accent-warm`      | `#e7a63f` | `#f2bf6b` | Progress, current module, attention       |
-| Accent/warm-soft | `--accent-warm-soft` | `#fbefd9` | `#46361d` | Warm status backgrounds                   |
+| Surface/subtle   | `--surface-subtle`   | `#f7f2f8` | `#1f1024` | Secondary panels                          |
+| Surface/strong   | `--surface-strong`   | `#efe6f2` | `#2b1732` | Highlight bars                            |
+| Text/primary     | `--text-primary`     | `#2b1533` | `#f7f0f9` | Headings, body                            |
+| Text/secondary   | `--text-secondary`   | `#65576b` | `#c9bacf` | Supporting copy                           |
+| Text/muted       | `--text-muted`       | `#766879` | `#a795ad` | Helper labels                             |
+| Border/default   | `--border-default`   | `#dccfe1` | `#4a2c53` | Standard dividers                         |
+| Border/subtle    | `--border-subtle`    | `#ece4ef` | `#34203c` | Soft separations                          |
+| Accent/primary   | `--accent-primary`   | `#4b0d61` | `#c684db` | Primary CTA, focus                        |
+| Accent/hover     | `--accent-hover`     | `#350444` | `#dda4ee` | CTA hover and pressed state               |
+| Accent/soft      | `--accent-soft`      | `#f0e7f3` | `#35123f` | Active navigation, informational emphasis |
+| Accent/warm      | `--accent-warm`      | `#f6a800` | `#ffc54a` | Progress, current module, attention       |
+| Accent/warm-soft | `--accent-warm-soft` | `#fff3cf` | `#49350a` | Warm status backgrounds                   |
 | Status/success   | `--status-success`   | `#198754` | `#43c087` | Completed/final                           |
 | Status/warning   | `--status-warning`   | `#8a5a00` | `#ffbf5b` | Needs review                              |
 | Status/error     | `--status-error`     | `#c53f3f` | `#ff7a7a` | Invalid/revoked                           |
@@ -38,9 +38,9 @@ Calm learning workspace. The participant surface borrows the familiar grammar of
 
 ### Rules
 
-- Green is reserved for primary actions, active navigation, and focus states; amber marks progress and the current learning module.
+- Plum is reserved for primary actions, active navigation, and focus states; gold marks progress, the current learning module, and attention.
 - Charts use the accent ramp plus muted neutrals from this palette only.
-- The application currently uses a fixed light appearance so the app canvas stays white regardless of the device color scheme.
+- The application currently uses a fixed light appearance so the app canvas stays white regardless of the device color scheme. Dashboard canvases use a flat surface with no decorative background gradient.
 - New colors require a semantic role update here first.
 
 ## 3. Typography
@@ -176,12 +176,12 @@ All spacing follows a 4px base.
 
 ## 6. Motion & Interaction
 
-| Type     | Duration | Easing                          | Usage                            |
-| -------- | -------- | ------------------------------- | -------------------------------- |
-| Micro    | `140ms`  | `ease-out`                      | Buttons, pills                   |
-| Standard | `180ms`  | `ease-in-out`                   | Card hover, route utility panels |
-| Selected | `150ms`  | `cubic-bezier(0.4, 0, 0.2, 1)`  | Selected option                  |
-| Progress | `300ms`  | `ease-out`                      | Progress fill                    |
+| Type     | Duration | Easing                         | Usage                            |
+| -------- | -------- | ------------------------------ | -------------------------------- |
+| Micro    | `140ms`  | `ease-out`                     | Buttons, pills                   |
+| Standard | `180ms`  | `ease-in-out`                  | Card hover, route utility panels |
+| Selected | `150ms`  | `cubic-bezier(0.4, 0, 0.2, 1)` | Selected option                  |
+| Progress | `300ms`  | `ease-out`                     | Progress fill                    |
 
 ### Rules
 
@@ -198,8 +198,8 @@ Mixed: tonal-shift plus restrained shadows.
 | Level    | Value                                    | Usage                               |
 | -------- | ---------------------------------------- | ----------------------------------- |
 | Hairline | `inset 0 0 0 1px rgba(255,255,255,0.05)` | Dark panels                         |
-| Subtle   | `0 8px 24px rgba(25, 50, 40, 0.07)`      | Floating navigation and panels      |
-| Elevated | `0 18px 44px rgba(25, 50, 40, 0.12)`     | Login and focused assessment panels |
+| Subtle   | `0 8px 24px rgba(75, 13, 97, 0.07)`      | Floating navigation and panels      |
+| Elevated | `0 18px 44px rgba(75, 13, 97, 0.12)`     | Login and focused assessment panels |
 
 ## 8. Accessibility Constraints & Accepted Debt
 

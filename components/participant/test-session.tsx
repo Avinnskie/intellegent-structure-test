@@ -1,258 +1,268 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CourseRail } from "@/components/participant/course-rail";
-import { TestQuestionPanel } from "@/components/participant/test-question-panel";
-import { SessionTimer, TestSessionSidebar } from "@/components/participant/test-session-sidebar";
-import { demoSession } from "@/lib/ist-data";
 import {
-  getFirstPendingSubtest,
-  getDisplayRemainingSeconds,
-  getNextSubtestCode,
-  getRemainingSeconds,
-  getSubtestByCode,
-} from "@/lib/ist-logic";
-import { getQuestion } from "@/lib/ist-questions";
+  TestQuestionPanel,
+  canSubmitValue,
+  type QuestionItem,
+} from "@/components/participant/test-question-panel";
 import {
-  finishAttempt,
-  getAttemptSnapshot,
-  getServerAttemptSnapshot,
-  loadCompletedSubtests,
-  markSubtestCompleted,
-  setAttemptState,
-  startAttempt,
-  subscribeAttempts,
-  type AttemptState,
-} from "@/lib/session-store";
+  TestSessionSidebar,
+  isAnsweredStatus,
+  type ItemStatusValue,
+} from "@/components/participant/test-session-sidebar";
+import { useAutosave, type AutosaveStatus } from "@/components/participant/use-autosave";
+import type { SubtestCode } from "@/lib/ist-subtests";
 
-type TestSessionProps = {
-  readonly subtestCode: string | null;
+const HEARTBEAT_INTERVAL_MS = 30_000;
+
+const AUTOSAVE_LABELS: Record<AutosaveStatus, string | null> = {
+  idle: null,
+  menyimpan: "Menyimpan…",
+  tersimpan: "Tersimpan",
+  gagal: "Gagal menyimpan — periksa koneksi",
 };
 
-export function TestSession({ subtestCode }: TestSessionProps) {
+type TestSessionProps = {
+  readonly token: string;
+  readonly subtestCode: SubtestCode;
+  readonly totalItems: number;
+  readonly durationSeconds: number;
+  readonly items: readonly QuestionItem[];
+  readonly statuses: readonly { itemNumber: number; status: ItemStatusValue }[];
+  readonly currentLocal: number;
+  /** Signed URL of the current item's image, minted server-side; null = no image. */
+  readonly currentMediaUrl?: string | null;
+  readonly expiresAt: string;
+  readonly serverNow: string;
+};
+
+export function TestSession({
+  token,
+  subtestCode,
+  totalItems,
+  durationSeconds,
+  items,
+  statuses,
+  currentLocal,
+  currentMediaUrl = null,
+  expiresAt,
+  serverNow,
+}: TestSessionProps) {
   const router = useRouter();
-  const subtest = getSubtestByCode(subtestCode);
-  const nextSubtestCode = getNextSubtestCode(subtest.code);
-  const attempt = useSyncExternalStore(
-    subscribeAttempts,
-    () => getAttemptSnapshot(subtest.code),
-    getServerAttemptSnapshot,
+
+  const currentItem = useMemo(
+    () => items.find((item) => item.localNumber === currentLocal) ?? items[0],
+    [items, currentLocal],
   );
-  const [now, setNow] = useState(() => Date.now());
-  const [draft, setDraft] = useState<string | null>(null);
-  const hasCompletedRef = useRef(false);
 
-  const completeSubtest = useCallback(
-    (timeoutTriggered: boolean) => {
-      if (hasCompletedRef.current) {
-        return;
-      }
+  const initialStatuses = useMemo(() => {
+    const byGlobal = new Map(statuses.map((entry) => [entry.itemNumber, entry.status]));
+    const map: Record<number, ItemStatusValue> = {};
+    for (const item of items) {
+      map[item.localNumber] = byGlobal.get(item.itemNumber) ?? "unanswered";
+    }
+    return map;
+  }, [items, statuses]);
 
-      hasCompletedRef.current = true;
-      markSubtestCompleted(subtest.code);
-      finishAttempt(subtest.code);
+  const [localStatuses, setLocalStatuses] = useState(initialStatuses);
+  const [statusesBase, setStatusesBase] = useState(initialStatuses);
+  if (statusesBase !== initialStatuses) {
+    setStatusesBase(initialStatuses);
+    setLocalStatuses(initialStatuses);
+  }
 
-      if (nextSubtestCode) {
-        router.push(
-          `/test/tutorial?code=${demoSession.accessCode}&subtest=${nextSubtestCode}&prev=${subtest.code}${timeoutTriggered ? "&reason=timeout" : ""}`,
-        );
-        return;
-      }
+  const [draft, setDraft] = useState("");
+  // Locks every input the moment an answer/skip is in flight, so the gap between the click and the
+  // next page rendering cannot swallow (or double-send) a second interaction.
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [draftItemId, setDraftItemId] = useState(currentItem.itemVersionId);
+  if (draftItemId !== currentItem.itemVersionId) {
+    setDraftItemId(currentItem.itemVersionId);
+    setDraft("");
+    // A new item has rendered — the navigation that locked the panel has completed.
+    setIsAdvancing(false);
+  }
 
-      router.push("/test/complete");
-    },
-    [nextSubtestCode, router, subtest.code],
+  const {
+    status: autosaveStatus,
+    queueSave,
+    flush,
+  } = useAutosave(
+    `/api/sessions/${encodeURIComponent(token)}/responses/${currentItem.itemVersionId}`,
   );
+
+  const serverNowMs = Date.parse(serverNow);
+  const expiresAtMs = Date.parse(expiresAt);
+  const initialRemaining = Math.max(
+    0,
+    Math.min(Math.ceil((expiresAtMs - serverNowMs) / 1000), durationSeconds),
+  );
+  const [remainingSeconds, setRemainingSeconds] = useState(initialRemaining);
 
   useEffect(() => {
-    const completed = loadCompletedSubtests();
-    const expectedSubtest = getFirstPendingSubtest(completed);
+    const clockOffset = serverNowMs - Date.now();
+    let hasExpired = false;
 
-    if (expectedSubtest === null) {
-      router.replace("/test/complete");
-      return;
-    }
-
-    if (expectedSubtest !== subtest.code) {
-      router.replace(
-        `/test/tutorial?code=${demoSession.accessCode}&subtest=${expectedSubtest}&locked=${subtest.code}`,
+    const tick = window.setInterval(() => {
+      const serverMs = Date.now() + clockOffset;
+      const remaining = Math.max(
+        0,
+        Math.min(Math.ceil((expiresAtMs - serverMs) / 1000), durationSeconds),
       );
-      return;
-    }
-
-    const existing = getAttemptSnapshot(subtest.code);
-
-    if (existing && getRemainingSeconds(existing.expiresAt) <= 0) {
-      completeSubtest(true);
-      return;
-    }
-
-    startAttempt(subtest.code, subtest.durationMinutes);
-  }, [completeSubtest, router, subtest.code, subtest.durationMinutes]);
-
-  useEffect(() => {
-    if (!attempt) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setNow(Date.now());
-
-      if (getRemainingSeconds(attempt.expiresAt) <= 0) {
-        window.clearInterval(timer);
-        completeSubtest(true);
+      setRemainingSeconds(remaining);
+      if (remaining <= 0 && !hasExpired) {
+        hasExpired = true;
+        window.clearInterval(tick);
+        void fetch(`/api/sessions/${encodeURIComponent(token)}/heartbeat`, { method: "POST" })
+          .catch(() => null)
+          .finally(() => router.refresh());
       }
     }, 1000);
 
-    return () => window.clearInterval(timer);
-  }, [attempt, completeSubtest]);
+    return () => window.clearInterval(tick);
+  }, [serverNowMs, expiresAtMs, durationSeconds, router, token]);
+  useEffect(() => {
+    const beat = window.setInterval(() => {
+      void fetch(`/api/sessions/${encodeURIComponent(token)}/heartbeat`, {
+        method: "POST",
+      }).catch(() => null);
+    }, HEARTBEAT_INTERVAL_MS);
 
-  const answeredCount = attempt ? Object.keys(attempt.responses).length : 0;
-  const allItems = useMemo(
-    () => Array.from({ length: subtest.itemCount }, (_, index) => index + 1),
-    [subtest.itemCount],
+    return () => window.clearInterval(beat);
+  }, [token]);
+
+  const routeFor = useCallback(
+    (localNumber: number) => `/test/${token}/question/${subtestCode}/${localNumber}`,
+    [token, subtestCode],
   );
-  const unansweredItems = useMemo(
-    () => allItems.filter((itemNumber) => !attempt?.responses[itemNumber]),
-    [allItems, attempt],
+
+  const goTo = useCallback(
+    (localNumber: number) => {
+      router.push(routeFor(localNumber));
+    },
+    [router, routeFor],
   );
-  const currentItem = attempt?.currentItem ?? 1;
-  const draftValue = draft ?? attempt?.responses[currentItem] ?? "";
-  const question = getQuestion(subtest.code, currentItem);
 
-  function moveTo(next: AttemptState, itemNumber: number) {
-    setAttemptState(subtest.code, { ...next, currentItem: itemNumber });
-    setDraft(null);
-  }
+  const goToReview = useCallback(() => {
+    router.push(`/test/${token}/review/${subtestCode}`);
+  }, [router, token, subtestCode]);
 
-  function handleAnswerSubmit() {
-    if (!attempt || !draftValue) {
+  const advance = useCallback(() => {
+    if (currentLocal >= totalItems) {
+      goToReview();
       return;
     }
+    goTo(currentLocal + 1);
+  }, [currentLocal, totalItems, goTo, goToReview]);
 
-    const answered: AttemptState = {
-      ...attempt,
-      responses: { ...attempt.responses, [attempt.currentItem]: draftValue },
-      skippedItems: attempt.skippedItems.filter((item) => item !== attempt.currentItem),
-    };
-    const remainingUnanswered = allItems.filter((itemNumber) => !answered.responses[itemNumber]);
+  function handleValueChange(value: string) {
+    if (isAdvancing) {
+      // A click that lands in the gap between "Jawab & lanjut" and the next page must not change
+      // the answer that is being submitted.
+      return;
+    }
+    setDraft(value);
+    if (canSubmitValue(currentItem, value)) {
+      queueSave(value);
+    }
+  }
 
-    if (attempt.currentItem === subtest.itemCount) {
-      if (remainingUnanswered.length === 0) {
-        setAttemptState(subtest.code, answered);
-        completeSubtest(false);
+  async function handleSubmit() {
+    if (isAdvancing || !canSubmitValue(currentItem, draft)) {
+      return;
+    }
+    setIsAdvancing(true);
+    const saved = await flush(draft);
+    if (saved) {
+      setLocalStatuses((previous) => ({ ...previous, [currentLocal]: "answered" }));
+      advance();
+      // The lock is released by the reset-on-prop-change block when the next item renders.
+      return;
+    }
+    // Save failed: unlock so the participant can retry with their answer still on screen.
+    setIsAdvancing(false);
+    router.refresh();
+  }
+
+  async function handleSkip() {
+    if (isAdvancing) {
+      return;
+    }
+    setIsAdvancing(true);
+    try {
+      const response = await fetch(
+        `/api/sessions/${encodeURIComponent(token)}/responses/${currentItem.itemVersionId}/skip`,
+        { method: "POST" },
+      );
+      if (response.ok) {
+        setLocalStatuses((previous) =>
+          isAnsweredStatus(previous[currentLocal] ?? "unanswered")
+            ? previous
+            : { ...previous, [currentLocal]: "skipped" },
+        );
+        advance();
         return;
       }
-
-      moveTo(answered, remainingUnanswered[0]);
-      return;
-    }
-
-    moveTo(answered, attempt.currentItem + 1);
+    } catch {}
+    setIsAdvancing(false);
+    router.refresh();
   }
 
-  function handleSkip() {
-    if (!attempt) {
-      return;
-    }
-
-    const skipped: AttemptState = {
-      ...attempt,
-      skippedItems: attempt.skippedItems.includes(attempt.currentItem)
-        ? attempt.skippedItems
-        : [...attempt.skippedItems, attempt.currentItem],
-    };
-
-    if (attempt.currentItem === subtest.itemCount) {
-      const nextTarget = unansweredItems.find((itemNumber) => itemNumber !== attempt.currentItem);
-
-      if (nextTarget === undefined) {
-        setAttemptState(subtest.code, skipped);
-        completeSubtest(false);
-        return;
-      }
-
-      moveTo(skipped, nextTarget);
-      return;
-    }
-
-    moveTo(skipped, attempt.currentItem + 1);
-  }
-
-  function handleJump(itemNumber: number) {
-    if (!attempt) {
-      return;
-    }
-
-    moveTo(attempt, itemNumber);
-  }
-
-  if (!attempt) {
-    return (
-      <section
-        aria-busy="true"
-        className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6 text-sm text-[var(--text-secondary)]"
-      >
-        Memuat state sesi...
-      </section>
-    );
-  }
-
-  if (!question) {
-    return (
-      <section
-        role="alert"
-        className="rounded-2xl border border-[var(--status-error)] bg-[var(--surface-panel)] p-6 text-sm text-[var(--status-error)]"
-      >
-        Data soal {subtest.code} nomor {currentItem} tidak tersedia. Muat ulang sesi atau hubungi
-        administrator tes.
-      </section>
-    );
-  }
-
-  const isCurrentAnswered = Boolean(attempt.responses[currentItem]);
-  const isCurrentSkipped = attempt.skippedItems.includes(currentItem);
-  const remainingSeconds = getDisplayRemainingSeconds(
-    attempt.expiresAt,
-    subtest.durationMinutes,
-    now,
+  const sidebarItems = useMemo(
+    () =>
+      items.map((item) => ({
+        localNumber: item.localNumber,
+        status: localStatuses[item.localNumber] ?? "unanswered",
+      })),
+    [items, localStatuses],
   );
+  const answeredCount = sidebarItems.filter((item) => isAnsweredStatus(item.status)).length;
+  const unansweredCount = totalItems - answeredCount;
+
+  const currentStatus = localStatuses[currentLocal] ?? "unanswered";
   const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, "0");
   const seconds = String(remainingSeconds % 60).padStart(2, "0");
 
   return (
-    <section className="grid gap-6 xl:grid-cols-[280px_1fr]">
-      <CourseRail currentCode={subtest.code} />
+    <section className="h-full w-full lg:pb-0 grid gap-6 xl:grid-cols-[280px_1fr]">
+      <CourseRail currentCode={subtestCode} />
       <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
-        <SessionTimer minutes={minutes} seconds={seconds} className="sticky top-4 z-30 xl:hidden" />
+        {/* <SessionTimer minutes={minutes} seconds={seconds} className="sticky top-4 z-30 xl:hidden" /> */}
         <TestQuestionPanel
           state={{
-            question,
-            currentItem,
-            totalItems: subtest.itemCount,
+            subtestCode,
+            item: currentItem,
+            totalItems,
             answeredCount,
-            status: isCurrentAnswered ? "answered" : isCurrentSkipped ? "skipped" : "pending",
-            value: draftValue,
+            status: isAnsweredStatus(currentStatus)
+              ? "answered"
+              : currentStatus === "skipped"
+                ? "skipped"
+                : "pending",
+            value: draft,
           }}
-          onValueChange={setDraft}
+          autosaveLabel={isAdvancing ? "Menyimpan…" : AUTOSAVE_LABELS[autosaveStatus]}
+          mediaUrl={currentMediaUrl}
+          disabled={isAdvancing}
+          onValueChange={handleValueChange}
           onSkip={handleSkip}
-          onSubmit={handleAnswerSubmit}
+          onSubmit={handleSubmit}
         />
 
         <TestSessionSidebar
           state={{
-            code: subtest.code,
+            code: subtestCode,
             minutes,
             seconds,
-            currentItem,
-            allItems,
-            unansweredCount: unansweredItems.length,
-            responses: attempt.responses,
-            skippedItems: attempt.skippedItems,
+            currentItem: currentLocal,
+            items: sidebarItems,
+            unansweredCount,
           }}
-          onJump={handleJump}
-          onComplete={() => completeSubtest(false)}
+          onJump={goTo}
+          onComplete={goToReview}
         />
       </div>
     </section>

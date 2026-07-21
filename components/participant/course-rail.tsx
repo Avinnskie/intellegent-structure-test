@@ -5,7 +5,7 @@ export function CourseRail({ currentCode }: { currentCode: SubtestCode }) {
   const currentIndex = subtests.findIndex((subtest) => subtest.code === currentCode);
 
   return (
-    <aside className="hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-5 shadow-[var(--shadow-subtle)] xl:sticky xl:top-24 xl:block xl:self-start">
+    <aside className="hidden h-full rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-5 xl:sticky xl:top-24 xl:block self-start">
       <h2 className="mt-2 text-lg font-bold tracking-[-0.03em] text-[var(--text-primary)]">
         IST Assessment
       </h2>
@@ -17,7 +17,7 @@ export function CourseRail({ currentCode }: { currentCode: SubtestCode }) {
       </div>
 
       <ol
-        className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-1"
+        className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-1 items-stretch"
         aria-label="Daftar subtes"
       >
         {subtests.map((subtest, index) => {

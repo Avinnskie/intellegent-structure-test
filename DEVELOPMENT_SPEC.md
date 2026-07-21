@@ -818,10 +818,12 @@ Response:
 ```json
 {
   "sessionToken": "opaque-token",
-  "sessionStatus": "code_validated",
+  "sessionStatus": "tutorial",
   "nextRoute": "/test/opaque-token/tutorial/SE"
 }
 ```
+
+`sessionStatus` melaporkan status sesi yang benar-benar tersimpan saat respons dikirim — validasi kode dan perpindahan ke tutorial di-commit dalam satu transaksi (`code_generated → code_validated → tutorial`), sehingga sesi sudah berstatus `tutorial`, bukan `code_validated`.
 
 ### Session
 

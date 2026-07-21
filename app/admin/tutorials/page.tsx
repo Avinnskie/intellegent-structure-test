@@ -1,5 +1,6 @@
-import { TutorialManagementPage } from "@/components/hr/tutorial-management-page";
+import { redirect } from "next/navigation";
 
+/** The portals are unified: tutorial management lives at /hr/tutorials for both roles. */
 export default function AdminTutorialsPage() {
-  return <TutorialManagementPage eyebrow="Super Admin" />;
+  redirect("/hr/tutorials");
 }

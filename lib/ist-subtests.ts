@@ -2,6 +2,18 @@ export const SUBTEST_CODES = ["SE", "WA", "AN", "GE", "RA", "ZR", "FA", "WU", "M
 
 export type SubtestCode = (typeof SUBTEST_CODES)[number];
 
+/**
+ * Narrows an untrusted string to a `SubtestCode`, or `null`.
+ *
+ * Lives here, with the codes themselves, because every caller is doing the same thing: turning a URL
+ * path segment or a `text` column into the union. Accepts `null`/`undefined` so a nullable column
+ * (`assessment_sessions.current_subtest_code`) and a required path segment share one narrowing —
+ * three server modules had independently grown their own copy of this.
+ */
+export function asSubtestCode(value: string | null | undefined): SubtestCode | null {
+  return SUBTEST_CODES.includes(value as SubtestCode) ? (value as SubtestCode) : null;
+}
+
 export type QuestionKind = "choice" | "short-text" | "numeric";
 
 export type Subtest = {

@@ -1,10 +1,6 @@
-import { AppShell } from "@/components/ui/app-shell";
-import { AccessEntry } from "@/components/participant/access-entry";
+import { redirect } from "next/navigation";
 
+/** The public root is the participant entry. HR and admin get there via their own login routes. */
 export default function Home() {
-  return (
-    <AppShell title="Akses assessment">
-      <AccessEntry />
-    </AppShell>
-  );
+  redirect("/test");
 }
