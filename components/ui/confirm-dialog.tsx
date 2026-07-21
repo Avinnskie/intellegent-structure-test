@@ -64,8 +64,9 @@ export function ConfirmDialog({
         }
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="overflow-hidden sm:max-w-md">
         <form
+          className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             if (!isConfirmDisabled) {
@@ -73,27 +74,29 @@ export function ConfirmDialog({
             }
           }}
         >
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
-          </DialogHeader>
+          <div className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain">
+            <DialogHeader>
+              <DialogTitle>{title}</DialogTitle>
+              <DialogDescription>{description}</DialogDescription>
+            </DialogHeader>
 
-          {input ? (
-            <div className="mt-4 grid gap-2">
-              <Label htmlFor="confirm-dialog-input">
-                {input.label}
-                {input.required ? <span className="sr-only">(wajib)</span> : null}
-              </Label>
-              <Input
-                id="confirm-dialog-input"
-                value={value}
-                onChange={(event) => setValue(event.target.value)}
-                placeholder={input.placeholder}
-                maxLength={500}
-                autoFocus
-              />
-            </div>
-          ) : null}
+            {input ? (
+              <div className="mt-4 grid min-w-0 gap-2">
+                <Label htmlFor="confirm-dialog-input">
+                  {input.label}
+                  {input.required ? <span className="sr-only">(wajib)</span> : null}
+                </Label>
+                <Input
+                  id="confirm-dialog-input"
+                  value={value}
+                  onChange={(event) => setValue(event.target.value)}
+                  placeholder={input.placeholder}
+                  maxLength={500}
+                  autoFocus
+                />
+              </div>
+            ) : null}
+          </div>
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" disabled={isBusy} onClick={onCancel}>

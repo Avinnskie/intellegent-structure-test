@@ -253,8 +253,8 @@ export function SessionBulkModal() {
                 {hasCopiedAll ? "Tersalin ✓" : "Salin semua (nama + kode)"}
               </Button>
             </div>
-            <div className="max-h-80 overflow-y-auto rounded-xl border border-[var(--border-default)]">
-              <table className="min-w-full text-left text-sm">
+            <div className="max-h-80 overflow-x-hidden overflow-y-auto rounded-xl border border-[var(--border-default)]">
+              <table className="w-full table-fixed text-left text-sm">
                 <thead className="sticky top-0 bg-[var(--surface-subtle)] text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   <tr>
                     <th className="px-4 py-2">Nama</th>
@@ -268,9 +268,15 @@ export function SessionBulkModal() {
                       key={row.accessCodeMasked + row.fullName}
                       className="border-t border-[var(--border-subtle)]"
                     >
-                      <td className="px-4 py-2 font-semibold">{row.fullName}</td>
-                      <td className="px-4 py-2">{row.birthDate}</td>
-                      <td className="px-4 py-2 font-mono font-bold">{row.accessCode}</td>
+                      <td className="break-words px-4 py-2 font-semibold [overflow-wrap:anywhere]">
+                        {row.fullName}
+                      </td>
+                      <td className="break-words px-4 py-2 [overflow-wrap:anywhere]">
+                        {row.birthDate}
+                      </td>
+                      <td className="break-words px-4 py-2 font-mono font-bold [overflow-wrap:anywhere]">
+                        {row.accessCode}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

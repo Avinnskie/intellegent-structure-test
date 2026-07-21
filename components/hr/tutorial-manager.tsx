@@ -247,7 +247,7 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                       }
                       event.target.value = "";
                     }}
-                    className="text-sm font-normal p-3 rounded-lg border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
+                    className="w-full min-w-0 max-w-full rounded-lg border border-[var(--border-default)] p-3 text-sm font-normal text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
                   />
                   {editor.isUploading ? (
                     <span className="text-xs font-normal text-[var(--text-muted)]">

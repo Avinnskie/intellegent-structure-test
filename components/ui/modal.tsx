@@ -30,13 +30,18 @@ export function Modal({ open, title, description, size = "md", onClose, children
       }}
     >
       <DialogContent
-        className={`max-h-[90dvh] overflow-y-auto ${size === "lg" ? "sm:max-w-3xl" : "sm:max-w-lg"}`}
+        className={`grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden ${size === "lg" ? "sm:max-w-3xl" : "sm:max-w-xl"}`}
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
-        {children}
+        <div
+          data-slot="modal-body"
+          className="min-h-0 min-w-0 break-words overflow-x-hidden overflow-y-auto overscroll-contain [overflow-wrap:anywhere] [&_button]:max-w-full [&_button]:whitespace-normal"
+        >
+          {children}
+        </div>
       </DialogContent>
     </Dialog>
   );

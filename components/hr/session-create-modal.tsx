@@ -144,9 +144,9 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
         ) : (
           <div className="space-y-4">
             <div className="grid gap-2">
-              <Label>Peserta</Label>
+              <Label htmlFor="session-candidate">Peserta</Label>
               <Select value={candidateId} onValueChange={(value) => setCandidateId(value ?? "")}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="session-candidate" className="w-full">
                   <SelectValue placeholder="Pilih peserta…">
                     {(value: string | null) => {
                       if (!value) {
@@ -173,12 +173,12 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Masa berlaku kode</Label>
+              <Label htmlFor="session-expiry">Masa berlaku kode</Label>
               <Select
                 value={expiresInHours}
                 onValueChange={(value) => setExpiresInHours(value ?? "48")}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="session-expiry" className="w-full">
                   <SelectValue>
                     {(value: string | null) => {
                       const found = TTL_OPTIONS.find((option) => String(option.hours) === value);
@@ -200,14 +200,14 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Kebijakan masuk kode</Label>
+              <Label htmlFor="session-reentry">Kebijakan masuk kode</Label>
               <Select
                 value={reentryPolicy}
                 onValueChange={(value) =>
                   setReentryPolicy((value ?? "single") as "single" | "multi")
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="session-reentry" className="w-full">
                   <SelectValue>
                     {(value: string | null) =>
                       value === "multi"
@@ -223,10 +223,7 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
                   >
                     Sekali pakai — keluar/tutup web berarti minta kode baru ke HR
                   </SelectItem>
-                  <SelectItem
-                    value="multi"
-                    label="Boleh masuk berulang selama tes berjalan"
-                  >
+                  <SelectItem value="multi" label="Boleh masuk berulang selama tes berjalan">
                     Boleh masuk berulang selama tes berjalan
                   </SelectItem>
                 </SelectContent>

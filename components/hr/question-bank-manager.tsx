@@ -346,7 +346,7 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
                       acceptedValues: itemType === "numeric" ? draft.acceptedValues : "",
                     });
                   }}
-                  className="h-11 rounded-xl border border-[var(--border-default)] bg-[var(--surface-panel)] px-3 text-sm font-normal text-[var(--text-primary)]"
+                  className="h-11 w-full min-w-0 max-w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-panel)] px-3 text-sm font-normal text-[var(--text-primary)]"
                 >
                   <option value="choice">Pilihan ganda</option>
                   <option value="numeric">Angka</option>

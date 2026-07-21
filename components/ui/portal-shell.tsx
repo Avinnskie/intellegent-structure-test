@@ -88,7 +88,7 @@ export function PortalShell({ displayName, role, children }: PortalShellProps) {
 
         <nav
           id="portal-mobile-menu"
-          className={`${menuOpen ? "flex" : "hidden"} fixed inset-0 z-40 flex-col gap-2 bg-[var(--surface-panel)] px-6 pb-6 pt-24 lg:static lg:z-auto lg:flex lg:gap-0 lg:space-y-1 lg:px-3 lg:pb-4 lg:pt-0`}
+          className={`${menuOpen ? "flex" : "hidden"} fixed inset-0 z-40 min-w-0 max-w-full flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain bg-[var(--surface-panel)] px-6 pb-6 pt-24 lg:static lg:z-auto lg:flex lg:gap-0 lg:space-y-1 lg:overflow-visible lg:px-3 lg:pb-4 lg:pt-0`}
         >
           {items.map((item) => {
             const active = isActive(pathname, item.href);

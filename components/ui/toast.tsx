@@ -62,18 +62,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           the stack fall back to the element's static position (top-left) in Safari. */}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-0 bottom-6 z-[100] flex flex-col items-center gap-2 px-4"
+        className="pointer-events-none fixed inset-x-0 bottom-6 z-[100] flex min-w-0 max-w-full flex-col items-center gap-2 overflow-x-hidden px-4"
       >
         {toasts.map((toast) => (
           <div
             key={toast.id}
             role={toast.kind === "error" ? "alert" : "status"}
-            className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur ${KIND_STYLES[toast.kind]}`}
+            className={`pointer-events-auto flex w-full min-w-0 max-w-[min(24rem,calc(100dvw-2rem))] items-start gap-3 overflow-x-hidden rounded-xl border px-4 py-3 shadow-lg backdrop-blur ${KIND_STYLES[toast.kind]}`}
           >
             <span aria-hidden="true" className="mt-0.5 text-sm font-bold">
               {KIND_ICONS[toast.kind]}
             </span>
-            <p className="min-w-0 flex-1 text-sm font-semibold leading-5">{toast.message}</p>
+            <p className="min-w-0 flex-1 break-words text-sm font-semibold leading-5 [overflow-wrap:anywhere]">
+              {toast.message}
+            </p>
             <button
               type="button"
               onClick={() => dismiss(toast.id)}

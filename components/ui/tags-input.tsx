@@ -68,7 +68,7 @@ export function TagsInput({
         id={id}
         disabled={disabled}
         className={cn(
-          "flex min-h-11 w-full cursor-text flex-wrap items-center gap-1.5 rounded-xl border border-[var(--border-default)] bg-[var(--surface-panel)] px-2 py-1.5 text-left text-sm text-[var(--text-primary)] transition-colors",
+          "flex min-h-11 w-full min-w-0 max-w-full cursor-text flex-wrap items-center gap-1.5 overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--surface-panel)] px-2 py-1.5 text-left text-sm text-[var(--text-primary)] transition-colors",
           "focus-within:border-[var(--accent-primary)] focus-within:ring-2 focus-within:ring-[var(--accent-soft)]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-soft)]",
           disabled && "cursor-not-allowed opacity-60",
@@ -115,7 +115,7 @@ export function TagsInput({
       <PopoverContent
         align="start"
         sideOffset={4}
-        className="w-[280px] max-w-[calc(100vw-2rem)] p-0"
+        className="w-[280px] max-w-[calc(100dvw-1rem)] p-0"
       >
         <Command shouldFilter={false} className="rounded-xl">
           <div className="border-b border-[var(--border-default)] p-2">
