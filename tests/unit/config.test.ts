@@ -110,6 +110,19 @@ test("getServerConfig throws naming APP_BASE_URL when it is not a valid URL", ()
   });
 });
 
+test("getServerConfig throws naming APP_BASE_URL when it contains a path", () => {
+  withEnv({ ...REQUIRED_ENV, APP_BASE_URL: "https://ist.example.com/api" }, () => {
+    assert.throws(
+      () => getServerConfig(),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /APP_BASE_URL/);
+        return true;
+      },
+    );
+  });
+});
+
 test("getServerConfig error message starts with the Indonesian config prefix", () => {
   withEnv({ ...REQUIRED_ENV, DATABASE_URL: undefined }, () => {
     assert.throws(

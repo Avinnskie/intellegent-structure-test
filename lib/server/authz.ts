@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { ApiError } from "../api/errors.ts";
-import { getServerConfig } from "../config.ts";
+import { logInfo } from "./logger.ts";
 import type { DbLike } from "../db/client.ts";
 import { users } from "../db/schema.ts";
 
@@ -24,6 +24,47 @@ const NOT_PROVISIONED_MESSAGE = "Akun Anda belum terdaftar pada portal ini. Hubu
 const INACTIVE_MESSAGE = "Akun Anda dinonaktifkan. Hubungi Super Admin.";
 const NO_PERMISSION_MESSAGE = "Anda tidak memiliki izin untuk tindakan ini.";
 const CSRF_MESSAGE = "Permintaan ditolak karena asal permintaan tidak dikenal.";
+
+function normalizeOrigin(value: string | undefined): string | null {
+  if (!value) return null;
+
+  const normalizedValue = value.trim();
+  if (!normalizedValue) return null;
+
+  try {
+    const url = normalizedValue.startsWith("http") ? new URL(normalizedValue) : new URL(`https://${normalizedValue}`);
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+function getTrustedOrigins(): Set<string> {
+  const candidates = [
+    process.env.APP_BASE_URL,
+    process.env.NEXT_PUBLIC_APP_BASE_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_URL,
+    process.env.NODE_ENV !== "production" ? "http://localhost:3000" : undefined,
+    process.env.NODE_ENV !== "production" ? "http://127.0.0.1:3000" : undefined,
+  ];
+
+  return new Set(
+    candidates
+      .map(normalizeOrigin)
+      .filter((origin): origin is string => Boolean(origin)),
+  );
+}
+
+function isTrustedOrigin(request: Request, trustedOrigins = getTrustedOrigins()): boolean {
+  const requestOrigin = normalizeOrigin(request.headers.get("origin") ?? undefined);
+
+  if (!requestOrigin) {
+    return false;
+  }
+
+  return trustedOrigins.has(requestOrigin);
+}
 
 /**
  * The Supabase auth user for the current request, or null when anonymous.
@@ -161,23 +202,21 @@ export function requirePermission(ctx: AuthContext, permission: string): void {
  * request-path callers omit it and get the validated config.
  */
 export function assertSameOrigin(request: Request, appBaseUrl?: string): void {
-  const origin = request.headers.get("origin");
-
-  if (origin === null) {
-    throw new ApiError("CSRF_REJECTED", CSRF_MESSAGE, 403);
+  const trustedOrigins = getTrustedOrigins();
+  const overrideOrigin = normalizeOrigin(appBaseUrl);
+  if (overrideOrigin) {
+    trustedOrigins.add(overrideOrigin);
   }
 
-  const expected = appBaseUrl ?? getServerConfig().APP_BASE_URL;
-  let originHost: string;
-  try {
-    originHost = new URL(origin).host;
-  } catch {
-    // "null" (a sandboxed iframe or a redirected cross-origin request) and any other non-URL land
-    // here. Unparseable can never match, so this is the same rejection, not a special case.
-    throw new ApiError("CSRF_REJECTED", CSRF_MESSAGE, 403);
-  }
-
-  if (originHost !== new URL(expected).host) {
+  if (!isTrustedOrigin(request, trustedOrigins)) {
+    logInfo("csrf_rejected", {
+      origin: request.headers.get("origin") ?? null,
+      referer: request.headers.get("referer") ?? null,
+      host: request.headers.get("host") ?? null,
+      forwardedHost: request.headers.get("x-forwarded-host") ?? null,
+      forwardedProto: request.headers.get("x-forwarded-proto") ?? null,
+      trustedOrigins: [...trustedOrigins].join(","),
+    });
     throw new ApiError("CSRF_REJECTED", CSRF_MESSAGE, 403);
   }
 }

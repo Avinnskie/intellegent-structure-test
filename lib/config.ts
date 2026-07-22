@@ -5,7 +5,22 @@ const emptyStringAsUndefined = (value: unknown) =>
   typeof value === "string" && value.trim() === "" ? undefined : value;
 
 const serverEnvSchema = z.object({
-  APP_BASE_URL: z.url(),
+  APP_BASE_URL: z.string().trim().min(1).superRefine((value, ctx) => {
+    try {
+      const url = new URL(value);
+      if (url.pathname !== "/" || url.search !== "" || url.hash !== "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "APP_BASE_URL harus origin tanpa path.",
+        });
+      }
+    } catch {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "APP_BASE_URL harus origin tanpa path.",
+      });
+    }
+  }),
   DATABASE_URL: z.string().min(1),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),

@@ -141,11 +141,10 @@ export default async function HrSessionDetailPage({
         <article className="space-y-5 rounded-2xl border border-[var(--border-default)] p-6">
           <ProgressBar label="Subtes selesai" value={subtestsCompleted} total={9} />
           <ProgressBar label="Jawaban terisi" value={answered} total={totalItems} />
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {[
               ["Terjawab", String(answered)],
               ["Dilewati", String(skipped)],
-              ["Belum", String(totalItems - answered - skipped)],
             ].map(([label, value]) => (
               <div
                 key={label}
