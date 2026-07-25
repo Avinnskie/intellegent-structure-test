@@ -19,7 +19,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "Intelligenz Struktur Test",
-  description: "Prototype LMS untuk alur peserta IST, skoring HR, dan pelaporan hasil.",
+  description: "Platform pelaksanaan, skoring, dan pelaporan Intelligenz Struktur Test (IST).",
 };
 
 export default function RootLayout({

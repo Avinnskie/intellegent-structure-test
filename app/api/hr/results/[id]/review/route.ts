@@ -17,11 +17,9 @@ async function parseBody(request: Request): Promise<{ notes: string }> {
   }
 }
 
-/** `draft → reviewed` with the reviewer's notes. `[id]` is the RESULT id. */
 export const POST = withApiHandler(
   async (request: Request, ctx: RouteContext<"/api/hr/results/[id]/review">) => {
     assertSameOrigin(request);
-    // Next 16: `ctx.params` is a Promise.
     const { id } = await ctx.params;
     const auth = await requireHrUser(getDb());
     const body = await parseBody(request);

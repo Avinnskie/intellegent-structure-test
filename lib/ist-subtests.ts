@@ -39,7 +39,7 @@ export const subtests = [
     durationMinutes: 6,
     questionKind: "choice",
     tutorialSummary: "Lengkapi kalimat dengan satu dari lima pilihan kata.",
-    examplePrompt: "Contoh dummy: Rencana yang baik disusun secara ...",
+    examplePrompt: "Contoh: Rencana yang baik disusun secara ...",
     hasVideo: false,
   },
   {
@@ -51,7 +51,7 @@ export const subtests = [
     durationMinutes: 6,
     questionKind: "choice",
     tutorialSummary: "Pilih satu kata yang tidak sekelompok dengan empat kata lainnya.",
-    examplePrompt: "Contoh dummy: apel, mangga, jeruk, pisang, meja.",
+    examplePrompt: "Contoh: apel, mangga, jeruk, pisang, meja.",
     hasVideo: false,
   },
   {
@@ -63,7 +63,7 @@ export const subtests = [
     durationMinutes: 7,
     questionKind: "choice",
     tutorialSummary: "Lengkapi hubungan analogi dengan pasangan yang paling setara.",
-    examplePrompt: "Contoh dummy: Guru : Murid = Dokter : ...",
+    examplePrompt: "Contoh: Guru : Murid = Dokter : ...",
     hasVideo: false,
   },
   {
@@ -75,7 +75,7 @@ export const subtests = [
     durationMinutes: 8,
     questionKind: "short-text",
     tutorialSummary: "Tulis satu konsep umum yang mencakup kedua kata.",
-    examplePrompt: "Contoh dummy: apel dan mangga termasuk ...",
+    examplePrompt: "Contoh: apel dan mangga termasuk ...",
     hasVideo: false,
   },
   {
@@ -87,7 +87,7 @@ export const subtests = [
     durationMinutes: 10,
     questionKind: "numeric",
     tutorialSummary: "Selesaikan persoalan hitung dan masukkan jawaban angka.",
-    examplePrompt: "Contoh dummy: 18 + 26 = ...",
+    examplePrompt: "Contoh: 18 + 26 = ...",
     hasVideo: false,
   },
   {
@@ -99,7 +99,7 @@ export const subtests = [
     durationMinutes: 10,
     questionKind: "numeric",
     tutorialSummary: "Temukan pola deret lalu masukkan angka berikutnya.",
-    examplePrompt: "Contoh dummy: 2, 4, 8, 16, ...",
+    examplePrompt: "Contoh: 2, 4, 8, 16, ...",
     hasVideo: false,
   },
   {
@@ -111,7 +111,7 @@ export const subtests = [
     durationMinutes: 7,
     questionKind: "choice",
     tutorialSummary: "Bayangkan potongan dirakit, lalu pilih bentuk hasilnya.",
-    examplePrompt: "Contoh dummy: pilih bentuk yang tersusun dari tiga potongan.",
+    examplePrompt: "Contoh: pilih bentuk yang tersusun dari tiga potongan.",
     hasVideo: true,
   },
   {
@@ -123,7 +123,7 @@ export const subtests = [
     durationMinutes: 9,
     questionKind: "choice",
     tutorialSummary: "Bayangkan kubus diputar, lalu pilih posisi yang sama.",
-    examplePrompt: "Contoh dummy: pilih kubus yang identik setelah diputar.",
+    examplePrompt: "Contoh: pilih kubus yang identik setelah diputar.",
     hasVideo: true,
   },
   {
@@ -134,8 +134,8 @@ export const subtests = [
     itemCount: 20,
     durationMinutes: 9,
     questionKind: "choice",
-    tutorialSummary: "Pilih kategori dari kata dummy yang sebelumnya diingat.",
-    examplePrompt: "Contoh dummy: kata berawalan M tadi termasuk kategori apa?",
+    tutorialSummary: "Pilih kategori dari kata yang sebelumnya diingat.",
+    examplePrompt: "Contoh: kata berawalan M tadi termasuk kategori apa?",
     hasVideo: false,
   },
 ] as const satisfies readonly Subtest[];

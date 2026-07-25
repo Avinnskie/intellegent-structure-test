@@ -23,6 +23,7 @@ import {
   assessmentSessions,
   itemOptions,
   itemVersions,
+  responses,
   subtestAttempts,
   subtestVersions,
 } from "../db/schema.ts";
@@ -39,6 +40,7 @@ import {
   sweepExpiredAttempt,
   type ParticipantSessionContext,
 } from "./participant-session.ts";
+import { readResponseValue } from "./participant-responses.ts";
 
 const MS_PER_SECOND = 1000;
 
@@ -89,6 +91,8 @@ export type StartSubtestItem = {
   placeholder: string | null;
   /** Storage path of an attached image, or null. The PAGE signs it into a URL; never a secret. */
   mediaReference: string | null;
+  /** The participant's previously saved answer, or null when unanswered. Restores the input on navigation. */
+  savedValue: string | null;
 };
 
 export type StartSubtestDto = {
@@ -200,7 +204,11 @@ async function selectAttempt(
  * GLOBAL identity, and using it here would silently make the deck's order depend on a column that
  * exists to be unique across all 176 items rather than to order these 20.
  */
-async function selectItems(tx: DbLike, subtestVersionId: string): Promise<StartSubtestItem[]> {
+async function selectItems(
+  tx: DbLike,
+  subtestVersionId: string,
+  attemptId: string,
+): Promise<StartSubtestItem[]> {
   const rows = await tx
     .select({
       id: itemVersions.id,
@@ -210,8 +218,13 @@ async function selectItems(tx: DbLike, subtestVersionId: string): Promise<StartS
       prompt: itemVersions.prompt,
       placeholder: itemVersions.placeholder,
       mediaReference: itemVersions.mediaReference,
+      savedValue: responses.responseValue,
     })
     .from(itemVersions)
+    .leftJoin(
+      responses,
+      and(eq(responses.itemVersionId, itemVersions.id), eq(responses.subtestAttemptId, attemptId)),
+    )
     .where(eq(itemVersions.subtestVersionId, subtestVersionId))
     .orderBy(asc(itemVersions.sequence));
 
@@ -250,6 +263,7 @@ async function selectItems(tx: DbLike, subtestVersionId: string): Promise<StartS
     options: optionsByItem.get(row.id) ?? [],
     placeholder: row.placeholder,
     mediaReference: row.mediaReference,
+    savedValue: readResponseValue(row.savedValue),
   }));
 }
 
@@ -382,7 +396,7 @@ async function startWithin(
       attemptId: existing.id,
       expiresAt: existing.expiresAt.toISOString(),
       serverNow: now.toISOString(),
-      items: await selectItems(tx, existing.subtestVersionId),
+      items: await selectItems(tx, existing.subtestVersionId, existing.id),
     };
   }
 
@@ -400,7 +414,7 @@ async function startWithin(
     attemptId: created.attemptId,
     expiresAt: created.expiresAt.toISOString(),
     serverNow: now.toISOString(),
-    items: await selectItems(tx, created.subtestVersionId),
+    items: await selectItems(tx, created.subtestVersionId, created.attemptId),
   };
 }
 

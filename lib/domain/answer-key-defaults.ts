@@ -1,44 +1,88 @@
 import type { IstQuestion } from "../ist-questions.ts";
+import { officialChoiceKeyFor, officialNumericAcceptedValuesFor } from "./official-ist.ts";
 
 /**
  * Stamped onto every `assessment_results.engine_version`. Bump on any change to aggregate/scoring
  * behavior (brief §22: reproducibility).
  */
-export const ENGINE_VERSION = "0.2.0";
+export const ENGINE_VERSION = "1.0.0";
 
-export const MANUAL_GE_DEFAULT_RUBRIC = "0 = salah, 1 = sebagian, 2 = tepat";
+export const MANUAL_GE_DEFAULT_RUBRIC =
+  "0 = tidak cocok, 1 = konsep sebagian, 2 = konsep umum tepat (rujuk Kunci IST)";
 
 export type AnswerKeyRule =
-  | { ruleType: "option_match"; payload: { correctOptionCodes: string[] }; maxScore: 1 }
-  | { ruleType: "numeric_match"; payload: { acceptedValues: string[] }; maxScore: 1 }
-  | { ruleType: "manual_ge"; payload: { rubric: string }; maxScore: 2 };
+  | {
+      readonly ruleType: "option_match";
+      readonly payload: { readonly correctOptionCodes: readonly string[] };
+      readonly maxScore: 1;
+    }
+  | {
+      readonly ruleType: "numeric_match";
+      readonly payload: { readonly acceptedValues: readonly string[] };
+      readonly maxScore: 1;
+    }
+  | {
+      readonly ruleType: "manual_ge";
+      readonly payload: { readonly rubric: string };
+      readonly maxScore: 2;
+    };
+
+class MissingOfficialAnswerKeyError extends Error {
+  readonly itemNumber: number;
+
+  constructor(itemNumber: number) {
+    super(`Kunci IST resmi tidak ditemukan untuk item ${itemNumber}.`);
+    this.name = "MissingOfficialAnswerKeyError";
+    this.itemNumber = itemNumber;
+  }
+}
+
+class UnexpectedQuestionKindError extends Error {
+  constructor() {
+    super("Jenis soal IST tidak dikenali.");
+    this.name = "UnexpectedQuestionKindError";
+  }
+}
+
+function assertNever(value: never): never {
+  void value;
+  throw new UnexpectedQuestionKindError();
+}
 
 /**
- * Deterministic default answer key derivation used by the seed and the golden fixtures. The choice
- * key is a pure function of the item number so seed and tests stay in sync.
+ * Returns the immutable workbook answer key used to seed a versioned scoring-key release.
  */
 export function defaultAnswerKeyFor(question: IstQuestion): AnswerKeyRule {
-  if (question.kind === "choice") {
-    const codes = ["a", "b", "c", "d", "e"] as const;
-    return {
-      ruleType: "option_match",
-      payload: { correctOptionCodes: [codes[question.globalNumber % 5]] },
-      maxScore: 1,
-    };
+  switch (question.kind) {
+    case "choice": {
+      const correctOptionCode = officialChoiceKeyFor(question.globalNumber);
+      if (!correctOptionCode) {
+        throw new MissingOfficialAnswerKeyError(question.globalNumber);
+      }
+      return {
+        ruleType: "option_match",
+        payload: { correctOptionCodes: [correctOptionCode] },
+        maxScore: 1,
+      };
+    }
+    case "numeric": {
+      const acceptedValues = officialNumericAcceptedValuesFor(question.globalNumber);
+      if (!acceptedValues) {
+        throw new MissingOfficialAnswerKeyError(question.globalNumber);
+      }
+      return {
+        ruleType: "numeric_match",
+        payload: { acceptedValues },
+        maxScore: 1,
+      };
+    }
+    case "short-text":
+      return {
+        ruleType: "manual_ge",
+        payload: { rubric: MANUAL_GE_DEFAULT_RUBRIC },
+        maxScore: 2,
+      };
+    default:
+      return assertNever(question);
   }
-
-  if (question.kind === "numeric") {
-    const value = String(question.globalNumber * 2);
-    return {
-      ruleType: "numeric_match",
-      payload: { acceptedValues: [value, `${value}.0`] },
-      maxScore: 1,
-    };
-  }
-
-  return {
-    ruleType: "manual_ge",
-    payload: { rubric: MANUAL_GE_DEFAULT_RUBRIC },
-    maxScore: 2,
-  };
 }

@@ -56,8 +56,7 @@ export type ObjectiveRule =
   | { readonly ruleType: "manual_ge"; readonly payload: ManualGePayload };
 
 export type ObjectiveOutcome =
-  | { readonly kind: "scored"; readonly score: 0 | 1 | 2 }
-  | { readonly kind: "requires_manual" };
+  { readonly kind: "scored"; readonly score: 0 | 1 | 2 } | { readonly kind: "requires_manual" };
 
 /**
  * Split an answer into comparable units. Deliberately liberal: it strips common punctuation and
@@ -152,30 +151,62 @@ export function isGeAutoPayload(payload: unknown): payload is GeAutoPayload {
   return Array.isArray(k.score2) && Array.isArray(k.score1) && Array.isArray(k.score0);
 }
 
+function parseExcelNumber(value: string): number | null {
+  const normalized = value.trim().replace(",", ".");
+  if (!/^-?\d+(?:\.\d+)?$/.test(normalized)) {
+    return null;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+class UnexpectedObjectiveRuleError extends Error {
+  constructor() {
+    super("Jenis aturan skoring objektif tidak dikenali.");
+    this.name = "UnexpectedObjectiveRuleError";
+  }
+}
+
+function assertNever(rule: never): never {
+  void rule;
+  throw new UnexpectedObjectiveRuleError();
+}
+
 export function scoreObjective(
   rule: ObjectiveRule,
   responseValue: string | null,
 ): ObjectiveOutcome {
-  if (rule.ruleType === "manual_ge") {
-    if (!isGeAutoPayload(rule.payload)) {
-      return { kind: "requires_manual" };
+  switch (rule.ruleType) {
+    case "manual_ge":
+      if (!isGeAutoPayload(rule.payload)) {
+        return { kind: "requires_manual" };
+      }
+      if (responseValue === null) {
+        return { kind: "scored", score: 0 };
+      }
+      return { kind: "scored", score: matchGeKeywords(responseValue, rule.payload) };
+    case "option_match":
+      if (responseValue === null) {
+        return { kind: "scored", score: 0 };
+      }
+      return {
+        kind: "scored",
+        score: rule.payload.correctOptionCodes.includes(responseValue) ? 1 : 0,
+      };
+    case "numeric_match": {
+      if (responseValue === null) {
+        return { kind: "scored", score: 0 };
+      }
+      const responseNumber = parseExcelNumber(responseValue);
+      if (responseNumber === null) {
+        return { kind: "scored", score: 0 };
+      }
+      const isAccepted = rule.payload.acceptedValues.some(
+        (acceptedValue) => parseExcelNumber(acceptedValue) === responseNumber,
+      );
+      return { kind: "scored", score: isAccepted ? 1 : 0 };
     }
-    if (responseValue === null) {
-      return { kind: "scored", score: 0 };
-    }
-    return { kind: "scored", score: matchGeKeywords(responseValue, rule.payload) };
+    default:
+      return assertNever(rule);
   }
-  if (responseValue === null) {
-    return { kind: "scored", score: 0 };
-  }
-  if (rule.ruleType === "option_match") {
-    return {
-      kind: "scored",
-      score: rule.payload.correctOptionCodes.includes(responseValue) ? 1 : 0,
-    };
-  }
-  return {
-    kind: "scored",
-    score: rule.payload.acceptedValues.includes(responseValue.trim()) ? 1 : 0,
-  };
 }

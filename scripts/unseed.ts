@@ -14,9 +14,8 @@
  *   - organizations and users (HR/admin accounts)
  *   - the assessment_form_versions row, its 9 subtest_versions
  *   - the published scoring_key_versions row (empty of rules until HR adds answer keys)
- *   - norm_set_versions / norm_age_bands / norm_score_rows — they can only be replaced by script
- *     (`db:patch-ge-norms`) or psychologist reconciliation (brief §28); deleting them would make
- *     scoring unrecoverable from the UI.
+ *   - norm_set_versions / norm_age_bands / norm_score_rows — restored through `db:seed` or
+ *     `db:upgrade-scoring`; deleting them would make scoring unrecoverable from the UI.
  *   - audit_logs (append-only by design)
  *
  * IDEMPOTENT: re-running on an already-clean database deletes zero rows and succeeds.
@@ -95,8 +94,8 @@ async function main(): Promise<void> {
     }
     console.log(
       "\nLangkah berikutnya: tambahkan soal (beserta kunci jawaban) lewat menu Bank Soal dan " +
-        "tutorial lewat menu Tutorial Subtes. Rekonsiliasi norma via " +
-        "db:patch-ge-norms / psikolog sebelum skoring produksi (brief §28).",
+        "tutorial lewat menu Tutorial Subtes. Pulihkan scoring workbook melalui db:seed atau " +
+        "db:upgrade-scoring sebelum melakukan kalkulasi.",
     );
   } finally {
     // postgres-js keeps the pool open and would hang the process on exit.

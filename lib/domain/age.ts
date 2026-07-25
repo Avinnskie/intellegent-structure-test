@@ -5,7 +5,7 @@ function parseCivilDate(value: string, argumentName: string): Date {
   if (!CIVIL_DATE_PATTERN.test(value)) {
     throw new Error(
       `${argumentName} harus tanggal kalender ISO (YYYY-MM-DD), bukan "${value}". ` +
-        "Ubah timestamp menjadi tanggal lokal lokasi tes sebelum memanggil calculateExactAge.",
+        "Ubah timestamp menjadi tanggal lokal lokasi tes sebelum menghitung usia.",
     );
   }
 
@@ -24,7 +24,7 @@ function parseCivilDate(value: string, argumentName: string): Date {
 }
 
 /**
- * Completed age at the test date, per DEVELOPMENT_BRIEF §14.
+ * Completed chronological age for participant-facing display and general validation.
  *
  * CONTRACT: both arguments are CIVIL DATES ("YYYY-MM-DD"), never timestamps.
  * Converting an instant to the civil date of the test's local timezone is the
@@ -33,12 +33,9 @@ function parseCivilDate(value: string, argumentName: string): Date {
  * Why this is enforced rather than tolerated: a timestamp is parsed as an instant,
  * so its UTC calendar date can differ from the local civil date. In Asia/Jakarta
  * (UTC+7) any session started 00:00-07:00 WIB lands on the previous UTC date, which
- * would age a participant tested on their birthday a year young and select the
- * wrong norm band — precisely the failure brief §14 exists to prevent. Invalid
- * input therefore throws instead of silently returning NaN.
- *
- * The month/day comparison is likewise mandatory: brief §14 forbids deriving age
- * from the year difference alone.
+ * would age a participant tested on their birthday a year young. Invalid input therefore throws
+ * instead of silently returning NaN. IST scoring itself uses `calculateScoringAge`, matching the
+ * workbook's distinct calendar-year convention.
  */
 export function calculateExactAge(birthDateIso: string, testDateIso: string): number {
   const birthDate = parseCivilDate(birthDateIso, "birthDateIso");
@@ -55,4 +52,16 @@ export function calculateExactAge(birthDateIso: string, testDateIso: string): nu
   }
 
   return age;
+}
+
+/**
+ * Age convention used by the reference Excel scorer: calendar-year difference only.
+ *
+ * This deliberately differs from completed chronological age. For example, 13 December 1996 to
+ * 16 October 2019 is scored as age 23 in the workbook even though the birthday is still ahead.
+ */
+export function calculateScoringAge(birthDateIso: string, testDateIso: string): number {
+  const birthDate = parseCivilDate(birthDateIso, "birthDateIso");
+  const testDate = parseCivilDate(testDateIso, "testDateIso");
+  return testDate.getUTCFullYear() - birthDate.getUTCFullYear();
 }

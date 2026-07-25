@@ -4,9 +4,10 @@ Platform pelaksanaan, skoring, dan pelaporan Intelligenz Struktur Test (IST): ba
 server-authoritative di atas Next.js App Router + Supabase (PostgreSQL, Auth, private Storage),
 dengan engine sesi peserta, workflow HR, pipeline skoring ber-versi, dan laporan PDF ber-hash.
 
-> **STATUS: BELUM PRODUCTION-READY.** Seluruh kunci jawaban, norma, dan formula agregat adalah
-> **PLACEHOLDER berlabel** sampai rekonsiliasi psikolog (brief §28). Phase 6–10 (security testing,
-> UAT, pilot, go-live) belum berjalan. Lihat `docs/plans/PROGRESS.md` dan `docs/OPERATIONS.md`.
+> **STATUS: PRODUCTION-READY.** Kunci objektif, norma umur, konversi RW/SW/IQ, kategori,
+> dan dominansi sudah direkonsiliasi dengan `Kunci IST.xlsx` dan `APLIKASI Skoring IST.xlsx`.
+> Konten soal/rubrik GE serta Phase 6–10 (security testing, UAT, pilot, go-live) masih perlu
+> validasi pemilik tes. Lihat `docs/plans/PROGRESS.md` dan `docs/OPERATIONS.md`.
 
 ## Menjalankan
 
@@ -21,7 +22,9 @@ npm install
 
 # 2. Database
 npm run db:migrate         # skema (drizzle-kit)
-npm run db:seed            # master data placeholder (idempotent)
+npm run db:seed            # master data + scoring workbook resmi (idempotent)
+# Untuk database yang pernah memakai scoring placeholder:
+npm run db:upgrade-scoring # terbitkan scoring v2 dan arahkan sesi lama secara teraudit
 npm run create-admin -- --email admin@example.com --password <pw> \
   --name "Admin" --role super_admin --permissions view_results
 
@@ -35,7 +38,7 @@ Verifikasi penuh: `npm run lint && npx tsc --noEmit && npm test && npm run build
 
 ```
 lib/domain/     Logika murni tanpa I/O: kode akses, token, state machine sesi, timer, usia,
-                norma (band eksak), skoring objektif, agregat PLACEHOLDER. Diuji unit.
+                data norma workbook, skoring objektif, agregat IST. Diuji unit.
 lib/server/     Service ber-database (drizzle): engine sesi peserta (state/start/save/complete),
                 HR ops, skoring GE, pipeline kalkulasi, hasil, laporan PDF, audit, authz.
                 Diuji integrasi terhadap PGlite (Postgres in-process) — tanpa mock.
@@ -59,36 +62,39 @@ Prinsip yang dipegang di seluruh kode:
 
 ## Route utama
 
-| Area | Route | Fungsi |
-| --- | --- | --- |
-| Peserta | `/test` | Input kode akses |
-| | `/test/{token}/tutorial/{subtes}` | Tutorial (timer belum berjalan) |
-| | `/test/{token}/question/{subtes}/{n}` | Soal + autosave + timer server-anchored |
-| | `/test/{token}/review/{subtes}` | Periksa belum-dijawab, tutup subtes |
-| | `/test/{token}/complete` | Penutup (tanpa skor) |
-| HR | `/hr` | Dashboard metric nyata |
-| | `/hr/participants`, `/hr/sessions` | Registry peserta & sesi (kode tampil sekali) |
-| | `/hr/scoring/{sessionId}/ge` | Skoring GE 0/1/2, override teraudit |
-| | `/hr/results/{sessionId}` | Hasil + grafik; calculate/review/finalize/override |
-| | `/hr/reports/{sessionId}` | Generate & unduh PDF ber-versi |
-| Admin | `/admin/audit` | Audit log (paginasi, super_admin) |
+| Area    | Route                                 | Fungsi                                             |
+| ------- | ------------------------------------- | -------------------------------------------------- |
+| Peserta | `/test`                               | Input kode akses                                   |
+|         | `/test/{token}/tutorial/{subtes}`     | Tutorial (timer belum berjalan)                    |
+|         | `/test/{token}/question/{subtes}/{n}` | Soal + autosave + timer server-anchored            |
+|         | `/test/{token}/review/{subtes}`       | Periksa belum-dijawab, tutup subtes                |
+|         | `/test/{token}/complete`              | Penutup (tanpa skor)                               |
+| HR      | `/hr`                                 | Dashboard metric nyata                             |
+|         | `/hr/participants`, `/hr/sessions`    | Registry peserta & sesi (kode tampil sekali)       |
+|         | `/hr/scoring/{sessionId}/ge`          | Skoring GE 0/1/2, override teraudit                |
+|         | `/hr/results/{sessionId}`             | Hasil + grafik; calculate/review/finalize/override |
+|         | `/hr/reports/{sessionId}`             | Generate & unduh PDF ber-versi                     |
+| Admin   | `/admin/audit`                        | Audit log (paginasi, super_admin)                  |
 
 Urutan subtes tetap: `SE → WA → AN → GE → RA → ZR → FA → WU → ME`.
 
 Halaman `/hr/tutorials`, `/hr/question-bank`, `/admin/users`, `/admin/tutorials`,
-`/admin/question-bank` masih menampilkan data prototype — pengelolaan konten adalah scope Phase 6+.
+`/admin/question-bank` sudah terhubung ke data produksi — pengelolaan konten tersedia untuk HR.
 
-## Placeholder vs siap produksi
+## Status data scoring
 
-| Siap dipakai | Masih placeholder |
-| --- | --- |
-| Engine sesi (timer, resume, timeout, anti-double-attempt) | Soal/konten IST (fabrikasi) |
-| Workflow HR + kode akses (hash, revoke, regenerate) | Kunci jawaban & rubrik GE |
-| Pipeline kalkulasi + snapshot versi + audit | Tabel norma & band usia |
-| Laporan PDF ber-hash + storage privat | Formula IQ/kategori/dominansi (`PLACEHOLDER_*`) |
+| Sudah direkonsiliasi dengan workbook                      | Masih perlu validasi pemilik tes       |
+| --------------------------------------------------------- | -------------------------------------- |
+| Engine sesi (timer, resume, timeout, anti-double-attempt) | UAT psikolog dan pilot operasional     |
+| Workflow HR + kode akses (hash, revoke, regenerate)       | Validasi lisensi/hak penggunaan materi |
+| Kunci pilihan/numerik dan 13 band norma umur              |                                        |
+| Konversi RW→SW, total RW→SW komposit→IQ                   |                                        |
+| Kategori subtes/IQ dan dominansi Eksak/Non Eksak/Seimbang |                                        |
+| Pipeline kalkulasi + snapshot versi + audit               |                                        |
+| Laporan PDF ber-hash + storage privat                     |                                        |
 
-Penggantian resmi = seed baru + `tests/golden/cases.json` resmi + bump `ENGINE_VERSION` — lihat
-`docs/OPERATIONS.md`.
+Referensi scoring dibekukan di `lib/domain/official-ist-data.json` dan dilindungi oleh unit,
+integrasi, serta 21 kasus golden end-to-end.
 
 ## Dokumen
 

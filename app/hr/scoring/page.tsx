@@ -4,7 +4,6 @@ import { getDb } from "@/lib/db/client.ts";
 import { requireHrUser } from "@/lib/server/authz.ts";
 import { listSessions } from "@/lib/server/hr.ts";
 
-/** The GE scoring queue: every session waiting for a human score, org-scoped. */
 export default async function HrScoringQueuePage() {
   const db = getDb();
   const ctx = await requireHrUser(db);

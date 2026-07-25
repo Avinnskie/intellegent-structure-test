@@ -15,6 +15,8 @@ export type QuestionItem = {
   readonly placeholder: string | null;
   /** Storage path (opaque to the client); the PAGE converts it to a signed URL. */
   readonly mediaReference?: string | null;
+  /** The participant's previously saved answer, or null when unanswered. Restores the input on navigation. */
+  readonly savedValue?: string | null;
 };
 
 type QuestionStatus = "answered" | "skipped" | "pending";

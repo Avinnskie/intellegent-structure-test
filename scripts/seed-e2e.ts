@@ -1,7 +1,7 @@
 /**
  * E2E fixture seed (T34). Prepares a DEV database for `npm run test:e2e`:
  *
- * 1. Runs the placeholder seed (idempotent).
+ * 1. Runs the default workbook-backed seed (idempotent).
  * 2. Shortens SE's duration to 15 seconds so the participant-flow spec can watch a real timeout
  *    without waiting six minutes. DEV DATABASES ONLY — this mutates the shared subtest version.
  *
@@ -31,10 +31,7 @@ async function main(): Promise<void> {
     .update(subtestVersions)
     .set({ durationSeconds })
     .where(
-      and(
-        eq(subtestVersions.formVersionId, summary.formVersionId),
-        eq(subtestVersions.code, "SE"),
-      ),
+      and(eq(subtestVersions.formVersionId, summary.formVersionId), eq(subtestVersions.code, "SE")),
     )
     .returning({ id: subtestVersions.id });
 

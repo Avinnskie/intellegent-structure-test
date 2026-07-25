@@ -20,73 +20,61 @@ export const CHART_ORDER: readonly SubtestCode[] = [
   "WU",
 ];
 
-export const IQ_DIVISOR = 9;
-
-/** Mean of the nine standard scores, rounded. */
-export function iqFromTotalStandard(totalStandardScore: number): number {
-  return Math.round(totalStandardScore / IQ_DIVISOR);
+/** The workbook maps composite SW to IQ with `ROUND(1.5 * SW - 50, 0)`. */
+export function iqFromCompositeStandard(compositeStandardScore: number): number {
+  return Math.round(compositeStandardScore * 1.5 - 50);
 }
 
-export const IQ_CATEGORY_BOUNDS = {
-  average: 90,
-  aboveAverage: 110,
-  superior: 120,
-} as const;
+export type SubtestCategory =
+  "Sangat Rendah" | "Rendah" | "Sedang" | "Cukup" | "Tinggi" | "Sangat Tinggi";
 
-export type ScoreCategory =
-  | "Di bawah rata-rata"
-  | "Rata-rata"
-  | "Di atas rata-rata"
-  | "Superior";
-
-/** Banding on a standard score. Boundaries are inclusive-lower, tested at each edge. */
-export function categoryForStandardScore(standardScore: number): ScoreCategory {
-  if (standardScore < IQ_CATEGORY_BOUNDS.average) {
-    return "Di bawah rata-rata";
-  }
-  if (standardScore < IQ_CATEGORY_BOUNDS.aboveAverage) {
-    return "Rata-rata";
-  }
-  if (standardScore < IQ_CATEGORY_BOUNDS.superior) {
-    return "Di atas rata-rata";
-  }
-  return "Superior";
+export function categoryForSubtestStandardScore(standardScore: number): SubtestCategory {
+  if (standardScore <= 80) return "Sangat Rendah";
+  if (standardScore <= 94) return "Rendah";
+  if (standardScore <= 99) return "Sedang";
+  if (standardScore <= 104) return "Cukup";
+  if (standardScore <= 118) return "Tinggi";
+  return "Sangat Tinggi";
 }
 
-export const DOMINANCE_GROUPS = {
-  verbal: ["SE", "WA", "AN", "GE", "ME"],
-  numerik: ["RA", "ZR"],
-  figural: ["FA", "WU"],
-} as const satisfies Record<string, readonly SubtestCode[]>;
+export type IqCategory =
+  | "Mentally Defective"
+  | "Borderline Defective"
+  | "Low Average"
+  | "Average"
+  | "High Average"
+  | "Superior"
+  | "Very Superior"
+  | "Genius";
 
-export type Dominance = keyof typeof DOMINANCE_GROUPS;
+export function categoryForIq(iqScore: number): IqCategory {
+  if (iqScore <= 65) return "Mentally Defective";
+  if (iqScore <= 79) return "Borderline Defective";
+  if (iqScore <= 90) return "Low Average";
+  if (iqScore <= 110) return "Average";
+  if (iqScore <= 119) return "High Average";
+  if (iqScore <= 127) return "Superior";
+  if (iqScore <= 139) return "Very Superior";
+  return "Genius";
+}
+
+export type Dominance = "Seimbang" | "Eksak" | "Non Eksak";
 
 export type DominanceProfile = {
-  dominance: Dominance;
-  groupMeans: Record<Dominance, number>;
+  readonly dominance: Dominance;
+  readonly exactScore: number;
+  readonly nonExactScore: number;
+  readonly difference: number;
 };
 
 /**
- * The group with the highest mean standard score wins; a tie goes to the FIRST group in
- * verbal → numerik → figural order (documented, deterministic — never dependent on object key
- * enumeration).
+ * Excel compares GE+RA ("exact") against AN+ZR ("non-exact"). A gap up to ten points is balanced.
  */
 export function dominanceProfile(scores: Readonly<Record<SubtestCode, number>>): DominanceProfile {
-  const order: readonly Dominance[] = ["verbal", "numerik", "figural"];
-
-  const groupMeans = {} as Record<Dominance, number>;
-  for (const group of order) {
-    const codes = DOMINANCE_GROUPS[group];
-    const total = codes.reduce((sum, code) => sum + scores[code], 0);
-    groupMeans[group] = total / codes.length;
-  }
-
-  let dominance: Dominance = "verbal";
-  for (const group of order) {
-    if (groupMeans[group] > groupMeans[dominance]) {
-      dominance = group;
-    }
-  }
-
-  return { dominance, groupMeans };
+  const exactScore = scores.GE + scores.RA;
+  const nonExactScore = scores.AN + scores.ZR;
+  const difference = Math.abs(exactScore - nonExactScore);
+  const dominance =
+    difference <= 10 ? "Seimbang" : exactScore > nonExactScore ? "Eksak" : "Non Eksak";
+  return { dominance, exactScore, nonExactScore, difference };
 }

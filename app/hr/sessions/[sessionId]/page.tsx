@@ -13,7 +13,6 @@ function formatDateTime(value: string | null): string {
   return value ? new Date(value).toLocaleString("id-ID") : "—";
 }
 
-/** Real session detail: candidate, code state + controls, and per-subtest progress. */
 export default async function HrSessionDetailPage({
   params,
 }: {

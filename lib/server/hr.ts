@@ -13,7 +13,7 @@
  *    key, norm set, and per-subtest tutorial versions the moment it is created; later publishes
  *    change nothing for sessions already issued.
  */
-import { and, desc, eq, ilike, inArray, isNull } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "../api/errors.ts";
 import { getServerConfig } from "../config.ts";
@@ -23,6 +23,7 @@ import {
   assessmentFormVersions,
   assessmentSessions,
   candidates,
+  itemVersions,
   normSetVersions,
   participantTokens,
   responses,
@@ -1019,11 +1020,27 @@ export async function getSessionDetail(
       sequence: subtestVersions.sequence,
       title: subtestVersions.title,
       durationSeconds: subtestVersions.durationSeconds,
-      itemCount: subtestVersions.itemCount,
     })
     .from(subtestVersions)
     .where(eq(subtestVersions.formVersionId, row.formVersionId))
     .orderBy(subtestVersions.sequence);
+
+  const itemCountRows = await db
+    .select({
+      subtestVersionId: itemVersions.subtestVersionId,
+      itemCount: count(),
+    })
+    .from(itemVersions)
+    .where(
+      inArray(
+        itemVersions.subtestVersionId,
+        subtestRows.map((subtest) => subtest.id),
+      ),
+    )
+    .groupBy(itemVersions.subtestVersionId);
+  const itemCountBySubtest = new Map(
+    itemCountRows.map((itemCount) => [itemCount.subtestVersionId, itemCount.itemCount]),
+  );
 
   const attemptRows = await db
     .select({
@@ -1099,7 +1116,7 @@ export async function getSessionDetail(
         sequence: subtest.sequence,
         title: subtest.title,
         durationSeconds: subtest.durationSeconds,
-        itemCount: subtest.itemCount,
+        itemCount: itemCountBySubtest.get(subtest.id) ?? 0,
         attempt: attempt
           ? {
               status: attempt.status,

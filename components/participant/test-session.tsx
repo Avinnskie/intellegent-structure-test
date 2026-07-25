@@ -74,14 +74,14 @@ export function TestSession({
     setLocalStatuses(initialStatuses);
   }
 
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(currentItem.savedValue ?? "");
   // Locks every input the moment an answer/skip is in flight, so the gap between the click and the
   // next page rendering cannot swallow (or double-send) a second interaction.
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [draftItemId, setDraftItemId] = useState(currentItem.itemVersionId);
   if (draftItemId !== currentItem.itemVersionId) {
     setDraftItemId(currentItem.itemVersionId);
-    setDraft("");
+    setDraft(currentItem.savedValue ?? "");
     // A new item has rendered — the navigation that locked the panel has completed.
     setIsAdvancing(false);
   }
