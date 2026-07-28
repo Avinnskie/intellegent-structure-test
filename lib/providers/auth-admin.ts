@@ -1,16 +1,7 @@
-/**
- * Admin surface of the auth provider (T-users): create accounts and set passwords.
- *
- * Uses SUPABASE_SECRET_KEY, which bypasses RLS — so this module is imported ONLY by the
- * super_admin-gated user service, never by anything on a participant or plain-HR path. The
- * interface exists so integration tests exercise the real service logic with an in-memory auth
- * instead of mocking the service.
- */
 import { createClient } from "@supabase/supabase-js";
 import { getServerConfig } from "../config.ts";
 
 export type AuthAdminProvider = {
-  /** Creates a confirmed auth user and returns its id. Throws if the email already exists. */
   createUser(email: string, password: string): Promise<string>;
   setPassword(userId: string, password: string): Promise<void>;
 };
@@ -32,13 +23,9 @@ export function createSupabaseAuthAdminProvider(): AuthAdminProvider {
       const { data, error } = await client.auth.admin.createUser({
         email,
         password,
-        // No mail server is wired up, and the account is provisioned by an operator who owns the
-        // address; unconfirmed would just block the login being created.
         email_confirm: true,
       });
       if (error || !data.user) {
-        // Supabase reports duplicates with a 422/email_exists; normalize so the service can turn
-        // it into a friendly 409 without depending on Supabase's message strings elsewhere.
         const isDuplicate =
           error?.code === "email_exists" || /already.*register|exist/i.test(error?.message ?? "");
         throw new Error(
@@ -61,7 +48,6 @@ export function createSupabaseAuthAdminProvider(): AuthAdminProvider {
   };
 }
 
-/** In-memory provider for tests: same contract, no network. */
 export function createMemoryAuthAdminProvider(): AuthAdminProvider & {
   accounts: Map<string, { email: string; password: string }>;
 } {

@@ -15,14 +15,9 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/**
- * Retires the old code (`regenerated`, kept as linked history) and mints a fresh one. The response
- * carries the new PLAINTEXT code — the only time it exists outside the hash — so no-store.
- */
 export const POST = withApiHandler(
   async (request: Request, ctx: RouteContext<"/api/hr/sessions/[id]/access-code/regenerate">) => {
     assertSameOrigin(request);
-    // Next 16: `ctx.params` is a Promise.
     const { id } = await ctx.params;
     const auth = await requireHrUser(getDb());
     const body = await parseBody(request);

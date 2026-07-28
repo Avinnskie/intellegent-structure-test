@@ -2,10 +2,6 @@ import { CourseRail } from "@/components/participant/course-rail";
 import { StartSubtestButton } from "@/components/participant/start-subtest-button";
 import type { SubtestCode } from "@/lib/ist-subtests";
 
-/**
- * Shapes mirror `SessionStateDto.currentSubtest`/`.tutorial` (T12). Declared here rather than
- * imported so this stays a pure presentational component — the server page owns the service import.
- */
 type TutorialScreenProps = {
   readonly token: string;
   readonly subtest: {
@@ -18,11 +14,9 @@ type TutorialScreenProps = {
     readonly textContent: string;
     readonly videoReference: string | null;
   };
-  /** Signed playback URL for the tutorial video, minted by the server page; null = no video. */
   readonly videoUrl?: string | null;
 };
 
-// Referenced by the duration card that is currently commented out below — kept for its return.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function formatDurationSeconds(durationSeconds: number): string {
   const minutes = Math.floor(durationSeconds / 60);
@@ -33,11 +27,6 @@ function formatDurationSeconds(durationSeconds: number): string {
   return seconds === 0 ? `${minutes} menit` : `${minutes} menit ${seconds} detik`;
 }
 
-/**
- * Server-rendered tutorial for the subtest the session is actually on. All content is the pinned
- * tutorial version resolved by `getSessionState`; nothing here reads demo data or client stores,
- * and the timer badge is honest — no attempt exists until the start button POSTs.
- */
 export function TutorialScreen({ token, subtest, tutorial, videoUrl = null }: TutorialScreenProps) {
   return (
     <section className="w-full grid gap-6 lg:grid-cols-[280px_1fr]">
@@ -57,20 +46,7 @@ export function TutorialScreen({ token, subtest, tutorial, videoUrl = null }: Tu
                   {subtest.title}
                 </h2>
               </div>
-              {/* <dl className="mt-6 gap-4">
-                <div className="rounded-xl bg-[var(--surface-base)] p-4">
-                  <dt className="text-sm text-[var(--text-muted)]">Jumlah soal</dt>
-                  <dd className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
-                    {subtest.itemCount}
-                  </dd>
-                </div>
-                <div className="rounded-xl bg-[var(--surface-base)] p-4">
-                  <dt className="text-sm text-[var(--text-muted)]">Durasi</dt>
-                  <dd className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
-                    {formatDurationSeconds(subtest.durationSeconds)}
-                  </dd>
-                </div>
-              </dl> */}
+              { }
             </div>
             <p className="mt-3 whitespace-pre-line text-base leading-7 text-[var(--text-secondary)]">
               {tutorial.textContent}
@@ -78,8 +54,7 @@ export function TutorialScreen({ token, subtest, tutorial, videoUrl = null }: Tu
 
             {videoUrl ? (
               <div className="mt-6 overflow-hidden rounded-xl border border-[var(--border-default)]">
-                {/* Video vs gambar diputuskan dari ekstensi PATH tersimpan (URL bertanda tangan
-                    membawa query, jadi jangan menebak dari URL-nya). */}
+                { }
                 {/\.(png|jpe?g|webp)$/i.test(tutorial.videoReference ?? "") ? (
                   // eslint-disable-next-line @next/next/no-img-element -- signed URL, next/image cannot optimize it
                   <img

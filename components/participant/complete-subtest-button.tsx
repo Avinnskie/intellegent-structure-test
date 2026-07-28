@@ -8,15 +8,6 @@ type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
 const NETWORK_ERROR_MESSAGE = "Tidak dapat menghubungi server. Periksa koneksi lalu coba lagi.";
 
-/**
- * "Selesaikan subtes" — the irreversible hand-in (spec §10: no way back afterwards).
- *
- * On success it follows the DTO: mid-test goes to the transition screen; after ME (`finished`) it
- * lands straight on the closing page — closing ME already calculated the result server-side, so
- * there is no acknowledgement left to send. A 409/410 — double press, timeout racing the click,
- * another tab got there first — is not an error to show: the session HAS moved, so the button
- * refreshes and lets the server page route wherever it now belongs.
- */
 export function CompleteSubtestButton({
   token,
   code,

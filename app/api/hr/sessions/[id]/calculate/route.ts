@@ -19,16 +19,9 @@ async function parseBody(request: Request): Promise<{ overrideReason?: string }>
   }
 }
 
-/**
- * Runs the calculation pipeline (spec §14). A rerun on non-final data produces a new result row
- * with identical numbers and supersedes the previous one. When the latest result is FINAL, the
- * call must carry `{ overrideReason }` — that routes through the audited override (T29) instead
- * of being refused; without the reason it stays a `RESULT_FINAL` 409.
- */
 export const POST = withApiHandler(
   async (request: Request, ctx: RouteContext<"/api/hr/sessions/[id]/calculate">) => {
     assertSameOrigin(request);
-    // Next 16: `ctx.params` is a Promise.
     const { id } = await ctx.params;
     const auth = await requireHrUser(getDb());
     const body = await parseBody(request);

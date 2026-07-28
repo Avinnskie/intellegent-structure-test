@@ -16,13 +16,6 @@ const REQUIRED_ENV = {
 
 const CONFIG_KEYS = [...Object.keys(REQUIRED_ENV), "ERROR_MONITORING_DSN"];
 
-/**
- * Swaps the environment for one sync test, then restores it.
- *
- * `getServerConfig` memoizes, so the cache is dropped on BOTH sides: before `run` so this test's env
- * is the one that gets parsed rather than a neighbour's leftover, and after it so the memo cannot
- * outlive the environment it was built from and leak into the next test.
- */
 function withEnv(overrides: Record<string, string | undefined>, run: () => void): void {
   const saved = CONFIG_KEYS.map((key) => [key, process.env[key]] as const);
   for (const key of CONFIG_KEYS) {
@@ -138,8 +131,6 @@ test("getServerConfig error message starts with the Indonesian config prefix", (
 
 test("getServerConfig memoizes: repeated calls return the identical object", () => {
   withEnv(REQUIRED_ENV, () => {
-    // Identity, not equality: every participant request reads the session-token secret through this,
-    // and re-parsing ~12 vars through zod + superRefine each time is pure waste.
     assert.equal(getServerConfig(), getServerConfig());
   });
 });
@@ -149,8 +140,6 @@ test("getServerConfig re-parses after the cache is reset, picking up a changed e
     assert.equal(getServerConfig().SUPABASE_MEDIA_BUCKET, "ist-media");
   });
   withEnv({ ...REQUIRED_ENV, SUPABASE_MEDIA_BUCKET: "ist-media-lain" }, () => {
-    // Would still read "ist-media" if the memo survived `withEnv`'s reset — which is exactly how a
-    // memo leaks one test's environment into the next.
     assert.equal(getServerConfig().SUPABASE_MEDIA_BUCKET, "ist-media-lain");
   });
 });
@@ -158,28 +147,24 @@ test("getServerConfig re-parses after the cache is reset, picking up a changed e
 test("getServerConfig does not cache a failure: a fixed env parses on the next call", () => {
   withEnv({ ...REQUIRED_ENV, DATABASE_URL: undefined }, () => {
     assert.throws(() => getServerConfig());
-    // Same cache, no reset: a cached throw would strand a process that booted before its env landed.
     process.env.DATABASE_URL = REQUIRED_ENV.DATABASE_URL;
     assert.equal(getServerConfig().DATABASE_URL, REQUIRED_ENV.DATABASE_URL);
   });
 });
 
 test("getServerConfig names every missing var, comma-joined", () => {
-  withEnv(
-    { ...REQUIRED_ENV, DATABASE_URL: undefined, SUPABASE_SECRET_KEY: undefined },
-    () => {
-      assert.throws(
-        () => getServerConfig(),
-        (error: unknown) => {
-          assert.ok(error instanceof Error);
-          const paths = error.message
-            .slice("Konfigurasi environment tidak lengkap/invalid: ".length)
-            .split(", ");
-          assert.ok(paths.includes("DATABASE_URL"));
-          assert.ok(paths.includes("SUPABASE_SECRET_KEY"));
-          return true;
-        },
-      );
-    },
-  );
+  withEnv({ ...REQUIRED_ENV, DATABASE_URL: undefined, SUPABASE_SECRET_KEY: undefined }, () => {
+    assert.throws(
+      () => getServerConfig(),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const paths = error.message
+          .slice("Konfigurasi environment tidak lengkap/invalid: ".length)
+          .split(", ");
+        assert.ok(paths.includes("DATABASE_URL"));
+        assert.ok(paths.includes("SUPABASE_SECRET_KEY"));
+        return true;
+      },
+    );
+  });
 });

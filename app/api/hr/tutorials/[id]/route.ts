@@ -11,11 +11,9 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/** Edits a DRAFT's content. Published versions refuse — they may be pinned by sessions. */
 export const PUT = withApiHandler(
   async (request: Request, ctx: RouteContext<"/api/hr/tutorials/[id]">) => {
     assertSameOrigin(request);
-    // Next 16: `ctx.params` is a Promise.
     const { id } = await ctx.params;
     const auth = await requireHrUser(getDb());
     const body = await parseBody(request);

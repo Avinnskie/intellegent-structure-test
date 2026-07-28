@@ -71,12 +71,6 @@ export const resultStatus = pgEnum("result_status", [
   "superseded",
 ]);
 export const actorType = pgEnum("actor_type", ["user", "participant", "system"]);
-/**
- * Re-entry policy of a session's access code (HR-configurable at session creation):
- * - `single`: one redemption per code — a closed tab means asking HR to regenerate.
- * - `multi`:  the same code re-admits the participant while the test is still live.
- * Either way, a session that finished testing never re-admits (its code turns `completed`).
- */
 export const reentryPolicy = pgEnum("reentry_policy", ["single", "multi"]);
 
 export const organizations = pgTable("organizations", {
@@ -87,7 +81,7 @@ export const organizations = pgTable("organizations", {
 });
 
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey(), // = Supabase auth user id
+  id: uuid("id").primaryKey(),
   organizationId: uuid("organization_id")
     .notNull()
     .references(() => organizations.id),
@@ -144,7 +138,7 @@ export const subtestVersions = pgTable(
     formVersionId: uuid("form_version_id")
       .notNull()
       .references(() => assessmentFormVersions.id),
-    code: text("code").notNull(), // SE..ME — fixed order enforced in domain layer
+    code: text("code").notNull(),
     sequence: integer("sequence").notNull(),
     title: text("title").notNull(),
     durationSeconds: integer("duration_seconds").notNull(),
@@ -160,7 +154,7 @@ export const itemVersions = pgTable(
     subtestVersionId: uuid("subtest_version_id")
       .notNull()
       .references(() => subtestVersions.id),
-    itemNumber: integer("item_number").notNull(), // global 1..176
+    itemNumber: integer("item_number").notNull(),
     itemType: itemType("item_type").notNull(),
     prompt: text("prompt").notNull(),
     mediaReference: text("media_reference"),
@@ -199,7 +193,6 @@ export const tutorialVersions = pgTable(
     effectiveDate: date("effective_date"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  // Identity guarantee for pinned tutorial versions: one row per (subtest, version).
   (t) => [uniqueIndex("tutorial_subtest_version_ux").on(t.subtestVersionId, t.version)],
 );
 
@@ -217,7 +210,6 @@ export const scoringKeyVersions = pgTable(
     checksum: text("checksum"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  // Identity guarantee for pinned scoring key versions: one row per (form, version).
   (t) => [uniqueIndex("scoring_key_version_ux").on(t.formVersionId, t.version)],
 );
 
@@ -232,7 +224,7 @@ export const itemScoringRules = pgTable(
       .notNull()
       .references(() => itemVersions.id),
     ruleType: ruleType("rule_type").notNull(),
-    rulePayload: jsonb("rule_payload").notNull(), // server-only; never serialized to participants
+    rulePayload: jsonb("rule_payload").notNull(),
     maxScore: integer("max_score").notNull(),
   },
   (t) => [uniqueIndex("rule_key_item_ux").on(t.scoringKeyVersionId, t.itemVersionId)],
@@ -253,7 +245,6 @@ export const normSetVersions = pgTable(
     checksum: text("checksum"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  // Identity guarantee for pinned norm set versions: one row per (form, version).
   (t) => [uniqueIndex("norm_set_version_ux").on(t.formVersionId, t.version)],
 );
 
@@ -268,7 +259,6 @@ export const normAgeBands = pgTable(
     minAge: integer("min_age").notNull(),
     maxAge: integer("max_age").notNull(),
   },
-  // An inverted band would silently misgrade candidates — reject it at the database.
   () => [check("norm_band_age_range_ck", sql`min_age <= max_age`)],
 );
 
@@ -305,7 +295,7 @@ export const assessmentSessions = pgTable(
     normSetVersionId: uuid("norm_set_version_id")
       .notNull()
       .references(() => normSetVersions.id),
-    pinnedTutorialVersions: jsonb("pinned_tutorial_versions").notNull(), // { SE: uuid, ... }
+    pinnedTutorialVersions: jsonb("pinned_tutorial_versions").notNull(),
     reentryPolicy: reentryPolicy("reentry_policy").notNull().default("single"),
     status: sessionStatus("status").notNull().default("code_generated"),
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
@@ -319,7 +309,6 @@ export const assessmentSessions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    // Composite serves the HR dashboard query (sessions of one org filtered by status).
     index("session_org_status_ix").on(t.organizationId, t.status),
     index("session_candidate_ix").on(t.candidateId),
   ],
@@ -333,7 +322,7 @@ export const accessCodes = pgTable(
       .notNull()
       .references(() => assessmentSessions.id),
     codeHash: text("code_hash").notNull().unique(),
-    codeMasked: text("code_masked").notNull(), // e.g. IST-7K••••2D — safe for HR list UI
+    codeMasked: text("code_masked").notNull(),
     status: accessCodeStatus("status").notNull().default("active"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     failedAttempts: integer("failed_attempts").notNull().default(0),
@@ -381,10 +370,6 @@ export const subtestAttempts = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true }),
     completionReason: completionReason("completion_reason"),
   },
-  // One attempt ever per (session, subtest) is intentional, not an oversight:
-  // spec §11 allows "hanya satu active attempt per subtes per sesi", and a retest is always a
-  // NEW session (brief §4.1) — never a reset of an existing attempt. The index doubles as the
-  // race safety net that keeps resume idempotent under concurrent requests.
   (t) => [uniqueIndex("attempt_session_subtest_ux").on(t.sessionId, t.subtestCode)],
 );
 
@@ -425,7 +410,7 @@ export const itemScores = pgTable(
       .references(() => responses.id),
     score: integer("score").notNull(),
     scoringRuleId: uuid("scoring_rule_id").references(() => itemScoringRules.id),
-    scoredBy: uuid("scored_by").references(() => users.id), // null = automatic objective scoring
+    scoredBy: uuid("scored_by").references(() => users.id),
     scoredAt: timestamp("scored_at", { withTimezone: true }).notNull().defaultNow(),
     overrideReason: text("override_reason"),
   },
@@ -512,7 +497,7 @@ export const auditLogs = pgTable(
     id: bigserial("id", { mode: "number" }).primaryKey(),
     organizationId: uuid("organization_id").references(() => organizations.id),
     actorType: actorType("actor_type").notNull(),
-    actorId: text("actor_id"), // user uuid, participant session uuid, or "system"
+    actorId: text("actor_id"),
     action: text("action").notNull(),
     objectType: text("object_type").notNull(),
     objectId: text("object_id"),

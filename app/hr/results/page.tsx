@@ -6,7 +6,6 @@ import type { SessionStatus } from "@/lib/domain/session-state.ts";
 import { requireHrUser } from "@/lib/server/authz.ts";
 import { listSessions } from "@/lib/server/hr.ts";
 
-/** Sessions that have finished testing — the population "Hasil & laporan" is about. */
 const RESULT_STATUSES: ReadonlySet<SessionStatus> = new Set([
   "test_completed",
   "needs_ge_scoring",
@@ -16,7 +15,6 @@ const RESULT_STATUSES: ReadonlySet<SessionStatus> = new Set([
   "needs_review",
 ]);
 
-/** The results workspace: every post-test session with links to its result and report pages. */
 export default async function HrResultsListPage() {
   const db = getDb();
   const ctx = await requireHrUser(db);

@@ -1,9 +1,5 @@
 import type { SessionStatus } from "@/lib/domain/session-state.ts";
 
-/**
- * HR-facing labels for the FULL internal status vocabulary. HR is the audience that IS allowed to
- * see scoring states (unlike participants — spec §13); the labels only translate, never hide.
- */
 export const SESSION_STATUS_LABELS: Readonly<Record<SessionStatus, string>> = {
   code_generated: "Kode dibuat",
   code_validated: "Kode divalidasi",

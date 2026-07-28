@@ -18,13 +18,6 @@ type ResultActionsProps = {
 
 type PendingAction = "review" | "finalize" | "override" | null;
 
-/**
- * The result lifecycle buttons: calculate, review (notes required), finalize (confirmed), and the
- * audited override over a final result (reason required). Confirmations and required inputs run
- * through the in-app dialog — required reasons are ENFORCED by the disabled confirm button, which
- * window.prompt could never do; outcomes surface as toasts. Every action ends in
- * `router.refresh()` so the UI can never show a state the database does not hold.
- */
 export function ResultActions({
   sessionId,
   resultId,
@@ -36,7 +29,6 @@ export function ResultActions({
   const [isBusy, setIsBusy] = useState(false);
   const [pending, setPending] = useState<PendingAction>(null);
 
-  /** Success toasts belong to the CALLER, and only on a true return — an error already toasted. */
   async function post(path: string, body?: unknown): Promise<boolean> {
     setIsBusy(true);
     try {

@@ -1,9 +1,3 @@
-/**
- * Local-device media uploads for content (tutorial videos, question images), stored in the
- * PRIVATE media bucket. Nothing here is ever public: every read goes through a short-lived signed
- * URL minted server-side for an authorized surface (portal preview, or the participant pages
- * that legitimately render the content).
- */
 import { z } from "zod";
 import { ApiError } from "../api/errors.ts";
 import { getServerConfig } from "../config.ts";
@@ -15,7 +9,6 @@ import { writeAudit } from "./audit.ts";
 export const MEDIA_KINDS = {
   "tutorial-video": {
     maxBytes: 100 * 1024 * 1024,
-    // MIME allow-list, matched exactly — the content type is what the signed URL will serve back.
     mimeToExt: { "video/mp4": "mp4", "video/webm": "webm" } as Record<string, string>,
     label: "video tutorial",
   },
@@ -44,7 +37,6 @@ export type MediaKind = keyof typeof MEDIA_KINDS;
 export const mediaKindSchema = z.enum(["tutorial-video", "tutorial-image", "item-image"]);
 
 const MEDIA_PREFIX = "media/";
-/** Long enough for the longest subtest sitting; short enough that a leaked URL goes stale. */
 const PARTICIPANT_URL_TTL_SECONDS = 2 * 60 * 60;
 const PREVIEW_URL_TTL_SECONDS = 300;
 
@@ -74,8 +66,6 @@ export async function uploadMedia(
     );
   }
 
-  // Server-generated name: the client's filename never reaches the bucket (no traversal, no
-  // collisions, nothing to sanitize).
   const path = `${MEDIA_PREFIX}${kind}/${crypto.randomUUID()}.${ext}`;
   const bytes = new Uint8Array(await file.arrayBuffer());
   await storage.upload(getServerConfig().SUPABASE_MEDIA_BUCKET, path, bytes, file.type);
@@ -93,11 +83,6 @@ export async function uploadMedia(
   return { path, kind, bytes: file.size };
 }
 
-/**
- * Signed URL for a stored media path. The `media/` prefix check is the authorization boundary on
- * the PATH: this helper can never be talked into signing a report or anything else in the bucket
- * namespace, whoever calls it.
- */
 export async function signMediaUrl(
   storage: StorageProvider,
   path: string,
@@ -113,10 +98,6 @@ export async function signMediaUrl(
   );
 }
 
-/**
- * Fail-soft variant for participant pages: a missing file or a storage hiccup must degrade to
- * "no media shown", never to a broken test page.
- */
 export async function signMediaUrlOrNull(
   storage: StorageProvider,
   path: string | null,

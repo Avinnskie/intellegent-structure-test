@@ -1,10 +1,5 @@
 import Link from "next/link";
 
-/**
- * The fail-closed landing for a session that cannot continue — cancelled, expired, invalidated, or
- * a broken row. Deliberately says nothing about WHICH: the distinction is HR's information, and a
- * participant holding a revoked token learns only that the session is unavailable (spec §13/§19).
- */
 export default function UnavailablePage() {
   return (
     <section className="flex min-h-dvh items-center justify-center px-4 py-10">

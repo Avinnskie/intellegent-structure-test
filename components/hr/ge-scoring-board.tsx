@@ -16,11 +16,6 @@ type GeScoringBoardProps = {
   readonly isSessionScorable: boolean;
 };
 
-/**
- * The GE rubric board on real data. Answered items get 0/1/2 buttons; unanswered items are shown
- * but not scorable — their absence is auto-scored 0 by the calculation pipeline. Changing a score
- * that already exists demands an override reason (audited server-side).
- */
 export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScoringBoardProps) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});

@@ -1,14 +1,3 @@
-/**
- * Seeds the versioned master data. See `lib/server/seed-core.ts` for what is written.
- *
- * Run with:
- *   npm run db:seed
- *
- * IDEMPOTENT: a re-run finds `form_code='IST-DEFAULT'` already present and writes nothing —
- * it does not duplicate, converge, or crash. To reseed, delete the existing form version and its
- * dependents first; this script will not do that for you, because on a live database those rows
- * are referenced by sessions and results.
- */
 import { getDb } from "../lib/db/client.ts";
 import { resolveSeedOrganizationName, runSeed, SEED_FORM_CODE } from "../lib/server/seed-core.ts";
 import { logInfo } from "../lib/server/logger.ts";
@@ -50,7 +39,6 @@ async function main(): Promise<void> {
         `  norm_score_rows   : ${counts.normScoreRows}`,
     );
   } finally {
-    // postgres-js keeps the pool open and would hang the process on exit.
     await db.$client.end();
   }
 }

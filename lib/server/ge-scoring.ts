@@ -1,16 +1,3 @@
-/**
- * GE manual scoring (T25, spec §14): the one subtest a human scores, on a 0/1/2 rubric.
- *
- * Ground rules:
- * - Only sessions in `needs_ge_scoring` accept scores — before that the participant may still be
- *   writing; after `calculated` the numbers are already derived from these scores.
- * - A response may be scored once freely; CHANGING a recorded score requires an override reason
- *   and writes an `ge.overridden` audit row. A psychological score that silently changed is
- *   exactly what the audit trail exists to prevent.
- * - Unanswered GE items have NO response row and cannot be hand-scored; the calculation pipeline
- *   (T27) scores their absence 0 automatically. Completeness therefore means: every GE response
- *   THAT EXISTS carries a score.
- */
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "../api/errors.ts";
@@ -44,7 +31,6 @@ export type GeItemDto = {
   itemVersionId: string;
   localNumber: number;
   prompt: string;
-  /** The participant's ORIGINAL text, verbatim (spec §12: preserved as typed). Null = unanswered. */
   responseValue: string | null;
   responseStatus: string | null;
   score: number | null;
@@ -57,7 +43,6 @@ export type GeListDto = {
   candidateAnswered: number;
   totalItems: number;
   scored: number;
-  /** True when every EXISTING GE response has a score — the gate T27 checks before calculating. */
   isComplete: boolean;
   items: readonly GeItemDto[];
 };
@@ -72,7 +57,6 @@ type GeRow = {
   rubricPayload: unknown;
 };
 
-/** Org-scoped session read; the GE deck of its pinned form version. */
 async function loadGeRows(
   db: DbLike,
   ctx: AuthContext,
@@ -223,8 +207,6 @@ export async function saveGeScores(
       throw new ApiError("SESSION_NOT_ACTIVE", WRONG_STATUS_MESSAGE, 409);
     }
 
-    // Every submitted responseId must be a GE response OF THIS SESSION — anything else (another
-    // session's response, another subtest's, a fabricated uuid) is refused wholesale.
     const validResponseIds = new Set(
       rows.map((row) => row.responseId).filter((id): id is string => id !== null),
     );
@@ -271,11 +253,9 @@ export async function saveGeScores(
       }
 
       if (current.score === entry.score) {
-        // Same value re-submitted (a save-all button does this) — not an override, nothing to do.
         continue;
       }
 
-      // CHANGING a recorded score is the guarded path: reason required, audit written.
       if (!entry.overrideReason) {
         throw new ApiError("OVERRIDE_REASON_REQUIRED", OVERRIDE_REASON_MESSAGE, 422);
       }
@@ -324,7 +304,6 @@ export async function saveGeScores(
   });
 }
 
-/** The gate T27 checks: every EXISTING GE response is scored (absence is auto-0 at calculate). */
 export async function isGeComplete(
   db: DbLike,
   ctx: AuthContext,

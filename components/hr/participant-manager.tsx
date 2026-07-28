@@ -21,7 +21,6 @@ type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
 const NETWORK_ERROR_MESSAGE = "Tidak dapat menghubungi server. Coba lagi.";
 const TEST_PURPOSES = ["Rekrutmen", "Pemetaan internal", "Pengembangan"];
-/** Radix Select cannot carry an empty-string item value; this sentinel maps to "not set". */
 const NONE = "__none__";
 
 export type CandidateRow = {
@@ -35,7 +34,6 @@ export type CandidateRow = {
 };
 
 type Draft = {
-  /** null = creating. */
   id: string | null;
   fullName: string;
   birthDate: string;
@@ -53,10 +51,6 @@ const EMPTY_DRAFT: Draft = {
   education: "",
 };
 
-/**
- * Candidate CRUD in shadcn modals. Create/edit share one form; delete is confirmed and the server
- * refuses candidates that already have sessions (history never vanishes).
- */
 export function ParticipantManager({ candidates }: { candidates: readonly CandidateRow[] }) {
   const today = new Date().toISOString().slice(0, 10);
   const router = useRouter();

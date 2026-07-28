@@ -4,7 +4,6 @@ import { getDb } from "@/lib/db/client.ts";
 import { requireHrUser } from "@/lib/server/authz.ts";
 import { listTutorials } from "@/lib/server/content.ts";
 
-/** Real tutorial versioning: draft → publish (previous archived); published rows are immutable. */
 export default async function HrTutorialsPage() {
   const db = getDb();
   await requireHrUser(db);

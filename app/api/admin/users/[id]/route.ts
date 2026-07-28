@@ -12,14 +12,9 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/**
- * Updates name/role/permissions/status, optionally resetting the password. Super_admin only;
- * self-deactivation and self-demotion are refused in the service (lockout guards).
- */
 export const PUT = withApiHandler(
   async (request: Request, ctx: RouteContext<"/api/admin/users/[id]">) => {
     assertSameOrigin(request);
-    // Next 16: `ctx.params` is a Promise.
     const { id } = await ctx.params;
     const auth = await requireHrUser(getDb());
     const body = await parseBody(request);

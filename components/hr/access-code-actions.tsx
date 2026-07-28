@@ -13,11 +13,6 @@ type RegeneratedCode = { accessCode: string; accessCodeExpiresAt: string };
 
 type PendingAction = "revoke" | "regenerate" | null;
 
-/**
- * Revoke / regenerate controls on the session detail page. Confirmation runs through the in-app
- * dialog (revoke carries the optional audited reason field); outcomes surface as toasts. A
- * regenerated code appears ONCE in the panel below the buttons, exactly like the creation screen.
- */
 export function AccessCodeActions({
   sessionId,
   codeStatus,

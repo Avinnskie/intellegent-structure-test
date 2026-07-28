@@ -11,10 +11,6 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/**
- * Bulk import: candidate + session + access code per row, all-or-nothing. The response is the ONE
- * moment every plaintext code in the batch exists — never cached, never logged.
- */
 export const POST = withApiHandler(async (request: Request) => {
   assertSameOrigin(request);
   const ctx = await requireHrUser(getDb());

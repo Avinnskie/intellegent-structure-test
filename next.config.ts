@@ -1,12 +1,5 @@
 import type { NextConfig } from "next";
 
-/**
- * Baseline security headers (T33, spec §19). CSP is deliberately conservative-but-workable:
- * `'unsafe-inline'` stays until the nonce-based CSP lands in Phase 6 (see docs/OPERATIONS.md) —
- * Next's inline runtime scripts need it without nonces. connect-src allows only self + Supabase.
- */
-// React dev mode needs eval() for debugging features (callstack reconstruction); it never uses
-// eval in production. The allowance is scoped to development only — production CSP stays strict.
 const SCRIPT_SRC =
   process.env.NODE_ENV === "development"
     ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
@@ -16,7 +9,6 @@ const CSP = [
   "default-src 'self'",
   SCRIPT_SRC,
   "style-src 'self' 'unsafe-inline'",
-  // Signed media URLs (question images, tutorial videos) are served from the Supabase project.
   "img-src 'self' data: blob: https://*.supabase.co",
   "media-src 'self' https://*.supabase.co",
   "font-src 'self' data:",
@@ -33,7 +25,6 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   { key: "Content-Security-Policy", value: CSP },
-  // HSTS only where TLS is guaranteed; a dev localhost must not get pinned to https.
   ...(process.env.NODE_ENV === "production"
     ? [
         {

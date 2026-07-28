@@ -1,26 +1,12 @@
-/**
- * E2E fixture seed (T34). Prepares a DEV database for `npm run test:e2e`:
- *
- * 1. Runs the default workbook-backed seed (idempotent).
- * 2. Shortens SE's duration to 15 seconds so the participant-flow spec can watch a real timeout
- *    without waiting six minutes. DEV DATABASES ONLY — this mutates the shared subtest version.
- *
- * The E2E suite itself creates candidates/sessions through the real HR API at runtime (so codes
- * are minted the production way); this script only makes the timing testable.
- *
- * Run: npm run db:seed-e2e
- */
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../lib/db/client.ts";
 import { subtestVersions } from "../lib/db/schema.ts";
 import { runSeed } from "../lib/server/seed-core.ts";
 
-// Long enough to answer/skip/review against a cloud DB's latency, short enough to watch expire.
 const E2E_SE_DURATION_SECONDS = 45;
 const STANDARD_SE_DURATION_SECONDS = 6 * 60;
 
 async function main(): Promise<void> {
-  // `--restore` puts SE back to its standard duration after an E2E run.
   const isRestore = process.argv.includes("--restore");
   const durationSeconds = isRestore ? STANDARD_SE_DURATION_SECONDS : E2E_SE_DURATION_SECONDS;
 

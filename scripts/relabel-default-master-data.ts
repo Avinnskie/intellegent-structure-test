@@ -1,21 +1,3 @@
-/**
- * Relabels the seeded master data IN PLACE: the seed shipped with PLACEHOLDER labels baked into
- * user-visible columns, and the labels were later scrubbed from the seed source
- * (`lib/server/seed-core.ts`) — but databases seeded before that cleanup still carry them.
- *
- * Updated (idempotent — a row already holding the target value is skipped):
- *   - assessment_form_versions.form_code  : "IST-PLACEHOLDER" → SEED_FORM_CODE
- *   - assessment_form_versions.title      : "IST Placeholder Form (BUKAN materi resmi)" → SEED_FORM_TITLE
- *   - subtest_versions.title              : "<Name> (XX) — PLACEHOLDER" → "<Name> (XX)"
- *   - norm_set_versions.population_reference : "PLACEBO — bukan norma resmi" → DEFAULT_POPULATION_REFERENCE
- *   - scoring_key_versions.approved_by    : "PLACEHOLDER — belum direkonsiliasi…" → DEFAULT_APPROVED_BY
- *
- * Safe on a live database: every FK references these rows by id, and no id is touched.
- * One transaction + one audit row (`seed.labels_relabeled`).
- *
- * Run with:
- *   npm run db:relabel
- */
 import { eq, like, sql } from "drizzle-orm";
 import { getDb } from "../lib/db/client.ts";
 import {
@@ -54,7 +36,6 @@ async function main(): Promise<void> {
         .returning({ id: assessmentFormVersions.id });
       counts.assessment_form_versions = formRows.length;
 
-      // Belt-and-braces: a title-only miss (custom form_code) still gets relabeled.
       const formTitleRows = await tx
         .update(assessmentFormVersions)
         .set({ title: SEED_FORM_TITLE })
@@ -109,7 +90,6 @@ async function main(): Promise<void> {
       }
     }
   } finally {
-    // postgres-js keeps the pool open and would hang the process on exit.
     await db.$client.end();
   }
 }

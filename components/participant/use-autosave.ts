@@ -7,18 +7,6 @@ export type AutosaveStatus = "idle" | "menyimpan" | "tersimpan" | "gagal";
 const DEBOUNCE_MS = 800;
 const RETRY_DELAY_MS = 2000;
 
-/**
- * Debounced autosave against the T14 PUT endpoint, with one retry.
- *
- * The endpoint is idempotent by contract, so re-sending the same value is always safe — which is
- * why the retry needs no bookkeeping beyond "try once more". A save that ultimately fails surfaces
- * as `"gagal"` for the indicator and nothing else: the participant's typed value is still on their
- * screen, and the next keystroke or the explicit "Jawab & lanjut" re-sends it.
- *
- * A generation counter guards the async gaps: a save that lands after a newer save started must not
- * overwrite the newer status. `flush` exists for the submit button — it bypasses the debounce and
- * REUSES the same generation stream so a stale debounce tick cannot fire after an explicit save.
- */
 export function useAutosave(saveUrl: string) {
   const [status, setStatus] = useState<AutosaveStatus>("idle");
   const generationRef = useRef(0);
@@ -47,12 +35,10 @@ export function useAutosave(saveUrl: string) {
           return true;
         }
       } catch {
-        // Network failure falls through to the retry below.
       }
 
       await new Promise((resolve) => window.setTimeout(resolve, RETRY_DELAY_MS));
       if (generation !== generationRef.current) {
-        // A newer save superseded this one while it waited; its outcome no longer matters.
         return false;
       }
       try {

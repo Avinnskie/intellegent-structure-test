@@ -5,11 +5,6 @@ import { getDb } from "@/lib/db/client.ts";
 import { getUnanswered } from "@/lib/server/participant-responses.ts";
 import { getSessionState } from "@/lib/server/participant-session.ts";
 
-/**
- * The "Belum Dijawab" checkpoint before handing a subtest in (spec §8). Reachable only while the
- * subtest is live — the same guard as the question page — so the list can never describe a closed
- * attempt. It carries navigation targets only: no prompts, no values, nothing worth shielding.
- */
 export default async function ReviewPage({
   params,
 }: {
@@ -36,7 +31,6 @@ export default async function ReviewPage({
     redirect(state.nextRoute);
   }
 
-  // The service already returns only pending items (unanswered + skipped), in local order.
   const pending = unanswered.items;
   const code = state.currentSubtest.code;
 

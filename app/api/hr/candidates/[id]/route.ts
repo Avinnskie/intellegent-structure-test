@@ -11,11 +11,9 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/** Full-field edit of one candidate (org-scoped, audited by id only). */
 export const PUT = withApiHandler(
   async (request: Request, ctx: RouteContext<"/api/hr/candidates/[id]">) => {
     assertSameOrigin(request);
-    // Next 16: `ctx.params` is a Promise.
     const { id } = await ctx.params;
     const auth = await requireHrUser(getDb());
     const body = await parseBody(request);
@@ -23,11 +21,9 @@ export const PUT = withApiHandler(
   },
 );
 
-/** Deletes a candidate WITHOUT sessions; refused with 409 otherwise (history never vanishes). */
 export const DELETE = withApiHandler(
   async (request: Request, ctx: RouteContext<"/api/hr/candidates/[id]">) => {
     assertSameOrigin(request);
-    // Next 16: `ctx.params` is a Promise.
     const { id } = await ctx.params;
     const auth = await requireHrUser(getDb());
     return Response.json(await deleteCandidate(getDb(), auth, id));

@@ -1,16 +1,3 @@
-/**
- * Portal user management from the web (spec §4.3: Super Admin mengelola akun HR).
- *
- * Rules that carry the weight:
- * - SUPER_ADMIN ONLY, re-checked here — the service is the last line, not the nav.
- * - LOCKOUT GUARDS: an admin can never deactivate themself or drop their own super_admin role.
- *   The web UI must not be able to strand the company with zero working admins.
- * - The password crosses this module exactly once, on its way to the auth provider. It is never
- *   stored, never logged, never audited — the audit rows carry email/role/status only.
- * - `users.id` mirrors the Supabase auth id (the login joins on it), so creation is auth-first and
- *   the row insert uses the returned id. A duplicate email answers 409 without leaking which side
- *   (auth or row) already had it.
- */
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "../api/errors.ts";
@@ -64,7 +51,6 @@ export async function listPortalUsers(db: DbLike, ctx: AuthContext): Promise<Por
 
 export const createUserSchema = z.object({
   email: z.email().max(320),
-  // Matches Supabase's default minimum; the operator hands this to the new user out of band.
   password: z.string().min(8).max(200),
   displayName: z.string().trim().min(1).max(200),
   role: z.enum(["hr_admin", "super_admin"]),
@@ -81,7 +67,6 @@ export async function createPortalUser(
   const data = createUserSchema.parse(input);
   const email = data.email.trim().toLowerCase();
 
-  // Pre-check our own table first: the common duplicate answers without an auth round trip.
   const [existing] = await db
     .select({ id: users.id })
     .from(users)
@@ -91,8 +76,6 @@ export async function createPortalUser(
     throw new ApiError("EMAIL_TAKEN", EMAIL_TAKEN_MESSAGE, 409);
   }
 
-  // Auth first: the row's id MUST be the auth id. If the row insert then fails, the CLI
-  // (create-admin) reconciles the orphan on its next run — documented behavior since T7.
   let authUserId: string;
   try {
     authUserId = await auth.createUser(email, data.password);
@@ -110,7 +93,6 @@ export async function createPortalUser(
       .insert(users)
       .values({
         id: authUserId,
-        // Single-company tenancy: new accounts join the creator's organization.
         organizationId: ctx.organizationId,
         email,
         displayName: data.displayName,
@@ -130,7 +112,6 @@ export async function createPortalUser(
       action: "user.created",
       objectType: "user",
       objectId: row.id,
-      // Email + role + permissions — NEVER the password.
       metadata: { email, role: data.role, permissions },
     });
 
@@ -152,7 +133,6 @@ export const updateUserSchema = z.object({
   role: z.enum(["hr_admin", "super_admin"]).optional(),
   viewResults: z.boolean().optional(),
   status: z.enum(["active", "inactive"]).optional(),
-  /** Optional reset. Absent = the password is not touched (a role edit must never log people out). */
   newPassword: z.string().min(8).max(200).optional(),
 });
 
@@ -169,7 +149,6 @@ export async function updatePortalUser(
     throw notFound();
   }
 
-  // Lockout guards BEFORE any write.
   if (userId === ctx.userId && data.status === "inactive") {
     throw new ApiError("SELF_DEACTIVATE", SELF_DEACTIVATE_MESSAGE, 409);
   }
@@ -228,8 +207,6 @@ export async function updatePortalUser(
     return row;
   });
 
-  // Outside the transaction: an auth API call must not hold row locks hostage, and a password
-  // failure after a successful row update is reported honestly by the throw below.
   if (data.newPassword !== undefined) {
     await auth.setPassword(userId, data.newPassword);
   }

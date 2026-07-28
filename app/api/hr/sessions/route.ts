@@ -13,10 +13,6 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/**
- * Creating a session mints its access code. The response carries the PLAINTEXT code — the only
- * time it ever leaves the server — so this handler must never be cached and never logged whole.
- */
 export const POST = withApiHandler(async (request: Request) => {
   assertSameOrigin(request);
   const ctx = await requireHrUser(getDb());

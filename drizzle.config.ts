@@ -1,7 +1,5 @@
 import { defineConfig } from "drizzle-kit";
 
-// `generate` hanya membaca schema.ts dan menulis SQL; hanya perintah di bawah ini
-// yang benar-benar membuka koneksi, jadi hanya perintah tersebut yang butuh URL.
 const COMMANDS_REQUIRING_DATABASE = ["migrate", "push", "pull", "studio"];
 
 const directDatabaseUrl = process.env.DIRECT_DATABASE_URL ?? "";

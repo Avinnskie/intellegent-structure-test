@@ -1,19 +1,3 @@
-/**
- * Content management: tutorial versions + question bank (spec §10/§10A, API §18).
- *
- * Versioning rules that carry the weight:
- *
- * - TUTORIALS ARE IMMUTABLE ONCE PUBLISHED. Sessions pin tutorial version IDS at creation, so a
- *   published row must never change — editing means a new DRAFT version; publishing it archives
- *   the previous published one. Running sessions keep showing what they pinned (spec §10A).
- * - QUESTION BANK EDITS ARE IN-PLACE AND DELIBERATE. Item rows belong to the form version, and
- *   sessions pin the form — so a prompt edit IS visible to running sessions. That is the intended
- *   tool for typo fixes; structural changes (new items, new option codes) belong to a new form
- *   version (Phase 6). Option CODES are therefore untouchable here: the scoring key addresses
- *   answers by code, and changing a code silently unkeys every recorded response.
- * - Master data is single-company (locked decision): no org scoping, but every mutation is audited
- *   with the acting user.
- */
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "../api/errors.ts";
@@ -40,7 +24,6 @@ function notFound(): ApiError {
   return new ApiError("NOT_FOUND", NOT_FOUND_MESSAGE, 404);
 }
 
-/** The single published form all content management operates on (single-company, one form). */
 async function publishedFormId(db: DbLike): Promise<string> {
   const [form] = await db
     .select({ id: assessmentFormVersions.id })
@@ -53,10 +36,6 @@ async function publishedFormId(db: DbLike): Promise<string> {
   }
   return form.id;
 }
-
-// ---------------------------------------------------------------------------
-// Tutorials
-// ---------------------------------------------------------------------------
 
 export type TutorialVersionDto = {
   id: string;
@@ -146,8 +125,6 @@ export async function createTutorialDraft(
       .where(
         and(eq(subtestVersions.formVersionId, formId), eq(subtestVersions.code, data.subtestCode)),
       )
-      // Serializes concurrent drafts on one subtest so two admins cannot mint the same version
-      // number (`tutorial_subtest_version_ux` is the backstop).
       .for("update")
       .limit(1);
     if (!subtest) {
@@ -237,7 +214,6 @@ export async function updateTutorialDraft(
   return db.transaction(async (tx) => {
     const tutorial = await lockTutorial(tx, tutorialId);
     if (tutorial.status !== "draft") {
-      // A published tutorial may be PINNED by sessions — its content is a historical record.
       throw new ApiError("NOT_DRAFT", NOT_DRAFT_MESSAGE, 409);
     }
 
@@ -265,11 +241,6 @@ export async function updateTutorialDraft(
   });
 }
 
-/**
- * Publishes a draft and archives the previously published version of the SAME subtest in one
- * transaction — at any instant exactly one published tutorial per subtest (what `createSession`
- * pins). Sessions created before this keep their pinned version untouched.
- */
 export async function publishTutorial(
   db: DbLike,
   ctx: AuthContext,
@@ -326,11 +297,6 @@ export async function publishTutorial(
   });
 }
 
-/**
- * Archives a draft (discard) or a published version (take offline). Archiving the published one
- * without a replacement makes `createSession` fail closed with MASTER_DATA_MISSING until a new
- * version is published — deliberate: no session may start without a tutorial (spec §10).
- */
 export async function archiveTutorial(
   db: DbLike,
   ctx: AuthContext,
@@ -366,10 +332,6 @@ export async function archiveTutorial(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Question bank
-// ---------------------------------------------------------------------------
-
 export type QuestionBankItemDto = {
   itemVersionId: string;
   itemNumber: number;
@@ -377,7 +339,6 @@ export type QuestionBankItemDto = {
   itemType: string;
   prompt: string;
   placeholder: string | null;
-  /** Storage path of the attached image (private bucket), or null. */
   mediaReference: string | null;
   status: string;
   options: readonly { optionCode: string; label: string }[];
@@ -390,7 +351,6 @@ export type QuestionBankSubtestDto = {
   items: readonly QuestionBankItemDto[];
 };
 
-/** The full bank of the published form. NO scoring data — the key lives one join away on purpose. */
 export async function listQuestionBank(db: DbLike): Promise<QuestionBankSubtestDto[]> {
   const formId = await publishedFormId(db);
 
@@ -448,7 +408,6 @@ export async function listQuestionBank(db: DbLike): Promise<QuestionBankSubtestD
   }));
 }
 
-/** The latest PUBLISHED scoring key of the published form — the key the answer editor operates on. */
 async function publishedScoringKeyId(db: DbLike): Promise<string> {
   const formId = await publishedFormId(db);
   const [key] = await db
@@ -468,15 +427,8 @@ async function publishedScoringKeyId(db: DbLike): Promise<string> {
 export type ItemAnswerKeyDto = {
   itemVersionId: string;
   ruleType: string;
-  /** For `option_match`. */
   correctOptionCodes: readonly string[] | null;
-  /** For `numeric_match`. */
   acceptedValues: readonly string[] | null;
-  /**
-   * For `manual_ge` with `autoScore=true`: three ranked keyword lists that drive automatic 0/1/2
-   * scoring at calculation time (highest-list-that-matches wins). `null` = HR has not authored
-   * keywords for this item yet, and it still needs manual scoring at `/hr/scoring/…/ge`.
-   */
   geKeywords: {
     readonly score2: readonly string[];
     readonly score1: readonly string[];
@@ -485,17 +437,12 @@ export type ItemAnswerKeyDto = {
   } | null;
 };
 
-/**
- * The current answer key of ONE item, fetched on demand by the editor. Deliberately a separate
- * read from `listQuestionBank`: the bulk list stays key-free (the leak test pins that), and the
- * key travels only when an authorized editor explicitly opens it.
- */
 export async function getItemAnswerKey(
   db: DbLike,
   ctx: AuthContext,
   itemId: string,
 ): Promise<ItemAnswerKeyDto> {
-  void ctx; // authz is at the route; the ctx in the signature keeps the calling convention uniform.
+  void ctx;
   if (!z.uuid().safeParse(itemId).success) {
     throw notFound();
   }
@@ -579,17 +526,7 @@ function buildGePayload(input: GeKeywordsInput | undefined): Record<string, unkn
 }
 
 export const updateItemSchema = itemContentSchema.extend({
-  /**
-   * Labels only, addressed BY CODE. Codes are the identity the scoring key and every recorded
-   * response point at — they cannot be created, deleted, or renamed here.
-   */
   options: z.array(optionInputSchema).max(10).optional(),
-  /**
-   * The correct answer (spec §14: HR menentukan kunci saat mengubah soal). `option_match` items
-   * take option codes (validated against the item's real codes); `numeric_match` items take
-   * explicit accepted string variants. GE items take `geKeywords`. Absent = the key is not
-   * touched.
-   */
   correctOptionCodes: z.array(z.string().trim().min(1).max(10)).min(1).max(5).optional(),
   acceptedValues: z.array(z.string().trim().min(1).max(64)).min(1).max(10).optional(),
   geKeywords: geKeywordsSchema.optional(),
@@ -770,10 +707,6 @@ export async function createQuestionItem(
   });
 }
 
-/**
- * In-place content edit (typo fixes). Visible to running sessions — by design, and worth the
- * warning the UI carries: the alternative (a new form version per typo) is Phase 6 tooling.
- */
 export async function updateQuestionItem(
   db: DbLike,
   ctx: AuthContext,
@@ -801,7 +734,6 @@ export async function updateQuestionItem(
       .set({
         prompt: data.prompt,
         placeholder: data.placeholder ?? null,
-        // Only touched when the field was SENT: undefined keeps the current image, null detaches.
         ...(data.mediaReference !== undefined ? { mediaReference: data.mediaReference } : {}),
       })
       .where(eq(itemVersions.id, item.id));
@@ -814,7 +746,6 @@ export async function updateQuestionItem(
       const validCodes = new Set(existing.map((option) => option.optionCode));
       for (const option of data.options) {
         if (!validCodes.has(option.optionCode)) {
-          // A code that does not exist cannot be "updated" — creating codes would desync the key.
           throw new ApiError(
             "INVALID_OPTION_CODE",
             `Kode opsi ${option.optionCode} tidak ada pada soal ini.`,
@@ -833,11 +764,6 @@ export async function updateQuestionItem(
       }
     }
 
-    // Answer-key edit. The rule row of the PUBLISHED key is updated in place — same
-    // "typo fix, visible to pinned sessions" semantics as the prompt, and the recalculation path
-    // re-derives machine scores so a corrected key flows into re-scores. GE items accept
-    // `geKeywords` (which flips the item to autoScore mode); option_match and numeric_match keep
-    // their existing shapes.
     let keyUpdated = false;
     if (data.correctOptionCodes || data.acceptedValues || data.geKeywords) {
       const keyId = await publishedScoringKeyId(tx);
@@ -895,9 +821,6 @@ export async function updateQuestionItem(
           .set({ rulePayload: { acceptedValues: data.acceptedValues.map((value) => value.trim()) } })
           .where(eq(itemScoringRules.id, rule.id));
       } else {
-        // GE: HR authors three ranked keyword lists that drive automatic 0/1/2 scoring (spec
-        // §14). Sending `geKeywords` flips the payload to autoScore mode; sending the other key
-        // fields on a GE item is rejected because their shape does not fit the manual rubric.
         if (data.correctOptionCodes || data.acceptedValues) {
           throw new ApiError(
             "INVALID_ANSWER_KEY",
@@ -938,8 +861,6 @@ export async function updateQuestionItem(
       action: "item.updated",
       objectType: "item_version",
       objectId: item.id,
-      // Never the prompt text, labels, or THE KEY: item content and answers are test material
-      // (spec §19 keeps the bank out of broad-read surfaces); the rows are the record.
       metadata: {
         itemNumber: item.itemNumber,
         optionsUpdated: data.options?.length ?? 0,
@@ -953,11 +874,6 @@ export async function updateQuestionItem(
 
 export const itemStatusSchema = z.object({ status: z.enum(["active", "inactive"]) });
 
-/**
- * Deprecation flag. `inactive` items are STILL served to sessions whose deck pins them (T13:
- * filtering would renumber a live deck); the flag exists for review workflows and future form
- * versions, which is exactly how the seed treats it.
- */
 export async function setQuestionItemStatus(
   db: DbLike,
   ctx: AuthContext,

@@ -11,14 +11,9 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/**
- * In-place content edit of one item (prompt, placeholder, option LABELS — never option codes,
- * which the scoring key and recorded responses address). Visible to running sessions by design.
- */
 export const PUT = withApiHandler(
   async (request: Request, ctx: RouteContext<"/api/hr/question-bank/items/[id]">) => {
     assertSameOrigin(request);
-    // Next 16: `ctx.params` is a Promise.
     const { id } = await ctx.params;
     const auth = await requireHrUser(getDb());
     const body = await parseBody(request);

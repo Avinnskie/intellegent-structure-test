@@ -4,9 +4,7 @@ import { useActionState } from "react";
 import { signIn, type LoginState } from "@/app/login/actions";
 
 type LoginFormProps = {
-  /** Already sanitized by the page via `safeNextPath` — round-tripped so a deep link survives login. */
   readonly next: string;
-  /** Set when a layout bounced an authenticated-but-unprovisioned or deactivated user back here. */
   readonly denied: boolean;
 };
 

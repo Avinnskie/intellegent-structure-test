@@ -1,28 +1,3 @@
-/**
- * Removes the seeded CONTENT and every piece of dev/test transactional data, so the
- * database holds no dummy material — while keeping the structure the portal UIs cannot recreate.
- *
- * Deleted (dummy data):
- *   - ALL sessions and their dependents: reports, subtest_scores, assessment_results, item_scores,
- *     responses, subtest_attempts, participant_tokens, access_codes, assessment_sessions
- *   - ALL candidates (created during dev testing; every session referencing them is gone above)
- *   - The 176 seeded items: item_scoring_rules, item_options, item_versions
- *   - The seeded tutorial_versions
- *
- * Kept (infrastructure — there is NO UI to recreate these, and the question-bank/tutorial CRUD
- * hangs off them):
- *   - organizations and users (HR/admin accounts)
- *   - the assessment_form_versions row, its 9 subtest_versions
- *   - the published scoring_key_versions row (empty of rules until HR adds answer keys)
- *   - norm_set_versions / norm_age_bands / norm_score_rows — restored through `db:seed` or
- *     `db:upgrade-scoring`; deleting them would make scoring unrecoverable from the UI.
- *   - audit_logs (append-only by design)
- *
- * IDEMPOTENT: re-running on an already-clean database deletes zero rows and succeeds.
- *
- * Run with:
- *   npm run db:unseed
- */
 import { getDb } from "../lib/db/client.ts";
 import {
   accessCodes,
@@ -49,7 +24,6 @@ async function main(): Promise<void> {
 
   try {
     const deleted = await db.transaction(async (tx) => {
-      // Child-before-parent, per the FK graph in lib/db/schema.ts (all FKs are NO ACTION).
       const counts: Record<string, number> = {};
       const wipe = async (label: string, table: Parameters<typeof tx.delete>[0]) => {
         const rows = await tx.delete(table).returning();
@@ -98,7 +72,6 @@ async function main(): Promise<void> {
         "db:upgrade-scoring sebelum melakukan kalkulasi.",
     );
   } finally {
-    // postgres-js keeps the pool open and would hang the process on exit.
     await db.$client.end();
   }
 }

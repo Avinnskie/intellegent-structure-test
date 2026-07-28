@@ -47,11 +47,6 @@ type EditDraft = {
   newPassword: string;
 };
 
-/**
- * Web CRUD for portal accounts (super_admin only; the service re-enforces it) on shadcn
- * components. The password field is write-only: straight to the API, never rendered back.
- * Deactivation is confirmed; the server refuses self-deactivation/self-demotion outright.
- */
 export function UserManager({
   users,
   selfId,

@@ -3,13 +3,6 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db/client.ts";
 import { getSessionState } from "@/lib/server/participant-session.ts";
 
-/**
- * The between-subtests breather: "that one is closed, here is where you go next."
- *
- * Unlike the other token routes this page never redirects on a route mismatch — it is a
- * deliberately transient stop the participant may land on from any closing action, and its whole
- * job is to hand them the CURRENT `nextRoute`. It shows nothing about answers or scores.
- */
 export default async function TransitionPage({
   params,
 }: {

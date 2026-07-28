@@ -14,12 +14,7 @@ type PortalNavItem = {
 };
 
 type PortalShellProps = {
-  /**
-   * Legacy: the two portals now share ONE navigation. Kept optional so old call sites compile;
-   * what varies is the ROLE, not the mode.
-   */
   readonly mode?: "hr" | "admin";
-  /** From the `users` row resolved by the layout's `requirePortalUser` — never client-supplied. */
   readonly displayName: string;
   readonly role: UserRole;
   readonly children: React.ReactNode;
@@ -30,7 +25,6 @@ const roleLabels: Record<UserRole, string> = {
   super_admin: "Super Admin",
 };
 
-/** One dashboard for both roles. */
 const baseItems = [
   { href: "/hr", label: "Beranda", shortLabel: "01" },
   { href: "/hr/participants", label: "Peserta", shortLabel: "02" },
@@ -40,7 +34,6 @@ const baseItems = [
   { href: "/hr/question-bank", label: "Bank soal", shortLabel: "06" },
 ] as const satisfies readonly PortalNavItem[];
 
-/** Visible only to super_admin. The /admin layout re-enforces the role server-side. */
 const adminOnlyItems = [
   { href: "/admin/users", label: "Pengguna HR", shortLabel: "07" },
   { href: "/admin/audit", label: "Audit log", shortLabel: "08" },

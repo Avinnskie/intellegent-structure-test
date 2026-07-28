@@ -35,11 +35,6 @@ type CreatedSession = {
   accessCodeExpiresAt: string;
 };
 
-/**
- * Session creation in a shadcn modal. The success state INSIDE the modal is the only place the
- * plaintext code ever appears — closing it is the moment the code is gone (regenerate is the
- * rescue).
- */
 export function SessionCreateModal({ candidates }: { candidates: readonly CandidateOption[] }) {
   const router = useRouter();
   const { push } = useToast();

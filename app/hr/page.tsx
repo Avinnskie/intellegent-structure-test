@@ -7,7 +7,6 @@ import type { SessionStatus } from "@/lib/domain/session-state.ts";
 import { requireHrUser } from "@/lib/server/authz.ts";
 import { getDashboardMetrics } from "@/lib/server/metrics.ts";
 
-/** The HR landing page, on real numbers. Org scoping happens inside the metrics service. */
 export default async function HrDashboardPage() {
   const db = getDb();
   const ctx = await requireHrUser(db);

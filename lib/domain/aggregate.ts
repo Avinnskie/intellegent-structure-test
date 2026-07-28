@@ -1,13 +1,7 @@
 import type { SubtestCode } from "../ist-subtests.ts";
 
-/**
- * Engine version stamped onto every result row — re-exported from the answer-key defaults module,
- * which owns it, so the two can never disagree about which engine produced a result. Bump on ANY
- * change to aggregate/scoring behavior (brief §22: reproducibility).
- */
 export { ENGINE_VERSION } from "./answer-key-defaults.ts";
 
-/** Chart and report ordering per spec §16 — NOT the sitting order (ME sits last, charts mid). */
 export const CHART_ORDER: readonly SubtestCode[] = [
   "SE",
   "WA",
@@ -20,7 +14,6 @@ export const CHART_ORDER: readonly SubtestCode[] = [
   "WU",
 ];
 
-/** The workbook maps composite SW to IQ with `ROUND(1.5 * SW - 50, 0)`. */
 export function iqFromCompositeStandard(compositeStandardScore: number): number {
   return Math.round(compositeStandardScore * 1.5 - 50);
 }
@@ -67,9 +60,6 @@ export type DominanceProfile = {
   readonly difference: number;
 };
 
-/**
- * Excel compares GE+RA ("exact") against AN+ZR ("non-exact"). A gap up to ten points is balanced.
- */
 export function dominanceProfile(scores: Readonly<Record<SubtestCode, number>>): DominanceProfile {
   const exactScore = scores.GE + scores.RA;
   const nonExactScore = scores.AN + scores.ZR;

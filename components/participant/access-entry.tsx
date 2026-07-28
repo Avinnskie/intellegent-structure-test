@@ -4,16 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-/**
- * The error envelope every API route emits (`lib/api/errors.ts`). Parsed defensively: this is the
- * one component that talks to the server before any session exists, so a proxy error page or a
- * network drop must degrade to a readable message, never a crash.
- */
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
 const NETWORK_ERROR_MESSAGE = "Tidak dapat menghubungi server. Periksa koneksi lalu coba lagi.";
 
-/** Codes where the participant should wait or re-check rather than being blocked outright. */
 const WARNING_CODES = new Set(["CODE_EXPIRED", "RATE_LIMITED"]);
 
 export function AccessEntry() {
@@ -47,7 +41,6 @@ export function AccessEntry() {
           router.push(result.nextRoute);
           return;
         }
-        // A 200 without a usable route is a server bug; fail readable rather than navigate blind.
         setFeedbackTone("danger");
         setFeedback(NETWORK_ERROR_MESSAGE);
         return;
@@ -56,7 +49,6 @@ export function AccessEntry() {
       const envelope = (await response.json().catch(() => ({}))) as ErrorEnvelope;
       const errorCode = envelope.error?.code ?? "";
       setFeedbackTone(WARNING_CODES.has(errorCode) ? "warning" : "danger");
-      // The server's message is participant-safe by contract (T11); anything else gets the generic.
       setFeedback(envelope.error?.message ?? NETWORK_ERROR_MESSAGE);
     } catch {
       setFeedbackTone("danger");

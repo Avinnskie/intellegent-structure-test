@@ -1,18 +1,3 @@
-/**
- * HR operations: candidates, sessions, and the session list/detail the portal reads (T19).
- *
- * Three rules carry the security weight here:
- *
- * 1. EVERY read and write is scoped to `ctx.organizationId`. A session or candidate from another
- *    organization answers `NOT_FOUND` — indistinguishable from one that does not exist, so the API
- *    never confirms what it will not show (spec §19).
- * 2. THE PLAINTEXT CODE EXISTS ONCE. `createSession` returns it a single time for HR to hand to the
- *    candidate; the database holds only the hash and the mask, the audit row only the mask. Nothing
- *    in this module can read a code back afterwards, because nothing stores it.
- * 3. VERSIONS ARE PINNED AT CREATION (spec §10A). The session records the published form, scoring
- *    key, norm set, and per-subtest tutorial versions the moment it is created; later publishes
- *    change nothing for sessions already issued.
- */
 import { and, count, desc, eq, ilike, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "../api/errors.ts";
@@ -46,23 +31,13 @@ const MASTER_DATA_MESSAGE =
 const MS_PER_HOUR = 60 * 60 * 1000;
 const DEFAULT_CODE_TTL_HOURS = 48;
 const MAX_CODE_TTL_HOURS = 14 * 24;
-/** Retries on the (astronomically unlikely) code-hash collision before giving up loudly. */
 const CODE_GENERATION_ATTEMPTS = 3;
 const SESSION_LIST_LIMIT = 100;
 
-/** Same-shaped miss for "does not exist" and "belongs to someone else" — no existence oracle. */
 function notFound(): ApiError {
   return new ApiError("NOT_FOUND", NOT_FOUND_MESSAGE, 404);
 }
 
-// ---------------------------------------------------------------------------
-// Candidates
-// ---------------------------------------------------------------------------
-
-/**
- * Domain validation for a new candidate. `birthDate` must be a real calendar date in the past —
- * the age at test is computed from it (spec §15), and a typo here becomes a wrong norm band later.
- */
 export const createCandidateSchema = z.object({
   fullName: z.string().trim().min(1).max(200),
   birthDate: z
@@ -98,7 +73,6 @@ export type CandidateDto = {
 export async function createCandidate(
   db: DbLike,
   ctx: AuthContext,
-  // `unknown`, parsed here: the route hands the raw body through, and the schema is the boundary.
   input: unknown,
 ): Promise<CandidateDto> {
   const data = createCandidateSchema.parse(input);
@@ -129,8 +103,6 @@ export async function createCandidate(
       action: "candidate.created",
       objectType: "candidate",
       objectId: row.id,
-      // The id, never the name or birth date: audit rows are broadly readable and PII does not
-      // belong in them (spec §19); the candidate row itself is the record.
       metadata: { candidateId: row.id },
     });
 
@@ -167,11 +139,6 @@ export async function listCandidates(db: DbLike, ctx: AuthContext): Promise<Cand
   }));
 }
 
-/**
- * Edits a candidate's identity fields. Same validation as creation; org-scoped; audited with the
- * id only (PII stays out of audit). A birth-date fix is the legitimate use — results already
- * calculated keep their snapshotted `age_at_test`; only a RE-calculation reads the new date.
- */
 export async function updateCandidate(
   db: DbLike,
   ctx: AuthContext,
@@ -225,11 +192,6 @@ export async function updateCandidate(
   });
 }
 
-/**
- * Deletes a candidate — ONLY when no session references them. A candidate with sessions carries
- * assessment history that must never silently vanish (brief §22); the refusal tells HR to look at
- * the sessions first.
- */
 export async function deleteCandidate(
   db: DbLike,
   ctx: AuthContext,
@@ -280,12 +242,6 @@ export async function deleteCandidate(
   });
 }
 
-/**
- * Hard-deletes a session — ONLY while nothing has happened: `code_generated`/`code_validated`,
- * no attempt rows. The moment a participant has sat anything, the record is assessment history
- * and deletion is refused (cancel/void via status is the tool then). Access codes and tokens go
- * with it; the audit row survives (append-only, no FK to the session).
- */
 export async function deleteSession(
   db: DbLike,
   ctx: AuthContext,
@@ -348,19 +304,10 @@ export async function deleteSession(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Session creation — version pinning + access code
-// ---------------------------------------------------------------------------
-
 export const createSessionSchema = z.object({
   candidateId: z.uuid(),
   expiresInHours: z.number().int().min(1).max(MAX_CODE_TTL_HOURS).default(DEFAULT_CODE_TTL_HOURS),
   scheduledAt: z.iso.datetime().optional(),
-  /**
-   * `single` (default): satu kode satu kali masuk — tab tertutup berarti minta regenerate ke HR.
-   * `multi`: kode yang sama boleh masuk berulang selama tes masih hidup. Sesi yang selesai tidak
-   * pernah menerima kode lagi, apa pun kebijakannya.
-   */
   reentryPolicy: z.enum(["single", "multi"]).default("single"),
 });
 
@@ -370,7 +317,6 @@ export type CreateSessionDto = {
   sessionId: string;
   candidateId: string;
   status: SessionStatus;
-  /** PLAINTEXT — shown to HR exactly once, never stored, never audited, never queryable again. */
   accessCode: string;
   accessCodeMasked: string;
   accessCodeExpiresAt: string;
@@ -383,10 +329,6 @@ type PinnedMaster = {
   pinnedTutorialVersions: Record<SubtestCode, string>;
 };
 
-/**
- * The published master data a new session pins. Resolved fresh per creation — "published" is a
- * moving target between sessions, frozen only within one.
- */
 async function resolvePublishedMaster(tx: DbLike): Promise<PinnedMaster> {
   const [form] = await tx
     .select({ id: assessmentFormVersions.id })
@@ -416,7 +358,6 @@ async function resolvePublishedMaster(tx: DbLike): Promise<PinnedMaster> {
     throw new ApiError("MASTER_DATA_MISSING", MASTER_DATA_MESSAGE, 503);
   }
 
-  // The latest PUBLISHED tutorial per subtest, pinned by id (spec §10A).
   const tutorialRows = await tx
     .select({
       code: subtestVersions.code,
@@ -431,7 +372,6 @@ async function resolvePublishedMaster(tx: DbLike): Promise<PinnedMaster> {
   const pinned: Partial<Record<SubtestCode, string>> = {};
   for (const row of tutorialRows) {
     const code = row.code as SubtestCode;
-    // Rows arrive newest-first; the first one per code wins.
     pinned[code] ??= row.tutorialVersionId;
   }
 
@@ -461,7 +401,6 @@ export async function createSession(
   const pepper = getServerConfig().ACCESS_CODE_PEPPER;
 
   return db.transaction(async (tx) => {
-    // Org scoping BEFORE anything else: a candidate id from another org is a miss, full stop.
     const [candidate] = await tx
       .select({ id: candidates.id })
       .from(candidates)
@@ -493,7 +432,6 @@ export async function createSession(
       throw new Error("Sesi gagal dibuat.");
     }
 
-    // The database clock, not the app server's: `expires_at` will be compared against `now()`.
     const [clock] = await tx
       .select({ now: dbNow() })
       .from(assessmentSessions)
@@ -504,8 +442,6 @@ export async function createSession(
     }
     const expiresAt = new Date(clock.now.getTime() + data.expiresInHours * MS_PER_HOUR);
 
-    // The unique index on code_hash is the collision detector; colliding again after several
-    // fresh draws from a 31^8 space means something is broken, so fail loudly rather than loop.
     let plaintext: string | null = null;
     let masked = "";
     for (let attempt = 0; attempt < CODE_GENERATION_ATTEMPTS && plaintext === null; attempt += 1) {
@@ -553,8 +489,6 @@ export async function createSession(
       action: "access_code.generated",
       objectType: "assessment_session",
       objectId: session.id,
-      // The MASK only. The hash would be crackable offline against the alphabet; the plaintext
-      // would make the audit trail a credential store.
       metadata: { sessionId: session.id, codeMasked: masked, expiresAt: expiresAt.toISOString() },
     });
 
@@ -569,14 +503,9 @@ export async function createSession(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Bulk session creation (paste from Excel/Word)
-// ---------------------------------------------------------------------------
-
 const BULK_MAX_ROWS = 200;
 
 export const bulkCreateSessionsSchema = z.object({
-  /** Every row is validated with the SAME rules as single candidate creation. */
   rows: z
     .array(
       createCandidateSchema.pick({
@@ -591,7 +520,6 @@ export const bulkCreateSessionsSchema = z.object({
     .min(1)
     .max(BULK_MAX_ROWS),
   expiresInHours: z.number().int().min(1).max(MAX_CODE_TTL_HOURS).default(DEFAULT_CODE_TTL_HOURS),
-  /** Bulk default is MULTI (boleh masuk ulang) per product decision; switchable per batch. */
   reentryPolicy: z.enum(["single", "multi"]).default("multi"),
 });
 
@@ -600,7 +528,6 @@ export type BulkCreatedRow = {
   sessionId: string;
   fullName: string;
   birthDate: string;
-  /** PLAINTEXT — exists once, in this response, for HR to distribute. */
   accessCode: string;
   accessCodeMasked: string;
 };
@@ -611,13 +538,6 @@ export type BulkCreateSessionsDto = {
   reentryPolicy: "single" | "multi";
 };
 
-/**
- * Creates candidate + session + access code for EVERY row in ONE transaction — all-or-nothing, so
- * a failure at row 137 never leaves a half-imported batch to reconcile by hand. All sessions pin
- * the same published master versions (resolved once), share one TTL and one re-entry policy, and
- * every plaintext code exists only in the response. Audits: per-entity rows plus one
- * `session.bulk_created` summary.
- */
 export async function bulkCreateSessions(
   db: DbLike,
   ctx: AuthContext,
@@ -767,10 +687,6 @@ export async function bulkCreateSessions(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Session list + detail
-// ---------------------------------------------------------------------------
-
 export const listSessionsSchema = z.object({
   status: z.string().trim().min(1).max(40).optional(),
   query: z.string().trim().min(1).max(200).optional(),
@@ -791,7 +707,6 @@ export type SessionListRow = {
   progress: { subtestsCompleted: number; answered: number; skipped: number };
 };
 
-/** The newest code per session — regeneration (T20) leaves older rows behind as history. */
 function latestCodePerSession(
   rows: readonly {
     sessionId: string;
@@ -826,7 +741,6 @@ export async function listSessions(
     conditions.push(eq(assessmentSessions.status, filters.status as SessionStatus));
   }
   if (filters.query) {
-    // Parameterized by drizzle; the only user text reaching SQL is a bound LIKE pattern.
     conditions.push(ilike(candidates.fullName, `%${filters.query}%`));
   }
 
@@ -852,7 +766,6 @@ export async function listSessions(
   }
   const sessionIds = base.map((row) => row.sessionId);
 
-  // Aggregates fetched per page of ids, folded in JS: no N+1, no fragile lateral SQL.
   const codeRows = await db
     .select({
       sessionId: accessCodes.sessionId,
@@ -963,7 +876,6 @@ export async function getSessionDetail(
   sessionId: string,
 ): Promise<SessionDetailDto> {
   if (!z.uuid().safeParse(sessionId).success) {
-    // A malformed id is the same miss as an unknown one — not a different error to probe with.
     throw notFound();
   }
 
@@ -1132,16 +1044,11 @@ export async function getSessionDetail(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Access code revoke / regenerate (T20, spec §9)
-// ---------------------------------------------------------------------------
-
 const CODE_NOT_ACTIVE_MESSAGE = "Kode akses sesi ini sudah tidak aktif.";
 const CODE_COMPLETED_MESSAGE =
   "Kode akses sesi ini sudah selesai dipakai; sesi selesai tidak dapat dibuka kembali.";
 const SESSION_CLOSED_MESSAGE = "Sesi ini sudah ditutup dan kodenya tidak dapat dibuat ulang.";
 
-/** Session statuses from which a fresh code makes no sense — the session itself is over. */
 const REGENERATE_BLOCKED_STATUSES: ReadonlySet<SessionStatus> = new Set([
   "final",
   "void",
@@ -1159,7 +1066,6 @@ export type RevokeAccessCodeDto = {
 
 type LockedSessionRow = { id: string; status: SessionStatus };
 
-/** Org-scoped session lookup under a row lock, so two admins acting at once serialize. */
 async function lockHrSession(
   tx: DbLike,
   ctx: AuthContext,
@@ -1195,11 +1101,6 @@ async function latestCode(tx: DbLike, sessionId: string) {
   return row ?? null;
 }
 
-/**
- * Kills the code AND every participant token of the session. The code alone would only bar
- * re-entry; a participant already inside holds a token, and a revocation that leaves them typing
- * is not a revocation. The next request they make fails `TOKEN_INVALID` (T12 checks `revoked_at`).
- */
 export async function revokeAccessCode(
   db: DbLike,
   ctx: AuthContext,
@@ -1268,19 +1169,12 @@ export const regenerateAccessCodeSchema = z.object({
 
 export type RegenerateAccessCodeDto = {
   sessionId: string;
-  /** PLAINTEXT — the one and only time the new code leaves the server. */
   accessCode: string;
   accessCodeMasked: string;
   accessCodeExpiresAt: string;
   previousCodeMasked: string | null;
 };
 
-/**
- * Retires the old code as `regenerated` when one exists, then mints a fresh active code. Legacy or
- * repaired sessions can have no code row; the rescue flow still creates the missing entry.
- * Participant tokens survive: regeneration replaces the ENTRY credential, not a session already
- * legitimately underway — killing the session is what `revokeAccessCode` is for.
- */
 export async function regenerateAccessCode(
   db: DbLike,
   ctx: AuthContext,
@@ -1298,8 +1192,6 @@ export async function regenerateAccessCode(
 
     const code = await latestCode(tx, session.id);
     if (code?.status === "completed") {
-      // Spec §9: "kode yang selesai tidak dapat memulai sesi baru" — a finished sitting is not
-      // reopened by minting a fresh code; a retest is a NEW session.
       throw new ApiError("CODE_ALREADY_COMPLETED", CODE_COMPLETED_MESSAGE, 409);
     }
 

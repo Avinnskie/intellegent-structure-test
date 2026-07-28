@@ -23,11 +23,6 @@ const RESULT_STATUS_LABELS: Record<string, string> = {
   superseded: "Superseded",
 };
 
-/**
- * The result page: identity, versions, the §16 table + chart from
- * ONE server DTO, and the lifecycle actions. `view_results` is enforced by `getResult` itself; a
- * session that has no result yet still renders with its next operational step.
- */
 export default async function HrResultPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
   const db = getDb();
@@ -54,7 +49,6 @@ export default async function HrResultPage({ params }: { params: Promise<{ sessi
     result = await getResult(db, ctx, sessionId);
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) {
-      // The account is HR but lacks `view_results` (spec §4.3) — say so instead of erroring.
       isForbidden = true;
     } else if (!(error instanceof ApiError) || error.status !== 404) {
       throw error;

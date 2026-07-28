@@ -1,10 +1,6 @@
 import { ProgressBar } from "@/components/ui/progress-bar";
 import type { SubtestCode } from "@/lib/ist-subtests";
 
-/**
- * Mirrors `StartSubtestItem` (T13) — the participant-safe projection of one question. There is no
- * field for a scoring rule or a correct answer, and this component must never grow one.
- */
 export type QuestionItem = {
   readonly itemVersionId: string;
   readonly itemNumber: number;
@@ -13,9 +9,7 @@ export type QuestionItem = {
   readonly prompt: string;
   readonly options: readonly { optionCode: string; label: string }[];
   readonly placeholder: string | null;
-  /** Storage path (opaque to the client); the PAGE converts it to a signed URL. */
   readonly mediaReference?: string | null;
-  /** The participant's previously saved answer, or null when unanswered. Restores the input on navigation. */
   readonly savedValue?: string | null;
 };
 
@@ -33,16 +27,13 @@ type QuestionPanelState = {
 type TestQuestionPanelProps = {
   readonly state: QuestionPanelState;
   readonly autosaveLabel: string | null;
-  /** Signed URL of the question's image (already minted server-side); null = none. */
   readonly mediaUrl?: string | null;
-  /** True while an answer/skip is in flight — every input and button locks until the next item. */
   readonly disabled?: boolean;
   readonly onValueChange: (value: string) => void;
   readonly onSkip: () => void;
   readonly onSubmit: () => void;
 };
 
-/** A submittable answer: chosen option, or non-empty text/number. The server re-validates anyway. */
 export function canSubmitValue(item: QuestionItem, value: string): boolean {
   if (item.itemType === "choice") {
     return item.options.some((option) => option.optionCode === value);

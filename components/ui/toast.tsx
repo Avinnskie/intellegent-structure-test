@@ -32,10 +32,6 @@ const KIND_STYLES: Record<ToastKind, string> = {
 
 const KIND_ICONS: Record<ToastKind, string> = { success: "✓", error: "✕", info: "ℹ" };
 
-/**
- * App-wide toast stack replacing browser alert-style feedback. Non-blocking, auto-dismissing,
- * announced politely to screen readers; errors use role="alert" so they interrupt.
- */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<readonly Toast[]>([]);
   const nextIdRef = useRef(1);
@@ -58,8 +54,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {/* Bottom-center, anchored with explicit left+right (inset-x-0): `inset-x-auto` tricks made
-          the stack fall back to the element's static position (top-left) in Safari. */}
+      { }
       <div
         aria-live="polite"
         className="pointer-events-none fixed inset-x-0 bottom-6 z-[100] flex min-w-0 max-w-full flex-col items-center gap-2 overflow-x-hidden px-4"

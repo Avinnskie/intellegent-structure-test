@@ -13,10 +13,6 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/**
- * HR candidate registry. Auth first, CSRF on the mutation, org scoping inside the service — every
- * HR route follows this exact order so none can be reached with less than all three.
- */
 export const POST = withApiHandler(async (request: Request) => {
   assertSameOrigin(request);
   const ctx = await requireHrUser(getDb());

@@ -25,24 +25,16 @@ type Draft = {
   prompt: string;
   placeholder: string;
   options: { optionCode: string; label: string }[];
-  /** Kunci jawaban — dimuat terpisah saat editor dibuka; null selama masih dimuat. */
   correctOptionCode: string | null;
   acceptedValues: string;
   geScore2: string[];
   geScore1: string[];
   geScore0: string[];
   keyLoaded: boolean;
-  /** Path gambar saat ini; undefined = tidak diubah, null = dilepas. */
   mediaReference: string | null | undefined;
   isUploading: boolean;
 };
 
-/**
- * Question bank editor on real data. Edits are IN PLACE and reach running sessions (deliberate —
- * the typo-fix tool). Option CODES stay read-only; what HR now controls per item is the ANSWER
- * KEY: the correct option (choice) or accepted values (numeric), fetched on demand — the bulk
- * list never carries keys. Images upload from the local device into the private media bucket.
- */
 export function QuestionBankManager({ subtests }: { subtests: readonly QuestionBankSubtestDto[] }) {
   const router = useRouter();
   const { push } = useToast();
@@ -125,7 +117,6 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
         return;
       }
     } catch {
-      // Falls through to the toast below.
     }
     push("error", "Kunci jawaban gagal dimuat — simpan tanpa mengubah kunci, atau buka ulang.");
   }
@@ -203,7 +194,6 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
       ...(draft.options.length > 0
         ? { options: draft.options.map((option) => ({ ...option, label: option.label.trim() })) }
         : {}),
-      // The key is sent only when it was loaded (so a failed key fetch cannot blank a key).
       ...(draft.keyLoaded && draft.itemType === "choice" && draft.correctOptionCode
         ? { correctOptionCodes: [draft.correctOptionCode] }
         : {}),

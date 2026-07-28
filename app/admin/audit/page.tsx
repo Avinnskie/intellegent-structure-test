@@ -9,11 +9,6 @@ import { requireHrUser } from "@/lib/server/authz.ts";
 const PAGE_SIZE = 50;
 const FORBIDDEN_MESSAGE = "Anda tidak memiliki izin untuk tindakan ini.";
 
-/**
- * The real audit trail, newest first, paginated via `?page=`. Super_admin only — the layout gates
- * full loads, and the role is RE-CHECKED here because layouts do not re-run on client navigation.
- * Read-only by construction: this page has no actions, and the table has no update path anywhere.
- */
 export default async function AdminAuditPage({
   searchParams,
 }: {

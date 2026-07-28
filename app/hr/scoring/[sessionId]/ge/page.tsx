@@ -8,7 +8,6 @@ import { requireHrUser } from "@/lib/server/authz.ts";
 import { listGeItems } from "@/lib/server/ge-scoring.ts";
 import { getSessionDetail } from "@/lib/server/hr.ts";
 
-/** The GE scoring board on real data: verbatim answers, locked rubric, audited overrides. */
 export default async function HrGeScoringPage({
   params,
 }: {

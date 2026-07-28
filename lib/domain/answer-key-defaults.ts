@@ -1,10 +1,6 @@
 import type { IstQuestion } from "../ist-questions.ts";
 import { officialChoiceKeyFor, officialNumericAcceptedValuesFor } from "./official-ist.ts";
 
-/**
- * Stamped onto every `assessment_results.engine_version`. Bump on any change to aggregate/scoring
- * behavior (brief §22: reproducibility).
- */
 export const ENGINE_VERSION = "1.0.0";
 
 export const MANUAL_GE_DEFAULT_RUBRIC =
@@ -49,9 +45,6 @@ function assertNever(value: never): never {
   throw new UnexpectedQuestionKindError();
 }
 
-/**
- * Returns the immutable workbook answer key used to seed a versioned scoring-key release.
- */
 export function defaultAnswerKeyFor(question: IstQuestion): AnswerKeyRule {
   switch (question.kind) {
     case "choice": {

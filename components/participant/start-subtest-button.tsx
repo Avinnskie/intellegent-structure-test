@@ -8,14 +8,6 @@ type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
 const NETWORK_ERROR_MESSAGE = "Tidak dapat menghubungi server. Periksa koneksi lalu coba lagi.";
 
-/**
- * "Mulai subtes": POSTs the start endpoint, then navigates to the first question.
- *
- * The endpoint is idempotent by design (T13) — a double click or a retry resumes the SAME attempt
- * with the SAME deadline, so this button never needs to fear creating a second timer. On a state
- * error (session advanced in another tab, admin pause) it refreshes the route instead of guessing:
- * the server page re-reads `nextRoute` and redirects wherever the participant now belongs.
- */
 export function StartSubtestButton({ token, code }: { token: string; code: SubtestCode }) {
   const router = useRouter();
   const [isStarting, setIsStarting] = useState(false);
@@ -40,8 +32,6 @@ export function StartSubtestButton({ token, code }: { token: string; code: Subte
       }
 
       const envelope = (await response.json().catch(() => ({}))) as ErrorEnvelope;
-      // WRONG_SUBTEST / SUBTEST_LOCKED / SESSION_NOT_ACTIVE all mean "this page is stale":
-      // let the server component re-resolve where the participant belongs.
       if (response.status === 409 || response.status === 401) {
         router.refresh();
         return;

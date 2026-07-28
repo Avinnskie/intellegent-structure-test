@@ -19,18 +19,12 @@ type ConfirmDialogProps = {
   readonly description: string;
   readonly confirmLabel: string;
   readonly tone?: "primary" | "danger";
-  /** When set, the dialog carries a text field; `required` gates the confirm button. */
   readonly input?: { label: string; placeholder?: string; required?: boolean };
   readonly isBusy?: boolean;
   readonly onConfirm: (inputValue: string) => void;
   readonly onCancel: () => void;
 };
 
-/**
- * Confirmation dialog on shadcn/radix Dialog — same API as before, so call sites are untouched.
- * The optional required text field is what window.prompt never gave us: the confirm button stays
- * disabled until the (audited) reason is actually filled in.
- */
 export function ConfirmDialog({
   open,
   title,
@@ -43,8 +37,6 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const [value, setValue] = useState("");
-  // Reset-during-render (the React "derive state from props" pattern): a fresh opening starts
-  // with a clean field, so a reason typed for one action never leaks into the next confirmation.
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);

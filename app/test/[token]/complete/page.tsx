@@ -1,9 +1,3 @@
-/**
- * The closing screen. Spec §16: the participant sees NO results on the MVP — scoring happens on
- * HR's side after this point. Static on purpose: it reads nothing and calls nothing, so it can
- * never leak a status, a score, or an error detail, and it stays readable even if the session's
- * token has since been invalidated.
- */
 export default function CompletePage() {
   return (
     <section className="flex min-h-dvh items-center justify-center px-4 py-10">

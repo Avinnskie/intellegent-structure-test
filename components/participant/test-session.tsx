@@ -33,7 +33,6 @@ type TestSessionProps = {
   readonly items: readonly QuestionItem[];
   readonly statuses: readonly { itemNumber: number; status: ItemStatusValue }[];
   readonly currentLocal: number;
-  /** Signed URL of the current item's image, minted server-side; null = no image. */
   readonly currentMediaUrl?: string | null;
   readonly expiresAt: string;
   readonly serverNow: string;
@@ -75,14 +74,11 @@ export function TestSession({
   }
 
   const [draft, setDraft] = useState(currentItem.savedValue ?? "");
-  // Locks every input the moment an answer/skip is in flight, so the gap between the click and the
-  // next page rendering cannot swallow (or double-send) a second interaction.
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [draftItemId, setDraftItemId] = useState(currentItem.itemVersionId);
   if (draftItemId !== currentItem.itemVersionId) {
     setDraftItemId(currentItem.itemVersionId);
     setDraft(currentItem.savedValue ?? "");
-    // A new item has rendered — the navigation that locked the panel has completed.
     setIsAdvancing(false);
   }
 
@@ -160,8 +156,6 @@ export function TestSession({
 
   function handleValueChange(value: string) {
     if (isAdvancing) {
-      // A click that lands in the gap between "Jawab & lanjut" and the next page must not change
-      // the answer that is being submitted.
       return;
     }
     setDraft(value);
@@ -179,10 +173,8 @@ export function TestSession({
     if (saved) {
       setLocalStatuses((previous) => ({ ...previous, [currentLocal]: "answered" }));
       advance();
-      // The lock is released by the reset-on-prop-change block when the next item renders.
       return;
     }
-    // Save failed: unlock so the participant can retry with their answer still on screen.
     setIsAdvancing(false);
     router.refresh();
   }
@@ -230,7 +222,7 @@ export function TestSession({
     <section className="h-full w-full lg:pb-0 grid gap-6 xl:grid-cols-[280px_1fr]">
       <CourseRail currentCode={subtestCode} />
       <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
-        {/* <SessionTimer minutes={minutes} seconds={seconds} className="sticky top-4 z-30 xl:hidden" /> */}
+        { }
         <TestQuestionPanel
           state={{
             subtestCode,

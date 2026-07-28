@@ -38,7 +38,6 @@ type ParsedRow = {
 
 type ParseResult = { rows: ParsedRow[]; errors: { line: number; message: string }[] };
 
-/** `DD/MM/YYYY`, `DD-MM-YYYY`, dan `YYYY-MM-DD` → `YYYY-MM-DD`; null bila bukan tanggal sah. */
 function normalizeDate(raw: string): string | null {
   const trimmed = raw.trim();
   let year: number;
@@ -78,10 +77,6 @@ function normalizeGender(raw: string): string | null | undefined {
   return null;
 }
 
-/**
- * Paste dari Excel memisahkan kolom dengan TAB; paste manual boleh memakai `|`. Baris header
- * (mengandung "nama") dilewati otomatis.
- */
 function parsePaste(text: string): ParseResult {
   const rows: ParsedRow[] = [];
   const errors: { line: number; message: string }[] = [];
@@ -97,7 +92,7 @@ function parsePaste(text: string): ParseResult {
     const cells = trimmed.split(separator).map((cell) => cell.trim());
 
     if (index === 0 && /nama/i.test(cells[0] ?? "") && normalizeDate(cells[1] ?? "") === null) {
-      continue; // header row
+      continue;
     }
 
     const [name, dateRaw, genderRaw, education, purpose] = cells;

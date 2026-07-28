@@ -1,10 +1,5 @@
 import type { ResultDto } from "@/lib/server/calculate.ts";
 
-/**
- * The nine-subtest profile chart. Renders `dto.subtests` VERBATIM — already in spec §16 order
- * (SE WA AN GE ME RA ZR FA WU) with values computed server-side; this component never re-derives
- * a number, so the chart and the table below it cannot diverge.
- */
 export function ResultChart({ subtests }: { subtests: ResultDto["subtests"] }) {
   const max = Math.max(...subtests.map((subtest) => subtest.standardScore), 1);
 

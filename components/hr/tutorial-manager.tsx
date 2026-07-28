@@ -24,11 +24,6 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Ditolak",
 };
 
-/**
- * Tutorial CRUD on real data. The rules the UI enforces visually (the server enforces them for
- * real): published versions are read-only — editing means drafting a new version; publishing
- * archives the previous published one; sessions already created keep their pinned version.
- */
 export function TutorialManager({ subtests }: { subtests: readonly TutorialSubtestDto[] }) {
   const router = useRouter();
   const { push } = useToast();
@@ -39,7 +34,6 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
     version: TutorialVersionDto;
   } | null>(null);
 
-  // Draft editor state: null = closed; id null = creating a NEW draft.
   const [editor, setEditor] = useState<{
     id: string | null;
     textContent: string;
@@ -47,7 +41,6 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
     isUploading: boolean;
   } | null>(null);
 
-  /** Accepts video OR image; the media kind (and its size limit) follows the file's MIME type. */
   async function handleUploadMedia(file: File) {
     const isImage = file.type.startsWith("image/");
     setEditor((current) => (current ? { ...current, isUploading: true } : current));

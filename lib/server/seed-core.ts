@@ -1,9 +1,3 @@
-/**
- * Transactional entry point for the default IST master data.
- *
- * Content construction and scoring construction live in separate modules so this file only owns
- * idempotency, transaction scope, counts, and audit.
- */
 import { eq } from "drizzle-orm";
 import type { DbLike } from "../db/client.ts";
 import {

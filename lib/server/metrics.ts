@@ -1,7 +1,3 @@
-/**
- * Dashboard metrics for the HR portal (T22). Read-only, org-scoped, and cheap: one grouped count
- * over sessions plus the page of recent rows `listSessions` already knows how to build.
- */
 import { and, count, eq, gte } from "drizzle-orm";
 import type { DbLike } from "../db/client.ts";
 import { assessmentSessions } from "../db/schema.ts";
@@ -9,7 +5,6 @@ import type { SessionStatus } from "../domain/session-state.ts";
 import type { AuthContext } from "./authz.ts";
 import { listSessions, type SessionListRow } from "./hr.ts";
 
-/** Statuses that mean a candidate is actively somewhere inside the test flow right now. */
 const ACTIVE_STATUSES: ReadonlySet<SessionStatus> = new Set([
   "code_validated",
   "tutorial",
@@ -19,7 +14,6 @@ const ACTIVE_STATUSES: ReadonlySet<SessionStatus> = new Set([
 ]);
 
 export type DashboardMetrics = {
-  /** Sessions created since the first day of the current month (server timezone). */
   createdThisMonth: number;
   active: number;
   waitingGeScoring: number;

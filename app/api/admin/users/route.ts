@@ -12,7 +12,6 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/** Super_admin only (enforced in the service). The password is write-only pass-through. */
 export const GET = withApiHandler(async () => {
   const ctx = await requireHrUser(getDb());
   return Response.json({ users: await listPortalUsers(getDb(), ctx) });

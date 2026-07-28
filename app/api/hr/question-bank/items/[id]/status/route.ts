@@ -11,11 +11,9 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/** Toggles active/inactive. Inactive items keep serving pinned decks (T13) — this is a flag. */
 export const POST = withApiHandler(
   async (request: Request, ctx: RouteContext<"/api/hr/question-bank/items/[id]/status">) => {
     assertSameOrigin(request);
-    // Next 16: `ctx.params` is a Promise.
     const { id } = await ctx.params;
     const auth = await requireHrUser(getDb());
     const body = await parseBody(request);

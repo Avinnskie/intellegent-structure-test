@@ -1,14 +1,3 @@
-/**
- * The PDF report document (T31, spec §17). Rendered from the SAME `ResultDto` the screen uses, so
- * screen and paper can never disagree.
- *
- * DETERMINISM IS A CONTRACT: the document body contains no `new Date()` reads of the wall clock
- * and no random ids — only the DTO's own recorded values (metadata dates are pinned to
- * `calculatedAt`). Two renders of one result must hash identically; the test pins it.
- *
- * Plain `.ts` with `createElement` — no JSX — because the Node test runner's type stripping does
- * not process `.tsx`, and this module must be importable by tests and by Next alike.
- */
 import { createElement as h, type ReactElement } from "react";
 import {
   Document,
@@ -106,7 +95,6 @@ export function buildReportDocument(data: ResultDto): ReactElement<DocumentProps
     {
       title: `Laporan IST — ${data.candidate.fullName}`,
       author: "IST Assessment Platform",
-      // Metadata dates default to "now", which would break hash determinism.
       creationDate: new Date(data.calculatedAt),
       modificationDate: new Date(data.calculatedAt),
     },

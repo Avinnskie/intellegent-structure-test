@@ -44,8 +44,6 @@ export default async function QuestionPage({
     redirect(state.nextRoute);
   }
 
-  // Only the CURRENT item's image is signed (one storage call per render, not twenty); fail-soft —
-  // a storage hiccup shows the question without its image rather than breaking the test.
   const currentMediaUrl = await signMediaUrlOrNull(
     createSupabaseStorageProvider(),
     currentItem.mediaReference ?? null,

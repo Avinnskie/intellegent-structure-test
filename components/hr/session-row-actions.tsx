@@ -8,10 +8,6 @@ import { useToast } from "@/components/ui/toast";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
-/**
- * Row actions on the session list. Delete appears ONLY while nothing was sat
- * (code_generated/code_validated) — the server re-enforces it; later stages are history.
- */
 export function SessionRowActions({
   sessionId,
   status,

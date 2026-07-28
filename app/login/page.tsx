@@ -13,7 +13,6 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  // Sanitized here, at the edge of the app, so the client form only ever holds a vetted path.
   const next = safeNextPath(params.next);
 
   return (

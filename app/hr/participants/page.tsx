@@ -4,7 +4,6 @@ import { getDb } from "@/lib/db/client.ts";
 import { requireHrUser } from "@/lib/server/authz.ts";
 import { listCandidates } from "@/lib/server/hr.ts";
 
-/** Candidate registry with modal CRUD. Org scoping + audit live in the services. */
 export default async function HrParticipantsPage() {
   const db = getDb();
   const ctx = await requireHrUser(db);

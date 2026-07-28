@@ -1,6 +1,5 @@
 import type { SubtestCode } from "@/lib/ist-subtests";
 
-/** Mirrors the DB `response_status` enum as it reaches the client via the T12/T13 DTOs. */
 export type ItemStatusValue = "unanswered" | "answered" | "skipped" | "changed" | "locked";
 
 export type SidebarItem = {

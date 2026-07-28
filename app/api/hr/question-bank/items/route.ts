@@ -11,7 +11,6 @@ async function parseBody(request: Request): Promise<unknown> {
   }
 }
 
-/** Adds a new item to the currently published form and key, following question-bank edit semantics. */
 export const POST = withApiHandler(async (request: Request) => {
   assertSameOrigin(request);
   const auth = await requireHrUser(getDb());

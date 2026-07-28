@@ -7,7 +7,6 @@ type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
 const NETWORK_ERROR_MESSAGE = "Tidak dapat menghubungi server. Coba lagi.";
 
-/** Generates a new versioned PDF for a final result, then refreshes the history table. */
 export function GenerateReportButton({ resultId }: { resultId: string }) {
   const router = useRouter();
   const [isBusy, setIsBusy] = useState(false);

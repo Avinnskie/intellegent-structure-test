@@ -1,8 +1,3 @@
-/**
- * Where a participant waits while an admin has the session frozen (`paused_by_admin`). Static: it
- * says "wait", never "done" — the closing page would tell them a paused test is over, and naming
- * the WHY is HR's call, not this page's.
- */
 export default function PausedPage() {
   return (
     <section className="flex min-h-dvh items-center justify-center px-4 py-10">

@@ -1,9 +1,3 @@
-/**
- * Public facade for the version-pinned IST calculation pipeline.
- *
- * The implementation is split by responsibility: input scoring, aggregate persistence, and the
- * result read model. Keeping this facade stable avoids coupling routes and tests to those details.
- */
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { DbLike } from "../db/client.ts";

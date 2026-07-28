@@ -1,12 +1,3 @@
-/**
- * Result lifecycle after calculation (T29): draft → reviewed → final, plus the audited override
- * path over a final result.
- *
- * "Hasil final terkunci" (brief §22) is enforced here as data flow, not convention: a final result
- * refuses finalize/review/recalculate outright, and the ONLY way past it is `overrideFinalResult`,
- * which demands a reason, writes `result.overridden` to the audit trail, marks the old row
- * `superseded`, and hands back a fresh `draft` calculated from the same recorded inputs.
- */
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "../api/errors.ts";
@@ -34,7 +25,6 @@ type ResultRow = {
   supersededById: string | null;
 };
 
-/** Org-scoped result lookup under a session row lock so two admins acting at once serialize. */
 async function lockResult(tx: DbLike, ctx: AuthContext, resultId: string): Promise<ResultRow> {
   if (!z.uuid().safeParse(resultId).success) {
     throw notFound();
@@ -64,7 +54,6 @@ async function lockResult(tx: DbLike, ctx: AuthContext, resultId: string): Promi
 
 export type ResultActionDto = { resultId: string; sessionId: string; status: string };
 
-/** `draft → reviewed`, recording the reviewer's notes on the result row itself. */
 export async function reviewResult(
   db: DbLike,
   ctx: AuthContext,
@@ -87,7 +76,6 @@ export async function reviewResult(
       .set({ status: "reviewed", reviewNotes: trimmed })
       .where(eq(assessmentResults.id, result.id));
 
-    // The session mirrors the result's stage so the HR list can filter on it.
     assertSessionTransition("calculated", "reviewed");
     await tx
       .update(assessmentSessions)
@@ -108,10 +96,6 @@ export async function reviewResult(
   });
 }
 
-/**
- * `draft|reviewed → final`. From here the result is immutable and exportable (spec §13: "hasil
- * belum dapat diekspor sebelum final") — and locked against everything except an audited override.
- */
 export async function finalizeResult(
   db: DbLike,
   ctx: AuthContext,
@@ -163,11 +147,6 @@ export const overrideSchema = z.object({
   overrideReason: z.string().trim().min(1, OVERRIDE_REASON_MESSAGE).max(2000),
 });
 
-/**
- * The ONLY door past a final result. Marks it `superseded` (kept forever, never edited), audits
- * `result.overridden` with the reason, moves the session back to `calculated`, and recalculates —
- * producing a fresh `draft` from the same recorded responses and GE scores.
- */
 export async function overrideFinalResult(
   db: DbLike,
   ctx: AuthContext,
@@ -190,8 +169,6 @@ export async function overrideFinalResult(
       .update(assessmentResults)
       .set({ status: "superseded" })
       .where(eq(assessmentResults.id, result.id));
-    // `final` is terminal in the state machine on purpose; the override is the one audited
-    // exception, so the session write here is deliberate and does not go through canTransition.
     await tx
       .update(assessmentSessions)
       .set({ status: "calculated" })
@@ -213,7 +190,6 @@ export async function overrideFinalResult(
   return calculateResult(db, ctx, sessionId);
 }
 
-/** The latest live (non-superseded) result id of a session, for routes keyed by session. */
 export async function latestResultId(
   db: DbLike,
   ctx: AuthContext,

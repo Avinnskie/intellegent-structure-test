@@ -1,14 +1,3 @@
-/**
- * Report generation and download (T31, spec §17).
- *
- * - Only FINAL results produce reports (spec §13: "hasil belum dapat diekspor sebelum final").
- * - Files are IMMUTABLE and VERSIONED: regenerate writes a new `reports/{sessionId}/{reportId}.pdf`
- *   and a new row with `report_version + 1`; nothing ever overwrites.
- * - `file_hash = sha256(pdf)` makes any later tampering of the stored file detectable against the
- *   database, and pins render determinism in the tests.
- * - Downloads go through short-lived signed URLs on the PRIVATE bucket — the bucket itself never
- *   becomes public, and every download is audited.
- */
 import { createHash } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -79,7 +68,6 @@ export async function generateReport(
     throw new ApiError("RESULT_NOT_FINAL", NOT_FINAL_MESSAGE, 409);
   }
 
-  // The same DTO the screen renders — screen and paper cannot diverge.
   const dto = await getResult(db, ctx, result.sessionId);
   const pdf = await renderReportPdf(dto);
   const fileHash = createHash("sha256").update(pdf).digest("hex");
@@ -98,7 +86,6 @@ export async function generateReport(
       .values({
         resultId: result.id,
         reportVersion,
-        // Placeholder path; replaced right after the id exists. Two-step because the path embeds it.
         storageReference: "pending",
         fileHash,
         generatedBy: ctx.userId,
@@ -143,7 +130,6 @@ export async function generateReport(
   });
 }
 
-/** Short-lived signed URL for one report file. Authz first, audit always. */
 export async function getReportDownload(
   db: DbLike,
   storage: StorageProvider,
@@ -200,7 +186,6 @@ export type ReportHistoryRow = {
   generatedAt: string;
 };
 
-/** Report history of a session's results, newest first, for the reports page. */
 export async function listReports(
   db: DbLike,
   ctx: AuthContext,

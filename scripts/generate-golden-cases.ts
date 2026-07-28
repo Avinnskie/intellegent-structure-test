@@ -1,14 +1,3 @@
-/**
- * Golden dataset generator (T28, brief §22).
- *
- * Produces `tests/golden/cases.json` from the immutable workbook reference data. The integration
- * harness then drives the real application and compares every persisted number with these cases.
- *
- * The workbook defines scoring age as YEAR(test)-YEAR(birth), so dayOffset deliberately does not
- * change the scoring band when both dates remain in their respective years.
- *
- * Run: npm run golden:generate
- */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,11 +20,8 @@ export type GoldenCase = {
   name: string;
   description: string;
   age: { years: number; dayOffset: number };
-  /** Per non-GE subtest. GE is driven by `geScores` instead. */
   plans: Record<Exclude<SubtestCode, "GE">, AnswerPlan>;
-  /** One entry per ANSWERED GE item, in deck order; its length = answered count. */
   geScores: readonly (0 | 1 | 2)[];
-  /** When set, this subtest is closed by TIMEOUT (backdated expiry + sweep), not by hand. */
   timeoutSubtest: SubtestCode | null;
   expected:
     | {
@@ -134,7 +120,6 @@ export function buildGoldenCases(): GoldenCase[] {
   );
 }
 
-// CLI: `node --experimental-strip-types scripts/generate-golden-cases.ts`
 const isMain = process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href;
 if (isMain) {
   const cases = buildGoldenCases();
