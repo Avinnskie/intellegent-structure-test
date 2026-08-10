@@ -5,6 +5,14 @@ import { ApiError } from "@/lib/api/errors.ts";
 import { getDb } from "@/lib/db/client.ts";
 import { auditLogs } from "@/lib/db/schema.ts";
 import { requireHrUser } from "@/lib/server/authz.ts";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const PAGE_SIZE = 50;
 const FORBIDDEN_MESSAGE = "Anda tidak memiliki izin untuk tindakan ini.";
@@ -37,71 +45,71 @@ export default async function AdminAuditPage({
 
   return (
     <AppShell title="Audit log">
-      <section className="overflow-x-auto rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
+      <section className="overflow-x-auto rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-2xl font-bold tracking-[-0.03em] text-[var(--text-primary)]">
+          <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">
             Aktivitas sistem
           </h2>
-          <p className="text-sm text-[var(--text-muted)]">
+          <p className="text-sm text-muted-foreground">
             {total} entri · halaman {currentPage}/{totalPages}
           </p>
         </div>
         {rows.length === 0 ? (
-          <p className="mt-6 rounded-xl border border-dashed border-[var(--border-default)] bg-[var(--surface-base)] p-6 text-sm leading-6 text-[var(--text-secondary)]">
+          <p className="mt-6 rounded-xl border border-dashed border-border bg-background p-6 text-sm leading-6 text-muted-foreground">
             Belum ada aktivitas tercatat.
           </p>
         ) : (
-          <table className="mt-6 min-w-full text-left">
-            <thead className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              <tr>
-                <th className="pb-3">Waktu</th>
-                <th className="pb-3">Aktor</th>
-                <th className="pb-3">Aksi</th>
-                <th className="pb-3">Objek</th>
-                <th className="pb-3">Metadata</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm text-[var(--text-primary)]">
+          <Table className="mt-6 min-w-full text-left">
+            <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+              <TableRow>
+                <TableHead className="pb-3">Waktu</TableHead>
+                <TableHead className="pb-3">Aktor</TableHead>
+                <TableHead className="pb-3">Aksi</TableHead>
+                <TableHead className="pb-3">Objek</TableHead>
+                <TableHead className="pb-3">Metadata</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="text-sm text-foreground">
               {rows.map((row) => (
-                <tr key={row.id} className="border-t border-[var(--border-subtle)] align-top">
-                  <td className="py-4 whitespace-nowrap text-[var(--text-secondary)]">
+                <TableRow key={row.id} className="border-t border-border align-top">
+                  <TableCell className="py-4 whitespace-nowrap text-muted-foreground">
                     {row.createdAt.toLocaleString("id-ID")}
-                  </td>
-                  <td className="py-4">
+                  </TableCell>
+                  <TableCell className="py-4">
                     <span className="font-semibold">{row.actorType}</span>
                     {row.actorId ? (
-                      <span className="block font-mono text-xs text-[var(--text-muted)]">
+                      <span className="block font-mono text-xs text-muted-foreground">
                         {row.actorId}
                       </span>
                     ) : null}
-                  </td>
-                  <td className="py-4 font-mono text-xs">{row.action}</td>
-                  <td className="py-4 font-mono text-xs">
+                  </TableCell>
+                  <TableCell className="py-4 font-mono text-xs">{row.action}</TableCell>
+                  <TableCell className="py-4 font-mono text-xs">
                     {row.objectType}
                     {row.objectId ? (
-                      <span className="block text-[var(--text-muted)]">{row.objectId}</span>
+                      <span className="block text-muted-foreground">{row.objectId}</span>
                     ) : null}
-                  </td>
-                  <td className="py-4">
+                  </TableCell>
+                  <TableCell className="py-4">
                     {row.metadata ? (
-                      <pre className="max-w-md overflow-x-auto whitespace-pre-wrap rounded-lg bg-[var(--surface-base)] p-3 font-mono text-xs leading-5 text-[var(--text-secondary)]">
+                      <pre className="max-w-md overflow-x-auto whitespace-pre-wrap rounded-lg bg-background p-3 font-mono text-xs leading-5 text-muted-foreground">
                         {JSON.stringify(row.metadata, null, 2)}
                       </pre>
                     ) : (
                       "—"
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
 
-        <nav className="mt-6 flex items-center gap-3 border-t border-[var(--border-subtle)] pt-5">
+        <nav className="mt-6 flex items-center gap-3 border-t border-border pt-5">
           {currentPage > 1 ? (
             <Link
               href={`/admin/audit?page=${currentPage - 1}`}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-default)] px-4 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-subtle)]"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold text-foreground hover:bg-muted"
             >
               ← Lebih baru
             </Link>
@@ -109,7 +117,7 @@ export default async function AdminAuditPage({
           {currentPage < totalPages ? (
             <Link
               href={`/admin/audit?page=${currentPage + 1}`}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border-default)] px-4 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-subtle)]"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold text-foreground hover:bg-muted"
             >
               Lebih lama →
             </Link>
