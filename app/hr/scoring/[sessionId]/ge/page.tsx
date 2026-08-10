@@ -32,12 +32,12 @@ export default async function HrGeScoringPage({
   return (
     <AppShell title={`Skoring GE — ${detail.candidate.fullName}`}>
       <section className="space-y-6">
-        <article className="rounded-2xl border border-[var(--border-default)] bg-[var(--accent-warm-soft)] p-6">
+        <article className="rounded-xl border border-border bg-accent p-6">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center rounded-full bg-[var(--surface-panel)] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-primary)]">
+            <span className="inline-flex items-center rounded-full bg-card px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-foreground">
               {sessionStatusLabel(detail.status)}
             </span>
-            <span className="inline-flex items-center rounded-full border border-[var(--border-default)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+            <span className="inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
               16 soal GE
             </span>
           </div>
