@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PapiProfile, PapiStageNotice } from "@/components/hr/papi-profile";
 import { ResultActions } from "@/components/hr/result-actions";
 import { ResultChart } from "@/components/hr/result-chart";
 import { sessionStatusLabel } from "@/components/hr/session-status-label";
@@ -14,6 +15,21 @@ import {
   type ResultDto,
 } from "@/lib/server/calculate.ts";
 import { getSessionDetail } from "@/lib/server/hr.ts";
+import { logError } from "@/lib/server/logger.ts";
+import {
+  getPapiResult,
+  getPapiStage,
+  type PapiResultDto,
+  type PapiStageDto,
+} from "@/lib/server/papi-result-read.ts";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const RESULT_STATUS_LABELS: Record<string, string> = {
   waiting_ge: "Menunggu GE",
@@ -55,11 +71,32 @@ export default async function HrResultPage({ params }: { params: Promise<{ sessi
     }
   }
 
+  let papiStage: PapiStageDto | null = null;
+  let papiResult: PapiResultDto | null = null;
+  // Kegagalan membaca modul PAPI tidak boleh mematikan seluruh halaman hasil IST.
+  let papiUnavailable = false;
+  if (!isForbidden) {
+    try {
+      papiStage = await getPapiStage(db, ctx, sessionId);
+      if (papiStage.includesPapi) {
+        papiResult = await getPapiResult(db, ctx, sessionId);
+      }
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+        // Tidak berizin atau sesi tanpa data PAPI — bagian PAPI cukup disembunyikan.
+      } else {
+        // Umumnya skema PAPI belum termigrasi. Ditampilkan, bukan disembunyikan.
+        papiUnavailable = true;
+        logError("papi_section_unavailable", { sessionId }, error);
+      }
+    }
+  }
+
   if (isForbidden) {
     return (
       <AppShell title={`Hasil — ${detail.candidate.fullName}`}>
-        <article className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-8">
-          <p className="text-sm leading-6 text-[var(--text-secondary)]">
+        <article className="rounded-xl border border-border bg-card p-8">
+          <p className="text-sm leading-6 text-muted-foreground">
             Akun Anda tidak memiliki izin <code>view_results</code> untuk melihat hasil tes. Hubungi
             Super Admin.
           </p>
@@ -75,7 +112,7 @@ export default async function HrResultPage({ params }: { params: Promise<{ sessi
         result?.status === "final" ? (
           <Link
             href={`/hr/reports/${sessionId}`}
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-[var(--accent-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90"
           >
             Laporan PDF
           </Link>
@@ -91,20 +128,15 @@ export default async function HrResultPage({ params }: { params: Promise<{ sessi
         />
 
         {!result ? (
-          <article className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--surface-panel)] p-8">
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">
+          <article className="rounded-xl border border-dashed border-border bg-card p-8">
+            <p className="text-sm leading-6 text-muted-foreground">
               Belum ada hasil untuk sesi ini. Status sesi saat ini:{" "}
-              <strong className="text-[var(--text-primary)]">
-                {sessionStatusLabel(detail.status)}
-              </strong>
+              <strong className="text-foreground">{sessionStatusLabel(detail.status)}</strong>
               {automaticResult?.kind === "ge_key_required" ? (
                 <>
                   {" "}
                   — lengkapi{" "}
-                  <Link
-                    href="/hr/question-bank"
-                    className="font-semibold text-[var(--accent-primary)]"
-                  >
+                  <Link href="/hr/question-bank" className="font-semibold text-primary">
                     kunci jawaban GE
                   </Link>{" "}
                   agar sistem dapat menghitung otomatis.
@@ -115,78 +147,103 @@ export default async function HrResultPage({ params }: { params: Promise<{ sessi
         ) : (
           <>
             <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-              <article className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
+              <article className="rounded-xl border border-border bg-card p-6">
                 <div className="flex flex-wrap gap-3">
-                  <span className="inline-flex items-center rounded-full bg-[var(--accent-warm-soft)] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-primary)]">
+                  <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-foreground">
                     {RESULT_STATUS_LABELS[result.status] ?? result.status}
                   </span>
                   {result.normBandLabel ? (
-                    <span className="inline-flex items-center rounded-full border border-[var(--border-default)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                    <span className="inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
                       Norm band {result.normBandLabel}
                     </span>
                   ) : null}
                 </div>
-                <div className="mt-6 grid gap-3 text-sm text-[var(--text-secondary)]">
+                <div className="mt-6 grid gap-3 text-sm text-muted-foreground">
                   <p>
-                    <strong className="text-[var(--text-primary)]">Peserta:</strong>{" "}
+                    <strong className="text-foreground">Peserta:</strong>{" "}
                     {result.candidate.fullName}
                   </p>
                   <p>
-                    <strong className="text-[var(--text-primary)]">Usia saat tes:</strong>{" "}
-                    {result.ageAtTest} tahun · tanggal tes {result.testDate}
+                    <strong className="text-foreground">Usia saat tes:</strong> {result.ageAtTest}{" "}
+                    tahun · tanggal tes {result.testDate}
                   </p>
                   <p>
-                    <strong className="text-[var(--text-primary)]">IQ:</strong>{" "}
-                    {result.iq.score ?? "—"} · {result.iq.category ?? "—"}
+                    <strong className="text-foreground">IQ:</strong> {result.iq.score ?? "—"} ·{" "}
+                    {result.iq.category ?? "—"}
                   </p>
                   <p>
-                    <strong className="text-[var(--text-primary)]">Dominansi:</strong>{" "}
+                    <strong className="text-foreground">Dominansi:</strong>{" "}
                     {result.dominance.dominance ?? "—"}
                   </p>
                   <p>
-                    <strong className="text-[var(--text-primary)]">Total:</strong> RW{" "}
-                    {result.totals.rawScore} · SW {result.totals.standardScore}
+                    <strong className="text-foreground">Total:</strong> RW {result.totals.rawScore}{" "}
+                    · SW {result.totals.standardScore}
                   </p>
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-[var(--border-default)] p-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              <article className="rounded-xl border border-border p-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   Grafik sembilan subtes (SW)
                 </p>
                 <ResultChart subtests={result.subtests} />
               </article>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
-              <table className="min-w-full text-left">
-                <thead className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                  <tr>
-                    <th className="pb-3">Subtes</th>
-                    <th className="pb-3">RW</th>
-                    <th className="pb-3">SW</th>
-                    <th className="pb-3">Kategori</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm text-[var(--text-primary)]">
+            <div className="overflow-x-auto rounded-xl border border-border bg-card p-6">
+              <Table className="min-w-full text-left">
+                <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+                  <TableRow>
+                    <TableHead className="pb-3">Subtes</TableHead>
+                    <TableHead className="pb-3">RW</TableHead>
+                    <TableHead className="pb-3">SW</TableHead>
+                    <TableHead className="pb-3">Kategori</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="text-sm text-foreground">
                   {result.subtests.map((subtest) => (
-                    <tr key={subtest.code} className="border-t border-[var(--border-subtle)]">
-                      <td className="py-4 font-semibold">
+                    <TableRow key={subtest.code} className="border-t border-border">
+                      <TableCell className="py-4 font-semibold">
                         {subtest.code}
-                        <span className="ml-2 text-xs font-normal text-[var(--text-muted)]">
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
                           {subtest.title}
                         </span>
-                      </td>
-                      <td className="py-4">{subtest.rawScore}</td>
-                      <td className="py-4">{subtest.standardScore}</td>
-                      <td className="py-4">{subtest.category}</td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="py-4">{subtest.rawScore}</TableCell>
+                      <TableCell className="py-4">{subtest.standardScore}</TableCell>
+                      <TableCell className="py-4">{subtest.category}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </>
         )}
+
+        {papiUnavailable ? (
+          <article className="rounded-xl border border-dashed border-border bg-card p-6">
+            <h2 className="text-sm font-bold text-foreground">PAPI Kostick</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Modul PAPI belum dapat dibaca dari database. Umumnya ini berarti migrasi skema terbaru
+              belum dijalankan. Periksa dengan{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">npm run db:check-papi</code>,
+              lalu jalankan{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">npm run db:migrate</code> dan{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">npm run db:seed</code>. Hasil
+              IST di atas tidak terpengaruh.
+            </p>
+          </article>
+        ) : papiStage?.includesPapi ? (
+          papiResult ? (
+            <PapiProfile result={papiResult} />
+          ) : (
+            <PapiStageNotice
+              skipped={papiStage.skipped}
+              skipReason={papiStage.skipReason}
+              sessionStatusLabel={sessionStatusLabel(detail.status)}
+            />
+          )
+        ) : null}
       </section>
     </AppShell>
   );
