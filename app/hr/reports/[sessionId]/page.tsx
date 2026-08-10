@@ -10,6 +10,14 @@ import { requireHrUser } from "@/lib/server/authz.ts";
 import { getResult, type ResultDto } from "@/lib/server/calculate.ts";
 import { getSessionDetail } from "@/lib/server/hr.ts";
 import { listReports } from "@/lib/server/reports.ts";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default async function HrReportPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
@@ -36,8 +44,8 @@ export default async function HrReportPage({ params }: { params: Promise<{ sessi
     if (error.status === 403) {
       return (
         <AppShell title={`Laporan — ${detail.candidate.fullName}`}>
-          <article className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-8">
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">
+          <article className="rounded-xl border border-border bg-card p-8">
+            <p className="text-sm leading-6 text-muted-foreground">
               Akun Anda tidak memiliki izin <code>view_results</code>. Hubungi Super Admin.
             </p>
           </article>
@@ -53,18 +61,15 @@ export default async function HrReportPage({ params }: { params: Promise<{ sessi
     <AppShell title={`Laporan — ${detail.candidate.fullName}`}>
       <section className="space-y-6 ">
         {!isFinal ? (
-          <article className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--surface-panel)] p-8">
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">
+          <article className="rounded-xl border border-dashed border-border bg-card p-8">
+            <p className="text-sm leading-6 text-muted-foreground">
               Laporan PDF hanya dapat dibuat dari hasil yang sudah <strong>final</strong> (spec:
               hasil belum dapat diekspor sebelum final). Status saat ini:{" "}
-              <strong className="text-[var(--text-primary)]">
+              <strong className="text-foreground">
                 {result ? result.status : sessionStatusLabel(detail.status)}
               </strong>
               .{" "}
-              <Link
-                href={`/hr/results/${sessionId}`}
-                className="font-semibold text-[var(--accent-primary)]"
-              >
+              <Link href={`/hr/results/${sessionId}`} className="font-semibold text-primary">
                 Buka halaman hasil
               </Link>{" "}
               untuk menghitung, me-review, dan memfinalisasi.
@@ -75,82 +80,81 @@ export default async function HrReportPage({ params }: { params: Promise<{ sessi
             <GenerateReportButton resultId={result.resultId} />
 
             <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-              <article className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              <article className="rounded-xl border border-border bg-card p-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   Pratinjau isi laporan
                 </p>
-                <div className="mt-5 grid gap-3 text-sm text-[var(--text-secondary)]">
+                <div className="mt-5 grid gap-3 text-sm text-muted-foreground">
                   <p>
-                    <strong className="text-[var(--text-primary)]">Nama:</strong>{" "}
-                    {result.candidate.fullName}
+                    <strong className="text-foreground">Nama:</strong> {result.candidate.fullName}
                   </p>
                   <p>
-                    <strong className="text-[var(--text-primary)]">Tanggal tes:</strong>{" "}
-                    {result.testDate} · usia {result.ageAtTest} tahun · band{" "}
-                    {result.normBandLabel ?? "—"}
+                    <strong className="text-foreground">Tanggal tes:</strong> {result.testDate} ·
+                    usia {result.ageAtTest} tahun · band {result.normBandLabel ?? "—"}
                   </p>
                   <p>
-                    <strong className="text-[var(--text-primary)]">IQ:</strong>{" "}
-                    {result.iq.score ?? "—"} · {result.iq.category ?? "—"} · dominansi{" "}
-                    {result.dominance.dominance ?? "—"}
+                    <strong className="text-foreground">IQ:</strong> {result.iq.score ?? "—"} ·{" "}
+                    {result.iq.category ?? "—"} · dominansi {result.dominance.dominance ?? "—"}
                   </p>
                   <p>
-                    <strong className="text-[var(--text-primary)]">Total:</strong> RW{" "}
-                    {result.totals.rawScore} · SW {result.totals.standardScore}
+                    <strong className="text-foreground">Total:</strong> RW {result.totals.rawScore}{" "}
+                    · SW {result.totals.standardScore}
                   </p>
                 </div>
-                <p className="mt-5 rounded-xl border border-dashed border-[var(--status-warning)] bg-[color-mix(in_srgb,var(--status-warning)_8%,white)] p-4 text-xs leading-5 text-[var(--text-secondary)]">
+                <p className="mt-5 rounded-xl border border-dashed border-[var(--color-amber-500, #f59e0b)] bg-[color-mix(in_srgb,var(--color-amber-500, #f59e0b)_8%,white)] p-4 text-xs leading-5 text-muted-foreground">
                   Footer laporan: &ldquo;Laporan ini tidak memuat keputusan otomatis
                   diterima/ditolak.&rdquo;
                 </p>
               </article>
 
-              <article className="rounded-2xl border border-[var(--border-default)] bg-[var(--accent-warm-soft)] p-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              <article className="rounded-xl border border-border bg-accent p-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   Grafik yang tercetak di laporan
                 </p>
                 <ResultChart subtests={result.subtests} />
               </article>
             </div>
 
-            <article className="overflow-x-auto rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
-              <h2 className="text-lg font-bold tracking-[-0.02em] text-[var(--text-primary)]">
+            <article className="overflow-x-auto rounded-xl border border-border bg-card p-6">
+              <h2 className="text-lg font-bold tracking-[-0.02em] text-foreground">
                 Riwayat laporan
               </h2>
               {history.length === 0 ? (
-                <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
+                <p className="mt-4 text-sm leading-6 text-muted-foreground">
                   Belum ada PDF yang dibuat untuk hasil ini.
                 </p>
               ) : (
-                <table className="mt-4 min-w-full text-left">
-                  <thead className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    <tr>
-                      <th className="pb-3">Versi</th>
-                      <th className="pb-3">SHA-256</th>
-                      <th className="pb-3">Dibuat</th>
-                      <th className="pb-3">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm text-[var(--text-primary)]">
+                <Table className="mt-4 min-w-full text-left">
+                  <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+                    <TableRow>
+                      <TableHead className="pb-3">Versi</TableHead>
+                      <TableHead className="pb-3">SHA-256</TableHead>
+                      <TableHead className="pb-3">Dibuat</TableHead>
+                      <TableHead className="pb-3">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-sm text-foreground">
                     {history.map((row) => (
-                      <tr key={row.reportId} className="border-t border-[var(--border-subtle)]">
-                        <td className="py-4 font-semibold">v{row.reportVersion}</td>
-                        <td className="py-4 font-mono text-xs">{row.fileHash.slice(0, 16)}…</td>
-                        <td className="py-4">
+                      <TableRow key={row.reportId} className="border-t border-border">
+                        <TableCell className="py-4 font-semibold">v{row.reportVersion}</TableCell>
+                        <TableCell className="py-4 font-mono text-xs">
+                          {row.fileHash.slice(0, 16)}…
+                        </TableCell>
+                        <TableCell className="py-4">
                           {new Date(row.generatedAt).toLocaleString("id-ID")}
-                        </td>
-                        <td className="py-4">
+                        </TableCell>
+                        <TableCell className="py-4">
                           <a
                             href={`/api/hr/results/${row.reportId}/report`}
-                            className="font-semibold text-[var(--accent-primary)] hover:underline"
+                            className="font-semibold text-primary hover:underline"
                           >
                             Unduh
                           </a>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               )}
             </article>
           </>
