@@ -6,6 +6,14 @@ import { getDb } from "@/lib/db/client.ts";
 import type { SessionStatus } from "@/lib/domain/session-state.ts";
 import { requireHrUser } from "@/lib/server/authz.ts";
 import { getDashboardMetrics } from "@/lib/server/metrics.ts";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default async function HrDashboardPage() {
   const db = getDb();
@@ -37,7 +45,7 @@ export default async function HrDashboardPage() {
       actions={
         <Link
           href="/hr/sessions/new"
-          className="inline-flex h-12 items-center justify-center rounded-lg bg-[var(--accent-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"
+          className="inline-flex h-12 items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90"
         >
           Buat sesi baru
         </Link>
@@ -56,60 +64,62 @@ export default async function HrDashboardPage() {
         </div>
 
         <div>
-          <article className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
+          <article className="rounded-xl border border-border bg-card p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                <p className="text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   Sesi terbaru
                 </p>
-                <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-[var(--text-primary)]">
+                <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-foreground">
                   Aktivitas assessment terbaru
                 </h2>
               </div>
               <Link
                 href="/hr/sessions"
-                className="text-sm font-semibold text-[var(--accent-primary)] hover:underline"
+                className="text-sm font-semibold text-primary hover:underline"
               >
                 Semua sesi
               </Link>
             </div>
             {metrics.recentSessions.length === 0 ? (
-              <p className="mt-6 rounded-xl border border-dashed border-[var(--border-default)] bg-[var(--surface-base)] p-6 text-sm leading-6 text-[var(--text-secondary)]">
+              <p className="mt-6 rounded-xl border border-dashed border-border bg-background p-6 text-sm leading-6 text-muted-foreground">
                 Belum ada sesi. Mulai dengan menambahkan peserta lalu membuat sesi tes.
               </p>
             ) : (
               <div className="mt-6 overflow-x-auto">
-                <table className="min-w-full text-left">
-                  <thead className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    <tr>
-                      <th className="pb-3">Peserta</th>
-                      <th className="pb-3">Status</th>
-                      <th className="pb-3">Subtes</th>
-                      <th className="pb-3">Progres</th>
-                      <th className="pb-3">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm text-[var(--text-primary)]">
+                <Table className="min-w-full text-left">
+                  <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+                    <TableRow>
+                      <TableHead className="pb-3">Peserta</TableHead>
+                      <TableHead className="pb-3">Status</TableHead>
+                      <TableHead className="pb-3">Subtes</TableHead>
+                      <TableHead className="pb-3">Progres</TableHead>
+                      <TableHead className="pb-3">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-sm text-foreground">
                     {metrics.recentSessions.map((row) => (
-                      <tr key={row.sessionId} className="border-t border-[var(--border-subtle)]">
-                        <td className="py-4 font-semibold">{row.candidateName}</td>
-                        <td className="py-4">{sessionStatusLabel(row.status as SessionStatus)}</td>
-                        <td className="py-4">{row.currentSubtestCode ?? "—"}</td>
-                        <td className="py-4">
+                      <TableRow key={row.sessionId} className="border-t border-border">
+                        <TableCell className="py-4 font-semibold">{row.candidateName}</TableCell>
+                        <TableCell className="py-4">
+                          {sessionStatusLabel(row.status as SessionStatus)}
+                        </TableCell>
+                        <TableCell className="py-4">{row.currentSubtestCode ?? "—"}</TableCell>
+                        <TableCell className="py-4">
                           {row.progress.subtestsCompleted}/9 · {row.progress.answered} jawaban
-                        </td>
-                        <td className="py-4">
+                        </TableCell>
+                        <TableCell className="py-4">
                           <Link
                             href={`/hr/sessions/${row.sessionId}`}
-                            className="font-semibold text-[var(--accent-primary)]"
+                            className="font-semibold text-primary"
                           >
                             Detail
                           </Link>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </article>
