@@ -10,6 +10,7 @@ import type { AuthContext } from "./authz.ts";
 import { writeAudit } from "./audit.ts";
 import { requirePermission } from "./authz.ts";
 import { getResult } from "./calculate.ts";
+import { getPapiResult, getPapiStage } from "./papi-result-read.ts";
 import { renderReportPdf } from "./report-pdf.ts";
 
 const NOT_FOUND_MESSAGE = "Data tidak ditemukan.";
@@ -69,7 +70,14 @@ export async function generateReport(
   }
 
   const dto = await getResult(db, ctx, result.sessionId);
-  const pdf = await renderReportPdf(dto);
+
+  // Lampiran PAPI di-load bersamaan agar satu PDF memuat kedua instrumen.
+  const papiStage = await getPapiStage(db, ctx, result.sessionId);
+  const papiAttachment = papiStage.includesPapi
+    ? { stage: papiStage, result: await getPapiResult(db, ctx, result.sessionId) }
+    : null;
+
+  const pdf = await renderReportPdf(dto, papiAttachment);
   const fileHash = createHash("sha256").update(pdf).digest("hex");
 
   return db.transaction(async (tx) => {
@@ -151,9 +159,7 @@ export async function getReportDownload(
     .from(reports)
     .innerJoin(assessmentResults, eq(reports.resultId, assessmentResults.id))
     .innerJoin(assessmentSessions, eq(assessmentResults.sessionId, assessmentSessions.id))
-    .where(
-      and(eq(reports.id, reportId), eq(assessmentSessions.organizationId, ctx.organizationId)),
-    )
+    .where(and(eq(reports.id, reportId), eq(assessmentSessions.organizationId, ctx.organizationId)))
     .limit(1);
   if (!row || row.storageReference === "pending") {
     throw notFound();
