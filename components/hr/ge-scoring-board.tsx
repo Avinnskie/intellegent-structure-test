@@ -3,6 +3,14 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { GeItemDto, SaveGeScoresDto } from "@/lib/server/ge-scoring.ts";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -97,8 +105,8 @@ export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScorin
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border-default)] bg-[var(--accent-soft)] p-5">
-        <p className="text-sm font-semibold text-[var(--text-primary)]">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-accent p-5">
+        <p className="text-sm font-semibold text-foreground">
           {displayScored} dari {answered.length} jawaban dinilai
           {items.length > answered.length
             ? ` · ${items.length - answered.length} soal tidak dijawab (otomatis 0 saat kalkulasi)`
@@ -108,44 +116,44 @@ export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScorin
           type="button"
           onClick={handleSaveAll}
           disabled={pendingCount === 0 || isSaving || !isSessionScorable}
-          className="inline-flex h-11 items-center justify-center rounded-xl bg-[var(--accent-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSaving ? "Menyimpan…" : `Simpan ${pendingCount || ""} skor`.trim()}
         </button>
       </div>
 
       {!isSessionScorable ? (
-        <p className="rounded-xl border border-[var(--status-warning)]/40 bg-[color-mix(in_srgb,var(--status-warning)_10%,white)] px-4 py-3 text-sm leading-6 text-[var(--text-primary)]">
+        <p className="rounded-xl border border-[var(--color-amber-500, #f59e0b)]/40 bg-[color-mix(in_srgb,var(--color-amber-500, #f59e0b)_10%,white)] px-4 py-3 text-sm leading-6 text-foreground">
           Sesi ini tidak sedang menunggu penilaian GE, jadi skor tidak dapat disimpan.
         </p>
       ) : null}
       {error ? (
         <p
           role="alert"
-          className="rounded-xl border border-[var(--status-error)]/30 bg-[color-mix(in_srgb,var(--status-error)_8%,white)] px-4 py-3 text-sm leading-6 text-[var(--status-error)]"
+          className="rounded-xl border border-[var(--destructive)]/30 bg-[color-mix(in_srgb,var(--destructive)_8%,white)] px-4 py-3 text-sm leading-6 text-destructive"
         >
           {error}
         </p>
       ) : null}
       {notice ? (
-        <p className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-base)] px-4 py-3 text-sm leading-6 text-[var(--text-secondary)]">
+        <p className="rounded-xl border border-border bg-background px-4 py-3 text-sm leading-6 text-muted-foreground">
           {notice}
         </p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
-        <table className="min-w-full text-left">
-          <thead className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            <tr>
-              <th className="pb-3">No</th>
-              <th className="pb-3">Soal</th>
-              <th className="pb-3">Jawaban peserta</th>
-              <th className="pb-3">Rubrik</th>
-              <th className="pb-3">Skor</th>
-              <th className="pb-3">Catatan / alasan override</th>
-            </tr>
-          </thead>
-          <tbody className="text-sm text-[var(--text-primary)]">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card p-6">
+        <Table className="min-w-full text-left">
+          <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+            <TableRow>
+              <TableHead className="pb-3">No</TableHead>
+              <TableHead className="pb-3">Soal</TableHead>
+              <TableHead className="pb-3">Jawaban peserta</TableHead>
+              <TableHead className="pb-3">Rubrik</TableHead>
+              <TableHead className="pb-3">Skor</TableHead>
+              <TableHead className="pb-3">Catatan / alasan override</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="text-sm text-foreground">
             {items.map((item) => {
               const draft = item.responseId ? drafts[item.responseId] : undefined;
               const effectiveScore = draft?.score ?? item.score;
@@ -153,25 +161,24 @@ export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScorin
                 draft !== undefined && item.score !== null && draft.score !== item.score;
 
               return (
-                <tr
-                  key={item.itemVersionId}
-                  className="border-t border-[var(--border-subtle)] align-top"
-                >
-                  <td className="py-4 font-mono">{item.localNumber}</td>
-                  <td className="max-w-56 py-4 text-[var(--text-secondary)]">{item.prompt}</td>
-                  <td className="max-w-64 py-4">
+                <TableRow key={item.itemVersionId} className="border-t border-border align-top">
+                  <TableCell className="py-4 font-mono">{item.localNumber}</TableCell>
+                  <TableCell className="max-w-56 py-4 text-muted-foreground">
+                    {item.prompt}
+                  </TableCell>
+                  <TableCell className="max-w-64 py-4">
                     {item.responseValue !== null ? (
                       <span className="whitespace-pre-wrap">{item.responseValue}</span>
                     ) : (
-                      <span className="italic text-[var(--text-muted)]">
+                      <span className="italic text-muted-foreground">
                         {item.responseStatus === "skipped" ? "Dilewati" : "Tidak dijawab"}
                       </span>
                     )}
-                  </td>
-                  <td className="max-w-56 py-4 text-xs leading-5 text-[var(--text-secondary)]">
+                  </TableCell>
+                  <TableCell className="max-w-56 py-4 text-xs leading-5 text-muted-foreground">
                     {item.rubric ?? "—"}
-                  </td>
-                  <td className="py-4">
+                  </TableCell>
+                  <TableCell className="py-4">
                     {item.responseId ? (
                       <div
                         className="flex gap-2"
@@ -187,8 +194,8 @@ export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScorin
                             aria-pressed={effectiveScore === value}
                             className={`inline-flex size-10 items-center justify-center rounded-xl border text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50 ${
                               effectiveScore === value
-                                ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white"
-                                : "border-[var(--border-default)] text-[var(--text-primary)] hover:bg-[var(--surface-subtle)]"
+                                ? "border-primary bg-primary text-white"
+                                : "border-border text-foreground hover:bg-muted"
                             }`}
                           >
                             {value}
@@ -196,10 +203,10 @@ export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScorin
                         ))}
                       </div>
                     ) : (
-                      <span className="text-[var(--text-muted)]">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
-                  </td>
-                  <td className="py-4">
+                  </TableCell>
+                  <TableCell className="py-4">
                     {item.responseId && draft ? (
                       <div className="grid w-56 gap-2">
                         <input
@@ -210,7 +217,7 @@ export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScorin
                           }
                           placeholder="Catatan (opsional)"
                           maxLength={500}
-                          className="h-9 rounded-lg border border-[var(--border-default)] bg-[var(--surface-base)] px-3 text-xs"
+                          className="h-9 rounded-lg border border-border bg-background px-3 text-xs"
                         />
                         {isOverriding ? (
                           <input
@@ -225,21 +232,21 @@ export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScorin
                             }
                             placeholder="WAJIB: alasan mengubah skor tercatat"
                             maxLength={500}
-                            className="h-9 rounded-lg border border-[var(--status-warning)] bg-[var(--surface-base)] px-3 text-xs"
+                            className="h-9 rounded-lg border border-[var(--color-amber-500, #f59e0b)] bg-background px-3 text-xs"
                           />
                         ) : null}
                       </div>
                     ) : item.scoreNote ? (
-                      <span className="text-xs text-[var(--text-secondary)]">{item.scoreNote}</span>
+                      <span className="text-xs text-muted-foreground">{item.scoreNote}</span>
                     ) : (
-                      <span className="text-[var(--text-muted)]">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
