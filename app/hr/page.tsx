@@ -23,7 +23,7 @@ export default async function HrDashboardPage() {
 
   const cards = [
     {
-      label: "Sesi dibuat bulan ini",
+      label: "Sesi bulan ini",
       value: String(metrics.createdThisMonth),
       detail: "Sejak tanggal 1",
     },
@@ -48,7 +48,7 @@ export default async function HrDashboardPage() {
       }
     >
       <section className="space-y-8">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 grid-cols-3">
           {cards.map((metric) => (
             <StatCard
               key={metric.label}
