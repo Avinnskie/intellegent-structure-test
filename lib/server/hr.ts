@@ -10,6 +10,7 @@ import {
   candidates,
   itemVersions,
   normSetVersions,
+  papiFormVersions,
   participantTokens,
   responses,
   scoringKeyVersions,
@@ -17,7 +18,7 @@ import {
   subtestVersions,
   tutorialVersions,
 } from "../db/schema.ts";
-import { generateAccessCode, hashAccessCode, maskAccessCode } from "../domain/access-code.ts";
+import { generateAccessCode, hashAccessCode, displayAccessCode } from "../domain/access-code.ts";
 import type { SessionStatus } from "../domain/session-state.ts";
 import { SUBTEST_CODES, type SubtestCode } from "../ist-subtests.ts";
 import type { AuthContext } from "./authz.ts";
@@ -161,9 +162,7 @@ export async function updateCandidate(
         education: data.education ?? null,
         externalReference: data.externalReference ?? null,
       })
-      .where(
-        and(eq(candidates.id, candidateId), eq(candidates.organizationId, ctx.organizationId)),
-      )
+      .where(and(eq(candidates.id, candidateId), eq(candidates.organizationId, ctx.organizationId)))
       .returning();
     if (!row) {
       throw notFound();
@@ -205,9 +204,7 @@ export async function deleteCandidate(
     const [candidate] = await tx
       .select({ id: candidates.id })
       .from(candidates)
-      .where(
-        and(eq(candidates.id, candidateId), eq(candidates.organizationId, ctx.organizationId)),
-      )
+      .where(and(eq(candidates.id, candidateId), eq(candidates.organizationId, ctx.organizationId)))
       .for("update")
       .limit(1);
     if (!candidate) {
@@ -309,6 +306,8 @@ export const createSessionSchema = z.object({
   expiresInHours: z.number().int().min(1).max(MAX_CODE_TTL_HOURS).default(DEFAULT_CODE_TTL_HOURS),
   scheduledAt: z.iso.datetime().optional(),
   reentryPolicy: z.enum(["single", "multi"]).default("single"),
+  /** Sesi baterai IST + PAPI dalam satu kode akses. */
+  includePapi: z.boolean().default(true),
 });
 
 export type CreateSessionInput = z.input<typeof createSessionSchema>;
@@ -329,6 +328,21 @@ type PinnedMaster = {
   pinnedTutorialVersions: Record<SubtestCode, string>;
 };
 
+/** Versi form PAPI terbit terbaru, di-pin ke sesi seperti halnya master IST. */
+async function resolvePublishedPapiForm(tx: DbLike): Promise<string> {
+  const [form] = await tx
+    .select({ id: papiFormVersions.id })
+    .from(papiFormVersions)
+    .where(eq(papiFormVersions.status, "published"))
+    .orderBy(desc(papiFormVersions.version))
+    .limit(1);
+
+  if (!form) {
+    throw new ApiError("MASTER_DATA_MISSING", MASTER_DATA_MESSAGE, 503);
+  }
+  return form.id;
+}
+
 async function resolvePublishedMaster(tx: DbLike): Promise<PinnedMaster> {
   const [form] = await tx
     .select({ id: assessmentFormVersions.id })
@@ -344,7 +358,10 @@ async function resolvePublishedMaster(tx: DbLike): Promise<PinnedMaster> {
     .select({ id: scoringKeyVersions.id })
     .from(scoringKeyVersions)
     .where(
-      and(eq(scoringKeyVersions.formVersionId, form.id), eq(scoringKeyVersions.status, "published")),
+      and(
+        eq(scoringKeyVersions.formVersionId, form.id),
+        eq(scoringKeyVersions.status, "published"),
+      ),
     )
     .orderBy(desc(scoringKeyVersions.version))
     .limit(1);
@@ -366,7 +383,9 @@ async function resolvePublishedMaster(tx: DbLike): Promise<PinnedMaster> {
     })
     .from(tutorialVersions)
     .innerJoin(subtestVersions, eq(tutorialVersions.subtestVersionId, subtestVersions.id))
-    .where(and(eq(subtestVersions.formVersionId, form.id), eq(tutorialVersions.status, "published")))
+    .where(
+      and(eq(subtestVersions.formVersionId, form.id), eq(tutorialVersions.status, "published")),
+    )
     .orderBy(desc(tutorialVersions.version));
 
   const pinned: Partial<Record<SubtestCode, string>> = {};
@@ -413,6 +432,7 @@ export async function createSession(
     }
 
     const master = await resolvePublishedMaster(tx);
+    const papiFormVersionId = data.includePapi ? await resolvePublishedPapiForm(tx) : null;
 
     const [session] = await tx
       .insert(assessmentSessions)
@@ -424,6 +444,8 @@ export async function createSession(
         normSetVersionId: master.normSetVersionId,
         pinnedTutorialVersions: master.pinnedTutorialVersions,
         reentryPolicy: data.reentryPolicy,
+        includesPapi: papiFormVersionId === null ? 0 : 1,
+        papiFormVersionId,
         scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
         createdBy: ctx.userId,
       })
@@ -452,7 +474,7 @@ export async function createSession(
         .values({
           sessionId: session.id,
           codeHash,
-          codeMasked: maskAccessCode(code),
+          codeMasked: displayAccessCode(code),
           expiresAt,
           createdBy: ctx.userId,
         })
@@ -460,7 +482,7 @@ export async function createSession(
         .returning({ codeMasked: accessCodes.codeMasked });
       if (inserted.length > 0) {
         plaintext = code;
-        masked = inserted[0]?.codeMasked ?? maskAccessCode(code);
+        masked = inserted[0]?.codeMasked ?? displayAccessCode(code);
       }
     }
     if (plaintext === null) {
@@ -508,19 +530,23 @@ const BULK_MAX_ROWS = 200;
 export const bulkCreateSessionsSchema = z.object({
   rows: z
     .array(
-      createCandidateSchema.pick({
-        fullName: true,
-        birthDate: true,
-        gender: true,
-        education: true,
-      }).extend({
-        testPurpose: z.string().trim().min(1).max(200).default("Rekrutmen"),
-      }),
+      createCandidateSchema
+        .pick({
+          fullName: true,
+          birthDate: true,
+          gender: true,
+          education: true,
+        })
+        .extend({
+          testPurpose: z.string().trim().min(1).max(200).default("Rekrutmen"),
+        }),
     )
     .min(1)
     .max(BULK_MAX_ROWS),
   expiresInHours: z.number().int().min(1).max(MAX_CODE_TTL_HOURS).default(DEFAULT_CODE_TTL_HOURS),
   reentryPolicy: z.enum(["single", "multi"]).default("multi"),
+  /** Sesi baterai IST + PAPI dalam satu kode akses. */
+  includePapi: z.boolean().default(true),
 });
 
 export type BulkCreatedRow = {
@@ -548,6 +574,7 @@ export async function bulkCreateSessions(
 
   return db.transaction(async (tx) => {
     const master = await resolvePublishedMaster(tx);
+    const papiFormVersionId = data.includePapi ? await resolvePublishedPapiForm(tx) : null;
 
     const [clock] = await tx.select({ now: dbNow() }).from(assessmentFormVersions).limit(1);
     if (!clock) {
@@ -584,6 +611,8 @@ export async function bulkCreateSessions(
           normSetVersionId: master.normSetVersionId,
           pinnedTutorialVersions: master.pinnedTutorialVersions,
           reentryPolicy: data.reentryPolicy,
+          includesPapi: papiFormVersionId === null ? 0 : 1,
+          papiFormVersionId,
           createdBy: ctx.userId,
         })
         .returning({ id: assessmentSessions.id });
@@ -593,14 +622,18 @@ export async function bulkCreateSessions(
 
       let plaintext: string | null = null;
       let masked = "";
-      for (let attempt = 0; attempt < CODE_GENERATION_ATTEMPTS && plaintext === null; attempt += 1) {
+      for (
+        let attempt = 0;
+        attempt < CODE_GENERATION_ATTEMPTS && plaintext === null;
+        attempt += 1
+      ) {
         const code = generateAccessCode();
         const inserted = await tx
           .insert(accessCodes)
           .values({
             sessionId: session.id,
             codeHash: hashAccessCode(code, pepper),
-            codeMasked: maskAccessCode(code),
+            codeMasked: displayAccessCode(code),
             expiresAt,
             createdBy: ctx.userId,
           })
@@ -608,7 +641,7 @@ export async function bulkCreateSessions(
           .returning({ codeMasked: accessCodes.codeMasked });
         if (inserted.length > 0) {
           plaintext = code;
-          masked = inserted[0]?.codeMasked ?? maskAccessCode(code);
+          masked = inserted[0]?.codeMasked ?? displayAccessCode(code);
         }
       }
       if (plaintext === null) {
@@ -703,7 +736,7 @@ export type SessionListRow = {
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
-  accessCode: { masked: string; status: string; expiresAt: string } | null;
+  accessCode: { code: string; status: string; expiresAt: string } | null;
   progress: { subtestsCompleted: number; answered: number; skipped: number };
 };
 
@@ -720,7 +753,7 @@ function latestCodePerSession(
   for (const row of [...rows].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())) {
     if (!byNewest.has(row.sessionId)) {
       byNewest.set(row.sessionId, {
-        masked: row.codeMasked,
+        code: row.codeMasked,
         status: row.status,
         expiresAt: row.expiresAt.toISOString(),
       });
@@ -852,7 +885,13 @@ export type SessionDetailDto = {
     education: string | null;
     testPurpose: string;
   };
-  accessCode: { masked: string; status: string; expiresAt: string; lastUsedAt: string | null } | null;
+  accessCode: {
+    /** Kode akses lengkap, tidak disamarkan. */
+    code: string;
+    status: string;
+    expiresAt: string;
+    lastUsedAt: string | null;
+  } | null;
   subtests: readonly {
     code: SubtestCode;
     sequence: number;
@@ -1014,7 +1053,7 @@ export async function getSessionDetail(
     },
     accessCode: code
       ? {
-          masked: code.codeMasked,
+          code: code.codeMasked,
           status: code.status,
           expiresAt: code.expiresAt.toISOString(),
           lastUsedAt: code.lastUsedAt?.toISOString() ?? null,
@@ -1134,9 +1173,7 @@ export async function revokeAccessCode(
     const revokedTokens = await tx
       .update(participantTokens)
       .set({ revokedAt: clock.now })
-      .where(
-        and(eq(participantTokens.sessionId, session.id), isNull(participantTokens.revokedAt)),
-      )
+      .where(and(eq(participantTokens.sessionId, session.id), isNull(participantTokens.revokedAt)))
       .returning({ id: participantTokens.id });
 
     await writeAudit(tx, {
@@ -1221,7 +1258,7 @@ export async function regenerateAccessCode(
         .values({
           sessionId: session.id,
           codeHash: hashAccessCode(fresh, pepper),
-          codeMasked: maskAccessCode(fresh),
+          codeMasked: displayAccessCode(fresh),
           expiresAt,
           regeneratedFromId: code?.id ?? null,
           createdBy: ctx.userId,
@@ -1230,7 +1267,7 @@ export async function regenerateAccessCode(
         .returning({ codeMasked: accessCodes.codeMasked });
       if (inserted.length > 0) {
         plaintext = fresh;
-        masked = inserted[0]?.codeMasked ?? maskAccessCode(fresh);
+        masked = inserted[0]?.codeMasked ?? displayAccessCode(fresh);
       }
     }
     if (plaintext === null) {
