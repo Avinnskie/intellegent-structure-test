@@ -44,12 +44,6 @@ export default async function QuestionPage({
     redirect(state.nextRoute);
   }
 
-  /*
-    Seluruh media subtes ditandatangani sekali di sini, bukan satu per soal.
-    Peserta berpindah nomor di sisi klien, sehingga URL untuk nomor lain harus
-    sudah tersedia; menandatangani per navigasi berarti satu panggilan jaringan
-    ke Storage setiap kali tombol "berikutnya" ditekan.
-  */
   const storage = createSupabaseStorageProvider();
   const signed = await Promise.all(
     started.items.map(async (entry) => {
