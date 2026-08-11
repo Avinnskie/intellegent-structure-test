@@ -36,14 +36,14 @@ export function GenerateReportButton({ resultId }: { resultId: string }) {
         type="button"
         onClick={handleGenerate}
         disabled={isBusy}
-        className="inline-flex h-12 items-center justify-center rounded-xl bg-[var(--accent-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex h-12 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isBusy ? "Membuat PDF…" : "Generate laporan PDF"}
       </button>
       {error ? (
         <p
           role="alert"
-          className="rounded-xl border border-[var(--status-error)]/30 bg-[color-mix(in_srgb,var(--status-error)_8%,white)] px-4 py-3 text-sm leading-6 text-[var(--status-error)]"
+          className="rounded-xl border border-[var(--destructive)]/30 bg-[color-mix(in_srgb,var(--destructive)_8%,white)] px-4 py-3 text-sm leading-6 text-destructive"
         >
           {error}
         </p>
