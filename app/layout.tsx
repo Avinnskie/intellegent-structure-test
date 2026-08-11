@@ -4,7 +4,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -28,7 +28,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={cn("h-full", "antialiased", manrope.variable, ibmPlexMono.variable, "font-sans", geist.variable)}>
+    <html
+      lang="id"
+      className={cn(
+        "h-full",
+        "antialiased",
+        manrope.variable,
+        ibmPlexMono.variable,
+        "font-sans",
+        geist.variable,
+      )}
+    >
       <body className="min-h-full flex flex-col">
         <ToastProvider>{children}</ToastProvider>
       </body>
