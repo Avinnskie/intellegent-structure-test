@@ -15,16 +15,23 @@ async function main(): Promise<void> {
       itemVersions: summary.counts.itemVersions,
       itemScoringRules: summary.counts.itemScoringRules,
       normScoreRows: summary.counts.normScoreRows,
+      papiCreated: summary.papi.created,
+      papiFormVersionId: summary.papi.papiFormVersionId,
     });
 
     if (!summary.created) {
       console.log(
-        `Seed dilewati: form ${SEED_FORM_CODE} sudah ada (${summary.formVersionId}).\n` +
-          "Tidak ada baris yang ditulis.",
+        `Seed IST dilewati: form ${SEED_FORM_CODE} sudah ada (${summary.formVersionId}).`,
       );
     } else {
       console.log("Seed selesai — master data default terpasang.");
     }
+
+    console.log(
+      summary.papi.created
+        ? `Form PAPI dipasang (${summary.papi.itemCount} item).`
+        : "Seed PAPI dilewati: form PAPI sudah ada.",
+    );
 
     const { counts } = summary;
     console.log(
@@ -36,7 +43,9 @@ async function main(): Promise<void> {
         `  tutorial_versions : ${counts.tutorialVersions}\n` +
         `  item_scoring_rules: ${counts.itemScoringRules}\n` +
         `  norm_age_bands    : ${counts.normAgeBands}\n` +
-        `  norm_score_rows   : ${counts.normScoreRows}`,
+        `  norm_score_rows   : ${counts.normScoreRows}\n` +
+        `  papi form version : ${summary.papi.papiFormVersionId}\n` +
+        `  papi_item_versions: ${summary.papi.itemCount}`,
     );
   } finally {
     await db.$client.end();
