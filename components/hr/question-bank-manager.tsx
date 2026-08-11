@@ -12,6 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import type { QuestionBankItemDto, QuestionBankSubtestDto } from "@/lib/server/content.ts";
 import { X } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -116,8 +124,7 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
         );
         return;
       }
-    } catch {
-    }
+    } catch {}
     push("error", "Kunci jawaban gagal dimuat — simpan tanpa mengubah kunci, atau buka ulang.");
   }
 
@@ -257,12 +264,12 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
             aria-pressed={subtest.code === selected.code}
             className={`inline-flex h-10 items-center rounded-xl border px-4 text-sm font-semibold ${
               subtest.code === selected.code
-                ? "border-[var(--accent-primary)] bg-[var(--accent-soft)] text-[var(--accent-primary)]"
-                : "border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
+                ? "border-primary bg-accent text-primary"
+                : "border-border text-muted-foreground hover:bg-muted"
             }`}
           >
             {subtest.code}
-            <span className="ml-2 text-xs font-normal text-[var(--text-muted)]">
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
               {subtest.items.length}
             </span>
           </button>
@@ -313,7 +320,7 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
         {draft ? (
           <div className="space-y-4">
             {draft.mode === "create" ? (
-              <label className="grid gap-2 text-sm font-semibold text-[var(--text-primary)]">
+              <label className="grid gap-2 text-sm font-semibold text-foreground">
                 Tipe soal
                 <select
                   value={draft.itemType}
@@ -336,7 +343,7 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
                       acceptedValues: itemType === "numeric" ? draft.acceptedValues : "",
                     });
                   }}
-                  className="h-11 w-full min-w-0 max-w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-panel)] px-3 text-sm font-normal text-[var(--text-primary)]"
+                  className="h-11 w-full min-w-0 max-w-full rounded-xl border border-border bg-card px-3 text-sm font-normal text-foreground"
                 >
                   <option value="choice">Pilihan ganda</option>
                   <option value="numeric">Angka</option>
@@ -358,14 +365,14 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
 
             {draft.itemType === "choice" ? (
               <div className="grid gap-3">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                <p className="text-sm font-semibold text-foreground">
                   Opsi jawaban —{" "}
-                  <span className="font-normal text-[var(--text-muted)]">
+                  <span className="font-normal text-muted-foreground">
                     pilih tombol radio untuk menandai jawaban BENAR
                   </span>
                 </p>
                 {!draft.keyLoaded ? (
-                  <p className="text-xs text-[var(--text-muted)]">Memuat kunci jawaban…</p>
+                  <p className="text-xs text-muted-foreground">Memuat kunci jawaban…</p>
                 ) : null}
                 {draft.options.map((option, index) => (
                   <div key={option.optionCode} className="flex items-center gap-3 text-sm">
@@ -376,9 +383,9 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
                       disabled={!draft.keyLoaded}
                       onChange={() => setDraft({ ...draft, correctOptionCode: option.optionCode })}
                       aria-label={`Jawaban benar: opsi ${option.optionCode}`}
-                      className="size-4 accent-[var(--accent-primary)]"
+                      className="size-4 accent-[var(--primary)]"
                     />
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-subtle)] font-mono font-bold uppercase">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted font-mono font-bold uppercase">
                       {option.optionCode}
                     </span>
                     <Input
@@ -401,9 +408,9 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
             ) : null}
 
             {draft.itemType === "numeric" ? (
-              <label className="grid gap-2 text-sm font-semibold text-[var(--text-primary)]">
+              <label className="grid gap-2 text-sm font-semibold text-foreground">
                 Kunci jawaban angka{" "}
-                <span className="font-normal text-[var(--text-muted)]">
+                <span className="font-normal text-muted-foreground">
                   (varian diterima, pisahkan dengan koma — mis. 12, 12.0)
                 </span>
                 <Input
@@ -417,9 +424,9 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
 
             {draft.itemType === "short_text" ? (
               <>
-                <label className="grid gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                <label className="grid gap-2 text-sm font-semibold text-foreground">
                   Placeholder input{" "}
-                  <span className="font-normal text-[var(--text-muted)]">(opsional)</span>
+                  <span className="font-normal text-muted-foreground">(opsional)</span>
                   <Input
                     value={draft.placeholder}
                     maxLength={200}
@@ -429,18 +436,18 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
 
                 <div className="grid gap-3 rounded-xl">
                   <div>
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">
+                    <p className="text-sm font-semibold text-foreground">
                       Kunci referensi jawaban (GE)
                     </p>
                     {!draft.keyLoaded ? (
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">Memuat kunci jawaban…</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Memuat kunci jawaban…</p>
                     ) : null}
                   </div>
 
-                  <div className="grid gap-1 text-xs font-semibold text-[var(--text-primary)]">
+                  <div className="grid gap-1 text-xs font-semibold text-foreground">
                     <span>
                       Skor 2{" "}
-                      <span className="font-normal text-[var(--text-muted)]">
+                      <span className="font-normal text-muted-foreground">
                         — konsep umum yang paling tepat
                       </span>
                     </span>
@@ -452,10 +459,10 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
                     />
                   </div>
 
-                  <div className="grid gap-1 text-xs font-semibold text-[var(--text-primary)]">
+                  <div className="grid gap-1 text-xs font-semibold text-foreground">
                     <span>
                       Skor 1{" "}
-                      <span className="font-normal text-[var(--text-muted)]">
+                      <span className="font-normal text-muted-foreground">
                         — konsep terkait tetapi kurang tepat
                       </span>
                     </span>
@@ -467,10 +474,10 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
                     />
                   </div>
 
-                  <div className="grid gap-1 text-xs font-semibold text-[var(--text-primary)]">
+                  <div className="grid gap-1 text-xs font-semibold text-foreground">
                     <span>
                       Skor 0{" "}
-                      <span className="font-normal text-[var(--text-muted)]">
+                      <span className="font-normal text-muted-foreground">
                         — jawaban yang jelas salah (opsional; jawaban di luar semua daftar juga 0)
                       </span>
                     </span>
@@ -485,8 +492,8 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
               </>
             ) : null}
 
-            <div className="grid gap-2 text-sm font-semibold text-[var(--text-primary)]">
-              Gambar soal <span className="font-normal text-[var(--text-muted)]">(opsional)</span>
+            <div className="grid gap-2 text-sm font-semibold text-foreground">
+              Gambar soal <span className="font-normal text-muted-foreground">(opsional)</span>
               <div className="flex flex-wrap items-center gap-3">
                 <input
                   type="file"
@@ -499,27 +506,27 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
                     }
                     event.target.value = "";
                   }}
-                  className="text-sm font-normal p-3 rounded-lg border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
+                  className="text-sm font-normal p-3 rounded-lg border border-border text-muted-foreground hover:bg-muted"
                 />
                 {draft.isUploading ? (
-                  <span className="text-xs font-normal text-[var(--text-muted)]">Mengunggah…</span>
+                  <span className="text-xs font-normal text-muted-foreground">Mengunggah…</span>
                 ) : null}
                 {draft.mediaReference ? (
-                  <span className="rounded-lg bg-[var(--surface-subtle)] px-2 py-1 font-mono text-xs font-normal">
+                  <span className="rounded-lg bg-muted px-2 py-1 font-mono text-xs font-normal">
                     {draft.mediaReference}
                   </span>
                 ) : null}
                 <button
                   type="button"
                   onClick={() => setDraft({ ...draft, mediaReference: null })}
-                  className="text-xs font-semibold text-[var(--status-error)] hover:underline"
+                  className="text-xs font-semibold text-destructive hover:underline"
                 >
                   <X size={16} />
                 </button>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-4">
+            <div className="flex flex-wrap gap-3 border-t border-border pt-4">
               <Button
                 disabled={
                   isBusy ||
@@ -530,7 +537,7 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
                   (draft.itemType === "numeric" && draft.acceptedValues.trim() === "")
                 }
                 onClick={() => setPending({ kind: "save" })}
-                className={"h-12 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]"}
+                className={"h-12 bg-primary hover:bg-primary/90"}
               >
                 {draft.mode === "create" ? "Tambah soal" : "Simpan perubahan"}
               </Button>
@@ -542,13 +549,13 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
         ) : null}
       </Modal>
 
-      <article className="overflow-x-auto rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
+      <article className="overflow-x-auto rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-[-0.03em] text-[var(--text-primary)]">
+            <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">
               {selected.code} — {selected.title}
             </h2>
-            <p className="text-sm text-[var(--text-muted)]">
+            <p className="text-sm text-muted-foreground">
               {selected.items.length} soal tersedia untuk subtes ini
             </p>
           </div>
@@ -556,56 +563,56 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
             type="button"
             disabled={isBusy}
             onClick={openCreate}
-            className="h-11 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]"
+            className="h-11 bg-primary hover:bg-primary/90"
           >
             Tambah soal
           </Button>
         </div>
-        <table className="mt-6 min-w-full text-left">
-          <thead className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            <tr>
-              <th className="pb-3">No</th>
-              <th className="pb-3">Tipe</th>
-              <th className="pb-3">Pertanyaan</th>
-              <th className="pb-3">Media</th>
-              <th className="pb-3">Status</th>
-              <th className="pb-3">Aksi</th>
-            </tr>
-          </thead>
-          <tbody className="align-top text-sm text-[var(--text-primary)]">
+        <Table className="mt-6 min-w-full text-left">
+          <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+            <TableRow>
+              <TableHead className="pb-3">No</TableHead>
+              <TableHead className="pb-3">Tipe</TableHead>
+              <TableHead className="pb-3">Pertanyaan</TableHead>
+              <TableHead className="pb-3">Media</TableHead>
+              <TableHead className="pb-3">Status</TableHead>
+              <TableHead className="pb-3">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="align-top text-sm text-foreground">
             {selected.items.map((item) => (
-              <tr key={item.itemVersionId} className="border-t border-[var(--border-subtle)]">
-                <td className="py-4 font-mono">
+              <TableRow key={item.itemVersionId} className="border-t border-border">
+                <TableCell className="py-4 font-mono">
                   {item.localNumber}
-                  <span className="block text-xs text-[var(--text-muted)]">#{item.itemNumber}</span>
-                </td>
-                <td className="py-4">{item.itemType}</td>
-                <td className="max-w-md py-4 text-[var(--text-secondary)]">
+                  <span className="block text-xs text-muted-foreground">#{item.itemNumber}</span>
+                </TableCell>
+                <TableCell className="py-4">{item.itemType}</TableCell>
+                <TableCell className="max-w-md py-4 text-muted-foreground">
                   <span className="line-clamp-2">{item.prompt}</span>
-                </td>
-                <td className="py-4">
+                </TableCell>
+                <TableCell className="py-4">
                   <div className="max-w-[200px] truncate" title={item.mediaReference ?? undefined}>
                     {item.mediaReference ?? "—"}
                   </div>
-                </td>
-                <td className="py-4">
+                </TableCell>
+                <TableCell className="py-4">
                   <span
                     className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] ${
                       item.status === "active"
-                        ? "bg-[var(--accent-soft)] text-[var(--accent-primary)]"
-                        : "bg-[var(--surface-subtle)] text-[var(--text-muted)]"
+                        ? "bg-accent text-primary"
+                        : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {item.status === "active" ? "Aktif" : "Nonaktif"}
                   </span>
-                </td>
-                <td className="py-4">
+                </TableCell>
+                <TableCell className="py-4">
                   <span className="flex flex-wrap gap-3">
                     <button
                       type="button"
                       disabled={isBusy}
                       onClick={() => void openEditor(item)}
-                      className="font-semibold text-[var(--accent-primary)] hover:underline"
+                      className="font-semibold text-primary hover:underline"
                     >
                       Edit
                     </button>
@@ -613,16 +620,16 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
                       type="button"
                       disabled={isBusy}
                       onClick={() => handleToggleStatus(item)}
-                      className="font-semibold text-[var(--text-secondary)] hover:underline"
+                      className="font-semibold text-muted-foreground hover:underline"
                     >
                       {item.status === "active" ? "Nonaktifkan" : "Aktifkan"}
                     </button>
                   </span>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </article>
     </section>
   );
