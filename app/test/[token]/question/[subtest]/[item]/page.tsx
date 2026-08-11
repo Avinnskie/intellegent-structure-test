@@ -44,11 +44,23 @@ export default async function QuestionPage({
     redirect(state.nextRoute);
   }
 
-  const currentMediaUrl = await signMediaUrlOrNull(
-    createSupabaseStorageProvider(),
-    currentItem.mediaReference ?? null,
-    "participant",
+  /*
+    Seluruh media subtes ditandatangani sekali di sini, bukan satu per soal.
+    Peserta berpindah nomor di sisi klien, sehingga URL untuk nomor lain harus
+    sudah tersedia; menandatangani per navigasi berarti satu panggilan jaringan
+    ke Storage setiap kali tombol "berikutnya" ditekan.
+  */
+  const storage = createSupabaseStorageProvider();
+  const signed = await Promise.all(
+    started.items.map(async (entry) => {
+      if (!entry.mediaReference) {
+        return null;
+      }
+      const url = await signMediaUrlOrNull(storage, entry.mediaReference, "participant");
+      return url ? ([entry.itemVersionId, url] as const) : null;
+    }),
   );
+  const mediaUrls = Object.fromEntries(signed.filter((pair) => pair !== null));
 
   return (
     <div className="w-full">
@@ -60,7 +72,7 @@ export default async function QuestionPage({
         items={started.items}
         statuses={state.items}
         currentLocal={localNumber}
-        currentMediaUrl={currentMediaUrl}
+        mediaUrls={mediaUrls}
         expiresAt={started.expiresAt}
         serverNow={started.serverNow}
       />
