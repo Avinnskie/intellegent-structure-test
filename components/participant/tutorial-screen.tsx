@@ -32,35 +32,35 @@ export function TutorialScreen({ token, subtest, tutorial, videoUrl = null }: Tu
     <section className="w-full grid gap-6 lg:grid-cols-[280px_1fr]">
       <CourseRail currentCode={subtest.code} />
       <div className="grid gap-6">
-        <article className="flex flex-col justify-between rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
+        <article className="flex flex-col justify-between rounded-xl border border-border bg-card p-6">
           <div>
             <div className="flex justify-between items-center">
               <div className="space-x-2">
-                <span className="inline-flex items-center rounded-full bg-[var(--accent-warm-soft)] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-primary)]">
+                <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-foreground">
                   Subtes {subtest.code}
                 </span>
-                <span className="inline-flex items-center rounded-full border border-[var(--border-default)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                <span className="inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
                   Timer belum dimulai
                 </span>
-                <h2 className="mt-5 text-3xl font-bold tracking-[-0.04em] text-[var(--text-primary)]">
+                <h2 className="mt-5 text-3xl font-bold tracking-[-0.04em] text-foreground">
                   {subtest.title}
                 </h2>
               </div>
-              { }
+              {}
             </div>
-            <p className="mt-3 whitespace-pre-line text-base leading-7 text-[var(--text-secondary)]">
+            <p className="mt-3 whitespace-pre-line text-base leading-7 text-muted-foreground">
               {tutorial.textContent}
             </p>
 
             {videoUrl ? (
-              <div className="mt-6 overflow-hidden rounded-xl border border-[var(--border-default)]">
-                { }
+              <div className="mt-6 overflow-hidden rounded-xl border border-border">
+                {}
                 {/\.(png|jpe?g|webp)$/i.test(tutorial.videoReference ?? "") ? (
                   // eslint-disable-next-line @next/next/no-img-element -- signed URL, next/image cannot optimize it
                   <img
                     src={videoUrl}
                     alt={`Ilustrasi tutorial ${subtest.code}`}
-                    className="max-h-96 w-full bg-[var(--surface-base)] object-contain"
+                    className="max-h-96 w-full bg-background object-contain"
                   />
                 ) : (
                   <video
@@ -72,7 +72,7 @@ export function TutorialScreen({ token, subtest, tutorial, videoUrl = null }: Tu
                     Peramban Anda tidak mendukung pemutar video.
                   </video>
                 )}
-                <p className="border-t border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-3 text-xs leading-5 text-[var(--text-muted)]">
+                <p className="border-t border-border bg-card px-4 py-3 text-xs leading-5 text-muted-foreground">
                   Materi tutorial tidak mengurangi waktu subtes; timer baru berjalan setelah tombol
                   mulai ditekan.
                 </p>
