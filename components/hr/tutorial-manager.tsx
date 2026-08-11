@@ -10,6 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import type { TutorialSubtestDto, TutorialVersionDto } from "@/lib/server/content.ts";
 import { X } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -145,8 +153,8 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
             aria-pressed={subtest.code === selected.code}
             className={`inline-flex h-10 items-center rounded-xl border px-4 text-sm font-semibold ${
               subtest.code === selected.code
-                ? "border-[var(--accent-primary)] bg-[var(--accent-soft)] text-[var(--accent-primary)]"
-                : "border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
+                ? "border-primary bg-accent text-primary"
+                : "border-border text-muted-foreground hover:bg-muted"
             }`}
           >
             {subtest.code}
@@ -178,10 +186,10 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
         onCancel={() => setPending(null)}
       />
 
-      <article className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
+      <article className="rounded-xl border border-border bg-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-[-0.03em] text-[var(--text-primary)]">
+            <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">
               Tutorial {selected.code} — {selected.title}
             </h2>
           </div>
@@ -197,7 +205,7 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                 isUploading: false,
               });
             }}
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-[var(--accent-primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Buat draft baru
           </button>
@@ -223,9 +231,9 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                 />
               </div>
 
-              <div className="grid gap-2 text-sm font-semibold text-[var(--text-primary)]">
+              <div className="grid gap-2 text-sm font-semibold text-foreground">
                 Media tutorial{" "}
-                <span className="font-normal text-[var(--text-muted)]">
+                <span className="font-normal text-muted-foreground">
                   (opsional — video mp4/webm maks. 100 MB, atau gambar png/jpg/webp maks. 5 MB)
                 </span>
                 <div className="flex flex-wrap items-center gap-3">
@@ -240,22 +248,20 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                       }
                       event.target.value = "";
                     }}
-                    className="w-full min-w-0 max-w-full rounded-lg border border-[var(--border-default)] p-3 text-sm font-normal text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
+                    className="w-full min-w-0 max-w-full rounded-lg border border-border p-3 text-sm font-normal text-muted-foreground hover:bg-muted"
                   />
                   {editor.isUploading ? (
-                    <span className="text-xs font-normal text-[var(--text-muted)]">
-                      Mengunggah…
-                    </span>
+                    <span className="text-xs font-normal text-muted-foreground">Mengunggah…</span>
                   ) : null}
                   {editor.videoReference ? (
                     <>
-                      <span className="max-w-56 truncate rounded-lg bg-[var(--surface-subtle)] px-2 py-1 font-mono text-xs font-normal">
+                      <span className="max-w-56 truncate rounded-lg bg-muted px-2 py-1 font-mono text-xs font-normal">
                         {editor.videoReference}
                       </span>
                       <button
                         type="button"
                         onClick={() => setEditor({ ...editor, videoReference: "" })}
-                        className="text-xs font-semibold text-[var(--status-error)] hover:underline"
+                        className="text-xs font-semibold text-destructive hover:underline"
                       >
                         <X />
                       </button>
@@ -264,11 +270,11 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-4">
+              <div className="flex flex-wrap gap-3 border-t border-border pt-4">
                 <Button
                   disabled={isBusy || editor.isUploading || editor.textContent.trim() === ""}
                   onClick={handleSaveDraft}
-                  className="h-12 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]"
+                  className="h-12 bg-primary hover:bg-primary/90"
                 >
                   {editor.id ? "Simpan perubahan draft" : "Simpan sebagai draft"}
                 </Button>
@@ -281,45 +287,45 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
         </Modal>
 
         <div className="mt-6 overflow-x-auto">
-          <table className="min-w-full text-left">
-            <thead className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              <tr>
-                <th className="pb-3">Versi</th>
-                <th className="pb-3">Status</th>
-                <th className="pb-3">Konten</th>
-                <th className="pb-3">Efektif</th>
-                <th className="pb-3">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm text-[var(--text-primary)] align-top">
+          <Table className="min-w-full text-left">
+            <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+              <TableRow>
+                <TableHead className="pb-3">Versi</TableHead>
+                <TableHead className="pb-3">Status</TableHead>
+                <TableHead className="pb-3">Konten</TableHead>
+                <TableHead className="pb-3">Efektif</TableHead>
+                <TableHead className="pb-3">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="text-sm text-foreground align-top">
               {selected.versions.map((version) => (
-                <tr key={version.id} className="border-t border-[var(--border-subtle)]">
-                  <td className="py-4 font-mono">v{version.version}</td>
-                  <td className="py-4">
+                <TableRow key={version.id} className="border-t border-border">
+                  <TableCell className="py-4 font-mono">v{version.version}</TableCell>
+                  <TableCell className="py-4">
                     <span
                       className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] ${
                         version.status === "published"
-                          ? "bg-[var(--accent-soft)] text-[var(--accent-primary)]"
+                          ? "bg-accent text-primary"
                           : version.status === "draft"
-                            ? "bg-[var(--accent-warm-soft)] text-[var(--text-primary)]"
-                            : "bg-[var(--surface-subtle)] text-[var(--text-muted)]"
+                            ? "bg-accent text-foreground"
+                            : "bg-muted text-muted-foreground"
                       }`}
                     >
                       {STATUS_LABELS[version.status] ?? version.status}
                     </span>
-                  </td>
-                  <td className="max-w-md py-4">
-                    <span className="line-clamp-2 whitespace-pre-line text-[var(--text-secondary)]">
+                  </TableCell>
+                  <TableCell className="max-w-md py-4">
+                    <span className="line-clamp-2 whitespace-pre-line text-muted-foreground">
                       {version.textContent}
                     </span>
                     {version.videoReference ? (
-                      <span className="mt-1 block font-mono text-xs text-[var(--text-muted)]">
+                      <span className="mt-1 block font-mono text-xs text-muted-foreground">
                         video: {version.videoReference}
                       </span>
                     ) : null}
-                  </td>
-                  <td className="py-4">{version.effectiveDate ?? "—"}</td>
-                  <td className="py-4">
+                  </TableCell>
+                  <TableCell className="py-4">{version.effectiveDate ?? "—"}</TableCell>
+                  <TableCell className="py-4">
                     <span className="flex flex-wrap gap-3">
                       {version.status === "draft" ? (
                         <>
@@ -334,7 +340,7 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                                 isUploading: false,
                               })
                             }
-                            className="font-semibold text-[var(--accent-primary)] hover:underline"
+                            className="font-semibold text-primary hover:underline"
                           >
                             Edit
                           </button>
@@ -342,7 +348,7 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                             type="button"
                             disabled={isBusy}
                             onClick={() => setPending({ action: "publish", version })}
-                            className="font-semibold text-[var(--accent-primary)] hover:underline"
+                            className="font-semibold text-primary hover:underline"
                           >
                             Terbitkan
                           </button>
@@ -353,17 +359,17 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                           type="button"
                           disabled={isBusy}
                           onClick={() => setPending({ action: "archive", version })}
-                          className="font-semibold text-[var(--status-error)] hover:underline"
+                          className="font-semibold text-destructive hover:underline"
                         >
                           Arsipkan
                         </button>
                       ) : null}
                     </span>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </article>
     </section>
