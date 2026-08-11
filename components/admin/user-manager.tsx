@@ -17,6 +17,14 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import type { PortalUserDto } from "@/lib/server/users.ts";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -169,7 +177,7 @@ export function UserManager({
               <div className="grid gap-2">
                 <Label htmlFor="user-password">
                   Kata sandi awal{" "}
-                  <span className="font-normal text-[var(--text-muted)]">(min. 8)</span>
+                  <span className="font-normal text-muted-foreground">(min. 8)</span>
                 </Label>
                 <Input
                   id="user-password"
@@ -205,7 +213,7 @@ export function UserManager({
                 </Select>
               </div>
             </div>
-            <label className="flex items-center gap-3 text-sm font-semibold text-[var(--text-primary)]">
+            <label className="flex items-center gap-3 text-sm font-semibold text-foreground">
               <Checkbox
                 checked={create.viewResults}
                 onCheckedChange={(checked) =>
@@ -214,7 +222,7 @@ export function UserManager({
               />
               Izin <code>view_results</code> — dapat melihat hasil tes &amp; mengunduh laporan
             </label>
-            <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-4">
+            <div className="flex flex-wrap gap-3 border-t border-border pt-4">
               <Button
                 disabled={
                   isBusy ||
@@ -279,9 +287,7 @@ export function UserManager({
               <div className="grid gap-2">
                 <Label htmlFor="edit-password">
                   Kata sandi baru{" "}
-                  <span className="font-normal text-[var(--text-muted)]">
-                    (kosongkan bila tetap)
-                  </span>
+                  <span className="font-normal text-muted-foreground">(kosongkan bila tetap)</span>
                 </Label>
                 <Input
                   id="edit-password"
@@ -291,17 +297,15 @@ export function UserManager({
                   onChange={(event) => setEdit({ ...edit, newPassword: event.target.value })}
                 />
               </div>
-              <label className="flex items-end gap-3 pb-3 text-sm font-semibold text-[var(--text-primary)]">
+              <label className="flex items-end gap-3 pb-3 text-sm font-semibold text-foreground">
                 <Checkbox
                   checked={edit.viewResults}
-                  onCheckedChange={(checked) =>
-                    setEdit({ ...edit, viewResults: checked === true })
-                  }
+                  onCheckedChange={(checked) => setEdit({ ...edit, viewResults: checked === true })}
                 />
                 Izin <code>view_results</code>
               </label>
             </div>
-            <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-4">
+            <div className="flex flex-wrap gap-3 border-t border-border pt-4">
               <Button
                 disabled={
                   isBusy ||
@@ -337,54 +341,58 @@ export function UserManager({
         onCancel={() => setPendingDeactivate(null)}
       />
 
-      <article className="overflow-x-auto rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
+      <article className="overflow-x-auto rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-2xl font-bold tracking-[-0.03em] text-[var(--text-primary)]">
+          <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">
             Akun HR &amp; Super Admin
           </h2>
-          <p className="text-sm text-[var(--text-muted)]">{users.length} akun</p>
+          <p className="text-sm text-muted-foreground">{users.length} akun</p>
         </div>
-        <table className="mt-6 min-w-full text-left">
-          <thead className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            <tr>
-              <th className="pb-3">Nama</th>
-              <th className="pb-3">Email</th>
-              <th className="pb-3">Role</th>
-              <th className="pb-3">view_results</th>
-              <th className="pb-3">Status</th>
-              <th className="pb-3">Login terakhir</th>
-              <th className="pb-3">Aksi</th>
-            </tr>
-          </thead>
-          <tbody className="text-sm text-[var(--text-primary)]">
+        <Table className="mt-6 min-w-full text-left">
+          <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+            <TableRow>
+              <TableHead className="pb-3">Nama</TableHead>
+              <TableHead className="pb-3">Email</TableHead>
+              <TableHead className="pb-3">Role</TableHead>
+              <TableHead className="pb-3">view_results</TableHead>
+              <TableHead className="pb-3">Status</TableHead>
+              <TableHead className="pb-3">Login terakhir</TableHead>
+              <TableHead className="pb-3">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="text-sm text-foreground">
             {users.map((user) => (
-              <tr key={user.id} className="border-t border-[var(--border-subtle)]">
-                <td className="py-4 font-semibold">
+              <TableRow key={user.id} className="border-t border-border">
+                <TableCell className="py-4 font-semibold">
                   {user.displayName}
                   {user.id === selfId ? (
-                    <span className="ml-2 rounded-full bg-[var(--surface-subtle)] px-2 py-0.5 text-xs font-normal text-[var(--text-muted)]">
+                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
                       Anda
                     </span>
                   ) : null}
-                </td>
-                <td className="py-4">{user.email}</td>
-                <td className="py-4">{user.role === "super_admin" ? "Super Admin" : "HR Admin"}</td>
-                <td className="py-4">{user.permissions.includes("view_results") ? "✓" : "—"}</td>
-                <td className="py-4">
+                </TableCell>
+                <TableCell className="py-4">{user.email}</TableCell>
+                <TableCell className="py-4">
+                  {user.role === "super_admin" ? "Super Admin" : "HR Admin"}
+                </TableCell>
+                <TableCell className="py-4">
+                  {user.permissions.includes("view_results") ? "✓" : "—"}
+                </TableCell>
+                <TableCell className="py-4">
                   <span
                     className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] ${
                       user.status === "active"
-                        ? "bg-[var(--accent-soft)] text-[var(--accent-primary)]"
-                        : "bg-[var(--surface-subtle)] text-[var(--text-muted)]"
+                        ? "bg-accent text-primary"
+                        : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {user.status === "active" ? "Aktif" : "Nonaktif"}
                   </span>
-                </td>
-                <td className="py-4">
+                </TableCell>
+                <TableCell className="py-4">
                   {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString("id-ID") : "—"}
-                </td>
-                <td className="py-4">
+                </TableCell>
+                <TableCell className="py-4">
                   <span className="flex flex-wrap gap-1">
                     <Button
                       variant="link"
@@ -409,7 +417,7 @@ export function UserManager({
                         <Button
                           variant="link"
                           size="sm"
-                          className="h-auto p-0 text-[var(--status-error)]"
+                          className="h-auto p-0 text-destructive"
                           disabled={isBusy}
                           onClick={() => setPendingDeactivate(user)}
                         >
@@ -419,7 +427,7 @@ export function UserManager({
                         <Button
                           variant="link"
                           size="sm"
-                          className="h-auto p-0 text-[var(--text-secondary)]"
+                          className="h-auto p-0 text-muted-foreground"
                           disabled={isBusy}
                           onClick={() => void handleSetStatus(user, "active")}
                         >
@@ -428,11 +436,11 @@ export function UserManager({
                       )
                     ) : null}
                   </span>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </article>
     </section>
   );
