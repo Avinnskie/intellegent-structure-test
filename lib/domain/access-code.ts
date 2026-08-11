@@ -4,10 +4,6 @@ export const ACCESS_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
 const ACCESS_CODE_LENGTH = 8;
 const ACCESS_CODE_PREFIX = "IST-";
-const MASK_VISIBLE_CHARS = 2;
-const MASK_CHAR = "•";
-const FULLY_MASKED_BODY = MASK_CHAR.repeat(4);
-
 export function generateAccessCode(): string {
   const body = Array.from(
     { length: ACCESS_CODE_LENGTH },
@@ -25,17 +21,17 @@ export function hashAccessCode(code: string, pepper: string): string {
   return createHmac("sha256", pepper).update(normalizeAccessCode(code)).digest("hex");
 }
 
-export function maskAccessCode(code: string): string {
-  const normalized = normalizeAccessCode(code);
-  const hasPrefix = normalized.startsWith(ACCESS_CODE_PREFIX);
-  const prefix = hasPrefix ? ACCESS_CODE_PREFIX : "";
-  const body = hasPrefix ? normalized.slice(ACCESS_CODE_PREFIX.length) : normalized;
-
-  if (body.length <= MASK_VISIBLE_CHARS * 2) {
-    return `${prefix}${FULLY_MASKED_BODY}`;
-  }
-
-  const hidden = MASK_CHAR.repeat(body.length - MASK_VISIBLE_CHARS * 2);
-
-  return `${prefix}${body.slice(0, MASK_VISIBLE_CHARS)}${hidden}${body.slice(-MASK_VISIBLE_CHARS)}`;
+/**
+ * Kode akses ditampilkan utuh kepada HR.
+ *
+ * Sebelumnya nilai ini disamarkan (`IST-AB••••CD`) sehingga kode hanya terbaca
+ * sekali saat dibuat. Kini kolom `access_codes.code_masked` menyimpan kode
+ * lengkap agar HR dapat membacanya kembali kapan saja.
+ *
+ * Konsekuensinya kode dapat dibaca siapa pun yang punya akses ke database.
+ * Kode hanya berlaku untuk mengerjakan tes sebagai kandidat bersangkutan,
+ * punya masa berlaku, dan dapat dicabut — tetapi jejak hash-only hilang.
+ */
+export function displayAccessCode(code: string): string {
+  return normalizeAccessCode(code);
 }
