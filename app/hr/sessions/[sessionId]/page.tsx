@@ -116,7 +116,7 @@ export default async function HrSessionDetailPage({
               <dl className="mt-4 space-y-2 text-sm text-muted-foreground">
                 <div>
                   <dt className="inline font-semibold text-foreground">Kode: </dt>
-                  <dd className="inline font-mono">{detail.accessCode.masked}</dd>
+                  <dd className="inline font-mono">{detail.accessCode.code}</dd>
                 </div>
                 <div>
                   <dt className="inline font-semibold text-foreground">Status: </dt>
