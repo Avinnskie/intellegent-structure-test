@@ -68,15 +68,15 @@ export function TagsInput({
         id={id}
         disabled={disabled}
         className={cn(
-          "flex min-h-11 w-full min-w-0 max-w-full cursor-text flex-wrap items-center gap-1.5 overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--surface-panel)] px-2 py-1.5 text-left text-sm text-[var(--text-primary)] transition-colors",
-          "focus-within:border-[var(--accent-primary)] focus-within:ring-2 focus-within:ring-[var(--accent-soft)]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-soft)]",
+          "flex min-h-11 w-full min-w-0 max-w-full cursor-text flex-wrap items-center gap-1.5 overflow-hidden rounded-xl border border-border bg-card px-2 py-1.5 text-left text-sm text-foreground transition-colors",
+          "focus-within:border-primary focus-within:ring-2 focus-within:ring-[var(--accent)]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
           disabled && "cursor-not-allowed opacity-60",
           className,
         )}
       >
         {value.length === 0 ? (
-          <span className="px-1 text-sm font-normal text-[var(--text-muted)]">{placeholder}</span>
+          <span className="px-1 text-sm font-normal text-muted-foreground">{placeholder}</span>
         ) : (
           value.map((tag, index) => (
             <Badge
@@ -102,7 +102,7 @@ export function TagsInput({
                       removeAt(index);
                     }
                   }}
-                  className="ml-0.5 inline-flex size-3.5 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]"
+                  className="ml-0.5 inline-flex size-3.5 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   <X className="size-3" />
                 </span>
@@ -118,7 +118,7 @@ export function TagsInput({
         className="w-[280px] max-w-[calc(100dvw-1rem)] p-0"
       >
         <Command shouldFilter={false} className="rounded-xl">
-          <div className="border-b border-[var(--border-default)] p-2">
+          <div className="border-b border-border p-2">
             <CommandPrimitive.Input
               autoFocus
               value={input}
@@ -144,7 +144,7 @@ export function TagsInput({
                   setOpen(false);
                 }
               }}
-              className="h-8 w-full rounded-md bg-transparent px-2 text-sm outline-none placeholder:text-[var(--text-muted)]"
+              className="h-8 w-full rounded-md bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
           <CommandList className="max-h-56">
@@ -166,10 +166,10 @@ export function TagsInput({
                     key={`${tag}-active-${index}`}
                     value={`__existing_${index}_${tag}`}
                     onSelect={() => removeAt(index)}
-                    className="cursor-pointer justify-between text-[var(--text-secondary)]"
+                    className="cursor-pointer justify-between text-muted-foreground"
                   >
                     <span className="truncate">{tag}</span>
-                    <span className="text-xs text-[var(--text-muted)]">hapus</span>
+                    <span className="text-xs text-muted-foreground">hapus</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
