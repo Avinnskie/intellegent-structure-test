@@ -1,24 +1,24 @@
+import { Progress } from "@/components/ui/progress";
+
 type ProgressBarProps = {
   readonly label: string;
   readonly value: number;
   readonly total: number;
 };
 
+/** Pembungkus shadcn Progress dengan label dan hitungan di atasnya. */
 export function ProgressBar({ label, value, total }: ProgressBarProps) {
-  const percentage = total === 0 ? 0 : Math.round((value / total) * 100);
+  const percent = total > 0 ? Math.min(100, Math.max(0, (value / total) * 100)) : 0;
 
   return (
-    <div className="space-y-2 pb-0">
-      <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
-        <span>{label}</span>
-        <span>{percentage}%</span>
+    <div className="grid gap-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {value} / {total}
+        </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
-        <div
-          className="h-full origin-left rounded-full bg-[var(--accent-warm)] transition-transform duration-300 ease-out"
-          style={{ transform: `scaleX(${percentage / 100})` }}
-        />
-      </div>
+      <Progress value={percent} aria-label={label} />
     </div>
   );
 }

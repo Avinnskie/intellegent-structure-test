@@ -8,17 +8,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 type ModalProps = {
   readonly open: boolean;
   readonly title: string;
   readonly description?: string;
-
   readonly size?: "md" | "lg";
   readonly onClose: () => void;
   readonly children: ReactNode;
 };
 
+/**
+ * Pembungkus di atas shadcn Dialog. Prop-nya sengaja dipertahankan
+ * seperti versi sebelumnya agar seluruh pemanggil tetap bekerja.
+ */
 export function Modal({ open, title, description, size = "md", onClose, children }: ModalProps) {
   return (
     <Dialog
@@ -30,18 +34,16 @@ export function Modal({ open, title, description, size = "md", onClose, children
       }}
     >
       <DialogContent
-        className={`grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden ${size === "lg" ? "sm:max-w-3xl" : "sm:max-w-xl"}`}
+        className={cn(
+          "max-h-[85dvh] overflow-y-auto",
+          size === "lg" ? "sm:max-w-3xl" : "sm:max-w-lg",
+        )}
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
-        <div
-          data-slot="modal-body"
-          className="min-h-0 min-w-0 break-words overflow-x-hidden overflow-y-auto overscroll-contain [overflow-wrap:anywhere] [&_button]:max-w-full [&_button]:whitespace-normal"
-        >
-          {children}
-        </div>
+        {children}
       </DialogContent>
     </Dialog>
   );

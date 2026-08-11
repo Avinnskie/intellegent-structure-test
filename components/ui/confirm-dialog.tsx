@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 type ConfirmDialogProps = {
   readonly open: boolean;
@@ -25,6 +27,10 @@ type ConfirmDialogProps = {
   readonly onCancel: () => void;
 };
 
+/**
+ * Pembungkus di atas shadcn AlertDialog, lengkap dengan input opsional
+ * (misalnya alasan pencabutan kode). API-nya tidak berubah dari versi lama.
+ */
 export function ConfirmDialog({
   open,
   title,
@@ -37,18 +43,20 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const [value, setValue] = useState("");
-  const [wasOpen, setWasOpen] = useState(open);
-  if (wasOpen !== open) {
-    setWasOpen(open);
+  const [touchedOpen, setTouchedOpen] = useState(open);
+
+  // Setel ulang isian setiap kali dialog dibuka kembali.
+  if (touchedOpen !== open) {
+    setTouchedOpen(open);
     if (open) {
       setValue("");
     }
   }
 
-  const isConfirmDisabled = isBusy || (input?.required === true && value.trim() === "");
+  const blocked = isBusy || (input?.required === true && value.trim() === "");
 
   return (
-    <Dialog
+    <AlertDialog
       open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {
@@ -56,54 +64,42 @@ export function ConfirmDialog({
         }
       }}
     >
-      <DialogContent className="overflow-hidden sm:max-w-md">
-        <form
-          className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!isConfirmDisabled) {
-              onConfirm(value.trim());
-            }
-          }}
-        >
-          <div className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain">
-            <DialogHeader>
-              <DialogTitle>{title}</DialogTitle>
-              <DialogDescription>{description}</DialogDescription>
-            </DialogHeader>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
 
-            {input ? (
-              <div className="mt-4 grid min-w-0 gap-2">
-                <Label htmlFor="confirm-dialog-input">
-                  {input.label}
-                  {input.required ? <span className="sr-only">(wajib)</span> : null}
-                </Label>
-                <Input
-                  id="confirm-dialog-input"
-                  value={value}
-                  onChange={(event) => setValue(event.target.value)}
-                  placeholder={input.placeholder}
-                  maxLength={500}
-                  autoFocus
-                />
-              </div>
-            ) : null}
+        {input ? (
+          <div className="grid gap-2">
+            <Label htmlFor="confirm-dialog-input">{input.label}</Label>
+            <Input
+              id="confirm-dialog-input"
+              value={value}
+              placeholder={input.placeholder}
+              onChange={(event) => setValue(event.target.value)}
+              disabled={isBusy}
+            />
           </div>
+        ) : null}
 
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" disabled={isBusy} onClick={onCancel}>
-              Batal
-            </Button>
-            <Button
-              type="submit"
-              variant={tone === "danger" ? "destructive" : "default"}
-              disabled={isConfirmDisabled}
-            >
-              {isBusy ? "Memproses…" : confirmLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isBusy}>Batal</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={blocked}
+            className={cn(
+              tone === "danger" &&
+                "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20",
+            )}
+            onClick={(event) => {
+              event.preventDefault();
+              onConfirm(value);
+            }}
+          >
+            {isBusy ? "Memproses…" : confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
