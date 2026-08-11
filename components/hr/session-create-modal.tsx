@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -42,6 +43,7 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
   const [candidateId, setCandidateId] = useState("");
   const [expiresInHours, setExpiresInHours] = useState("48");
   const [reentryPolicy, setReentryPolicy] = useState<"single" | "multi">("single");
+  const [includePapi, setIncludePapi] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [created, setCreated] = useState<CreatedSession | null>(null);
   const [hasCopied, setHasCopied] = useState(false);
@@ -50,6 +52,7 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
     setIsOpen(false);
     setCreated(null);
     setCandidateId("");
+    setIncludePapi(true);
     setHasCopied(false);
   }
 
@@ -66,6 +69,7 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
           candidateId,
           expiresInHours: Number(expiresInHours),
           reentryPolicy,
+          includePapi,
         }),
       });
       if (response.ok) {
@@ -84,10 +88,7 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
 
   return (
     <>
-      <Button
-        className="h-12 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]px-3"
-        onClick={() => setIsOpen(true)}
-      >
+      <Button className="h-12 bg-primary hover:bg-primary/90px-3" onClick={() => setIsOpen(true)}>
         Buat sesi &amp; generate kode
       </Button>
 
@@ -96,15 +97,15 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
         title={created ? "Sesi dibuat — salin kode SEKARANG" : "Buat sesi & kode akses"}
         description={
           created
-            ? "Kode hanya ditampilkan satu kali. Setelah modal ini ditutup, yang tersisa hanya versi tersamar."
+            ? "Salin kode untuk diberikan kepada peserta. Kode juga tetap terlihat di daftar sesi."
             : "Sesi mengunci versi form, kunci skoring, norma, dan tutorial yang published saat ini."
         }
         onClose={close}
       >
         {created ? (
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-4 rounded-xl border border-[var(--accent-primary)] bg-[var(--accent-soft)] p-5">
-              <p className="font-mono text-2xl font-bold tracking-[0.06em] text-[var(--text-primary)]">
+            <div className="flex flex-wrap items-center gap-4 rounded-xl border border-primary bg-accent p-5">
+              <p className="font-mono text-2xl font-bold tracking-[0.06em] text-foreground">
                 {created.accessCode}
               </p>
               <Button
@@ -119,11 +120,11 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
                 {hasCopied ? "Tersalin ✓" : "Salin kode"}
               </Button>
             </div>
-            <p className="text-xs leading-5 text-[var(--text-muted)]">
-              Berlaku sampai {new Date(created.accessCodeExpiresAt).toLocaleString("id-ID")} ·
-              tampil di daftar sebagai <span className="font-mono">{created.accessCodeMasked}</span>
+            <p className="text-xs leading-5 text-muted-foreground">
+              Berlaku sampai {new Date(created.accessCodeExpiresAt).toLocaleString("id-ID")} · kode
+              ini tetap dapat dilihat kembali di daftar sesi
             </p>
-            <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-4">
+            <div className="flex flex-wrap gap-3 border-t border-border pt-4">
               <Link
                 href={`/hr/sessions/${created.sessionId}`}
                 onClick={close}
@@ -223,19 +224,37 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs leading-5 text-[var(--text-muted)]">
+              <p className="text-xs leading-5 text-muted-foreground">
                 Apa pun kebijakannya, kode dari sesi yang sudah selesai tes tidak dapat dipakai
                 masuk lagi.
               </p>
             </div>
+            <div className="grid gap-2 rounded-xl border border-border bg-muted p-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <Checkbox
+                  checked={includePapi}
+                  onCheckedChange={(checked) => setIncludePapi(checked === true)}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="text-sm font-semibold text-foreground">
+                    Sertakan PAPI Kostick setelah IST
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                    Satu kode akses untuk dua instrumen. Setelah IST selesai, peserta boleh
+                    istirahat dan kembali dengan kode yang sama. PAPI tidak dibatasi waktu.
+                  </span>
+                </span>
+              </label>
+            </div>
             {candidates.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-[var(--border-default)] bg-[var(--surface-base)] p-4 text-sm leading-6 text-[var(--text-secondary)]">
+              <p className="rounded-xl border border-dashed border-border bg-background p-4 text-sm leading-6 text-muted-foreground">
                 Belum ada peserta — tambahkan lewat halaman Peserta terlebih dahulu.
               </p>
             ) : null}
-            <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-4">
+            <div className="flex flex-wrap gap-3 border-t border-border pt-4">
               <Button
-                className="h-12 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]"
+                className="h-12 bg-primary hover:bg-primary/90"
                 disabled={isBusy || candidateId === ""}
                 onClick={handleCreate}
               >
