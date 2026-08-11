@@ -15,6 +15,15 @@ import {
 } from "@/components/participant/test-session-sidebar";
 import { useAutosave, type AutosaveStatus } from "@/components/participant/use-autosave";
 import type { SubtestCode } from "@/lib/ist-subtests";
+import {
+  moveActiveItem,
+  readDraft,
+  resolveActiveItem,
+  seedDrafts,
+  writeDraft,
+  type ActiveItemState,
+  type DraftMap,
+} from "@/lib/participant-navigation";
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 
@@ -33,7 +42,7 @@ type TestSessionProps = {
   readonly items: readonly QuestionItem[];
   readonly statuses: readonly { itemNumber: number; status: ItemStatusValue }[];
   readonly currentLocal: number;
-  readonly currentMediaUrl?: string | null;
+  readonly mediaUrls?: Readonly<Record<string, string>>;
   readonly expiresAt: string;
   readonly serverNow: string;
 };
@@ -46,15 +55,33 @@ export function TestSession({
   items,
   statuses,
   currentLocal,
-  currentMediaUrl = null,
+  mediaUrls = {},
   expiresAt,
   serverNow,
 }: TestSessionProps) {
   const router = useRouter();
 
+  /*
+    Nomor aktif disimpan di klien. Sebelumnya tiap perpindahan memakai
+    `router.push`, yang memicu render server penuh: resolusi token, pembacaan
+    sesi, transaksi `startSubtest`, dan penandatanganan URL media. Padahal
+    seluruh soal subtes ini sudah ada di `items` sejak halaman dimuat.
+  */
+  const [itemState, setItemState] = useState<ActiveItemState>({
+    activeLocal: currentLocal,
+    seenServerLocal: currentLocal,
+  });
+
+  // Prop server hanya mengambil alih bila nilainya berubah, bukan tiap render.
+  const synced = resolveActiveItem(itemState, currentLocal);
+  if (synced !== itemState) {
+    setItemState(synced);
+  }
+  const activeLocal = synced.activeLocal;
+
   const currentItem = useMemo(
-    () => items.find((item) => item.localNumber === currentLocal) ?? items[0],
-    [items, currentLocal],
+    () => items.find((item) => item.localNumber === activeLocal) ?? items[0],
+    [items, activeLocal],
   );
 
   const initialStatuses = useMemo(() => {
@@ -73,12 +100,25 @@ export function TestSession({
     setLocalStatuses(initialStatuses);
   }
 
-  const [draft, setDraft] = useState(currentItem.savedValue ?? "");
+  /*
+    Jawaban seluruh soal subtes disimpan di klien. Prop `items` hanya diambil
+    sekali saat subtes dibuka, sehingga tanpa peta ini kembali ke soal
+    sebelumnya akan menampilkan isian kosong.
+  */
+  const [drafts, setDrafts] = useState<DraftMap>(() => seedDrafts(items));
+  const [draftsBase, setDraftsBase] = useState(items);
+  if (draftsBase !== items) {
+    // Server mengirim data baru (mis. masuk ulang subtes) — jadikan acuan.
+    setDraftsBase(items);
+    setDrafts(seedDrafts(items));
+  }
+
+  const draft = readDraft(drafts, currentItem.itemVersionId);
+
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [draftItemId, setDraftItemId] = useState(currentItem.itemVersionId);
   if (draftItemId !== currentItem.itemVersionId) {
     setDraftItemId(currentItem.itemVersionId);
-    setDraft(currentItem.savedValue ?? "");
     setIsAdvancing(false);
   }
 
@@ -130,35 +170,42 @@ export function TestSession({
     return () => window.clearInterval(beat);
   }, [token]);
 
-  const routeFor = useCallback(
-    (localNumber: number) => `/test/${token}/question/${subtestCode}/${localNumber}`,
-    [token, subtestCode],
-  );
+  const goTo = useCallback((localNumber: number) => {
+    /*
+      URL sengaja TIDAK disinkronkan di sini.
 
-  const goTo = useCallback(
-    (localNumber: number) => {
-      router.push(routeFor(localNumber));
-    },
-    [router, routeFor],
-  );
+      Next App Router menambal `history.pushState`/`replaceState` dan
+      memperlakukannya sebagai pembaruan router. Karena nomor soal adalah segmen
+      dinamis rute, mengubahnya berarti kecocokan rute yang berbeda: Next
+      menjalankan navigasi, komponen dipasang ulang, dan `useState` kembali ke
+      nilai prop semula — peserta terlempar balik ke soal yang sama.
+
+      Perpindahan karena itu murni state React. Konsekuensinya, memuat ulang
+      halaman di tengah subtes akan mendarat pada nomor yang tertulis di URL,
+      bukan nomor terakhir yang dibuka. Jawaban tidak terpengaruh karena sudah
+      tersimpan di server.
+    */
+    setItemState((previous) => moveActiveItem(previous, localNumber));
+    window.scrollTo({ top: 0 });
+  }, []);
 
   const goToReview = useCallback(() => {
     router.push(`/test/${token}/review/${subtestCode}`);
   }, [router, token, subtestCode]);
 
   const advance = useCallback(() => {
-    if (currentLocal >= totalItems) {
+    if (activeLocal >= totalItems) {
       goToReview();
       return;
     }
-    goTo(currentLocal + 1);
-  }, [currentLocal, totalItems, goTo, goToReview]);
+    goTo(activeLocal + 1);
+  }, [activeLocal, totalItems, goTo, goToReview]);
 
   function handleValueChange(value: string) {
     if (isAdvancing) {
       return;
     }
-    setDraft(value);
+    setDrafts((previous) => writeDraft(previous, currentItem.itemVersionId, value));
     if (canSubmitValue(currentItem, value)) {
       queueSave(value);
     }
@@ -171,7 +218,7 @@ export function TestSession({
     setIsAdvancing(true);
     const saved = await flush(draft);
     if (saved) {
-      setLocalStatuses((previous) => ({ ...previous, [currentLocal]: "answered" }));
+      setLocalStatuses((previous) => ({ ...previous, [activeLocal]: "answered" }));
       advance();
       return;
     }
@@ -191,9 +238,9 @@ export function TestSession({
       );
       if (response.ok) {
         setLocalStatuses((previous) =>
-          isAnsweredStatus(previous[currentLocal] ?? "unanswered")
+          isAnsweredStatus(previous[activeLocal] ?? "unanswered")
             ? previous
-            : { ...previous, [currentLocal]: "skipped" },
+            : { ...previous, [activeLocal]: "skipped" },
         );
         advance();
         return;
@@ -214,7 +261,7 @@ export function TestSession({
   const answeredCount = sidebarItems.filter((item) => isAnsweredStatus(item.status)).length;
   const unansweredCount = totalItems - answeredCount;
 
-  const currentStatus = localStatuses[currentLocal] ?? "unanswered";
+  const currentStatus = localStatuses[activeLocal] ?? "unanswered";
   const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, "0");
   const seconds = String(remainingSeconds % 60).padStart(2, "0");
 
@@ -222,7 +269,7 @@ export function TestSession({
     <section className="h-full w-full lg:pb-0 grid gap-6 xl:grid-cols-[280px_1fr]">
       <CourseRail currentCode={subtestCode} />
       <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
-        { }
+        {}
         <TestQuestionPanel
           state={{
             subtestCode,
@@ -237,7 +284,7 @@ export function TestSession({
             value: draft,
           }}
           autosaveLabel={isAdvancing ? "Menyimpan…" : AUTOSAVE_LABELS[autosaveStatus]}
-          mediaUrl={currentMediaUrl}
+          mediaUrl={mediaUrls[currentItem.itemVersionId] ?? null}
           disabled={isAdvancing}
           onValueChange={handleValueChange}
           onSkip={handleSkip}
@@ -249,7 +296,7 @@ export function TestSession({
             code: subtestCode,
             minutes,
             seconds,
-            currentItem: currentLocal,
+            currentItem: activeLocal,
             items: sidebarItems,
             unansweredCount,
           }}
