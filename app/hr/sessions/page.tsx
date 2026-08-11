@@ -120,7 +120,7 @@ export default async function HrSessionsPage({
                       <TableCell className="py-4">
                         {row.accessCode ? (
                           <span className="inline-flex flex-col">
-                            <span className="font-mono">{row.accessCode.masked}</span>
+                            <span className="font-mono">{row.accessCode.code}</span>
                             <span className="text-xs text-muted-foreground">
                               {accessCodeStatusLabel(row.accessCode.status)}
                             </span>
