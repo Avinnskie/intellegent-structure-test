@@ -1,6 +1,7 @@
 import { createElement as h, type ReactElement } from "react";
-import { Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Circle, Line, Page, Polygon, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { formatPapiElapsed, papiCategoryLabel } from "../domain/papi-format.ts";
+import { buildPapiRadarLayout } from "../domain/papi-radar-geometry.ts";
 import { PAPI_MAX_FACTOR_SCORE } from "../papi-factors.ts";
 import type { PapiResultDto, PapiStageDto } from "./papi-result-read.ts";
 
@@ -28,6 +29,10 @@ const styles = StyleSheet.create({
   identityRow: { flexDirection: "row" as const, marginBottom: 3 },
   identityLabel: { width: 130, color: "#555555" },
 
+  chartRow: { flexDirection: "row" as const, gap: 16, marginTop: 8, alignItems: "center" as const },
+  radarBox: { width: 214 },
+  radarCaption: { fontSize: 7, color: "#777777", textAlign: "center" as const, marginTop: 2 },
+  barBox: { flex: 1 },
   chartArea: {
     flexDirection: "row" as const,
     alignItems: "flex-end" as const,
@@ -66,26 +71,7 @@ const styles = StyleSheet.create({
   groupMeta: { fontSize: 8, color: "#777777", marginTop: 4 },
 
   versions: { marginTop: 14, fontSize: 8, color: "#777777" },
-  footer: {
-    position: "absolute",
-    bottom: 32,
-    left: 40,
-    right: 40,
-    fontSize: 8,
-    color: "#777777",
-    borderTop: "1 solid #dddddd",
-    paddingTop: 8,
-  },
 });
-
-const IPSATIVE_NOTE =
-  "Skor PAPI bersifat ipsatif: total 20 faktor selalu 90, sehingga skor tinggi pada satu faktor " +
-  "memaksa faktor lain turun. Profil ini hanya bermakna dibandingkan di dalam diri peserta " +
-  "sendiri dan tidak sah dipakai untuk memeringkat kandidat atau sebagai ambang kelulusan.";
-
-const FOOTER_TEXT =
-  "Laporan ini tidak memuat keputusan otomatis diterima/ditolak. Interpretasi akhir menjadi" +
-  " wewenang psikolog/HR yang berwenang.";
 
 const KIND_LABELS: Record<string, string> = { role: "Role", need: "Need" };
 
@@ -98,7 +84,87 @@ function identityLine(label: string, value: string): ReactElement {
   );
 }
 
-/** Halaman PAPI ketika peserta menyelesaikan seluruh 90 nomor. */
+const RADAR_STROKE = "#4657d9";
+const RADAR_GRID = "#d8d8e4";
+
+/**
+ * Radar 20 faktor untuk laporan cetak.
+ *
+ * Digambar dengan primitif SVG @react-pdf, bukan gambar hasil rasterisasi,
+ * sehingga tetap tajam pada perbesaran berapa pun dan tidak memerlukan browser
+ * saat laporan dihasilkan di server.
+ */
+function papiRadarChart(papi: PapiResultDto): ReactElement {
+  const layout = buildPapiRadarLayout(
+    papi.factors.map((factor) => factor.score),
+    { size: 214, padding: 24 },
+  );
+
+  return h(
+    View,
+    { style: styles.radarBox },
+    h(
+      Svg,
+      { viewBox: `0 0 ${layout.size} ${layout.size}`, style: { width: "100%", height: 214 } },
+      // Cincin skala 3, 6, dan 9 sebagai acuan baca.
+      ...layout.rings.map((ring) =>
+        h(Polygon, {
+          key: `ring-${ring.score}`,
+          points: ring.points,
+          fill: "none",
+          stroke: RADAR_GRID,
+          strokeWidth: 0.6,
+        }),
+      ),
+      ...layout.spokes.map((spoke, index) =>
+        h(Line, {
+          key: `spoke-${index}`,
+          x1: spoke.from.x,
+          y1: spoke.from.y,
+          x2: spoke.to.x,
+          y2: spoke.to.y,
+          stroke: RADAR_GRID,
+          strokeWidth: 0.5,
+        }),
+      ),
+      h(Polygon, {
+        points: layout.valuePoints,
+        fill: RADAR_STROKE,
+        fillOpacity: 0.18,
+        stroke: RADAR_STROKE,
+        strokeWidth: 1.4,
+      }),
+      ...layout.valueDots.map((dot, index) =>
+        h(Circle, { key: `dot-${index}`, cx: dot.x, cy: dot.y, r: 1.6, fill: RADAR_STROKE }),
+      ),
+      ...layout.labels.flatMap((label, index) => {
+        const factor = papi.factors[index];
+        if (!factor) {
+          return [];
+        }
+        return [
+          h(
+            Text,
+            {
+              key: `label-${index}`,
+              x: label.x,
+              y: label.y,
+              textAnchor: label.anchor,
+              style: {
+                fontSize: 6.5,
+                fontFamily: factor.kind === "role" ? "Helvetica-Bold" : "Helvetica",
+                color: factor.kind === "role" ? "#1a1a1a" : "#777777",
+              },
+            },
+            `${factor.code} ${factor.score}`,
+          ),
+        ];
+      }),
+    ),
+    h(Text, { style: styles.radarCaption }, "Skala 0-9 tetap. Tebal = Role, pudar = Need."),
+  );
+}
+
 export function buildPapiPage(papi: PapiResultDto): ReactElement {
   const chartColumns = papi.factors.map((factor) =>
     h(
@@ -175,9 +241,13 @@ export function buildPapiPage(papi: PapiResultDto): ReactElement {
     identityLine("Role / Need", `${papi.roleTotal} / ${papi.needTotal}`),
     identityLine("Total skor", String(papi.totalScore)),
     h(Text, { style: styles.sectionTitle, key: "note-title" }, "Catatan pembacaan"),
-    h(Text, { style: styles.note, key: "note" }, IPSATIVE_NOTE),
     h(Text, { style: styles.sectionTitle, key: "chart-title" }, "Profil 20 faktor"),
-    h(View, { style: styles.chartArea, key: "chart" }, ...chartColumns),
+    h(
+      View,
+      { style: styles.chartRow, key: "chart" },
+      papiRadarChart(papi),
+      h(View, { style: styles.barBox }, h(View, { style: styles.chartArea }, ...chartColumns)),
+    ),
     h(Text, { style: styles.sectionTitle, key: "group-title" }, "Ringkasan tujuh kelompok"),
     h(View, { style: styles.groupWrap, key: "groups" }, ...groupCards),
     h(Text, { style: styles.sectionTitle, key: "table-title" }, "Detail faktor"),
@@ -197,21 +267,9 @@ export function buildPapiPage(papi: PapiResultDto): ReactElement {
   if (pendingWarning) {
     children.push(pendingWarning);
   }
-
-  children.push(
-    h(
-      Text,
-      { style: styles.versions, key: "versions" },
-      `Versi: form PAPI ${papi.papiFormVersionId} · engine ${papi.engineVersion}\n` +
-        `Dihitung ${papi.calculatedAt} · Difinalisasi ${papi.finalizedAt ?? "—"}`,
-    ),
-    h(Text, { style: styles.footer, fixed: true, key: "footer" }, FOOTER_TEXT),
-  );
-
   return h(Page, { size: "A4", style: styles.page, key: "papi" }, ...children);
 }
 
-/** Halaman PAPI ketika tahapnya tidak dikerjakan — transparan, bukan dihilangkan. */
 export function buildPapiSkippedPage(stage: PapiStageDto, candidateName: string): ReactElement {
   const reason =
     stage.skipReason === "participant_declined"
@@ -234,6 +292,5 @@ export function buildPapiSkippedPage(stage: PapiStageDto, candidateName: string)
     stage.skippedAt
       ? identityLine("Ditutup pada", new Date(stage.skippedAt).toISOString())
       : h(View, { key: "no-date" }),
-    h(Text, { style: styles.footer, fixed: true }, FOOTER_TEXT),
   );
 }
