@@ -73,7 +73,7 @@ export function ResultActions({
                 }
               })
             }
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-[var(--accent-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Coba hitung ulang
           </button>
@@ -83,7 +83,7 @@ export function ResultActions({
             type="button"
             disabled={isBusy}
             onClick={() => setPending("review")}
-            className="inline-flex h-12 items-center justify-center rounded-xl border border-[var(--border-default)] px-5 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-subtle)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-12 items-center justify-center rounded-xl border border-border px-5 text-sm font-semibold text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
             Tandai reviewed
           </button>
@@ -93,7 +93,7 @@ export function ResultActions({
             type="button"
             disabled={isBusy}
             onClick={() => setPending("finalize")}
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-[var(--accent-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Finalisasi hasil
           </button>
@@ -103,7 +103,7 @@ export function ResultActions({
             type="button"
             disabled={isBusy}
             onClick={() => setPending("override")}
-            className="inline-flex h-12 items-center justify-center rounded-xl border border-[var(--status-warning)] px-5 text-sm font-semibold text-[var(--text-primary)] hover:bg-[color-mix(in_srgb,var(--status-warning)_10%,white)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-12 items-center justify-center rounded-xl border border-[var(--color-amber-500, #f59e0b)] px-5 text-sm font-semibold text-foreground hover:bg-[color-mix(in_srgb,var(--color-amber-500, #f59e0b)_10%,white)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Override &amp; hitung ulang
           </button>
