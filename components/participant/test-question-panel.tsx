@@ -67,8 +67,8 @@ function QuestionControl({
                   disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
                 } ${
                   selected
-                    ? "border-[var(--accent-primary)] bg-[var(--accent-soft)]"
-                    : `border-[var(--border-default)] bg-[var(--surface-panel)] ${disabled ? "" : "hover:bg-[var(--surface-subtle)]"}`
+                    ? "border-primary bg-accent"
+                    : `border-border bg-card ${disabled ? "" : "hover:bg-muted"}`
                 }`}
               >
                 <input
@@ -77,15 +77,13 @@ function QuestionControl({
                   value={option.optionCode}
                   checked={selected}
                   onChange={(event) => onValueChange(event.target.value)}
-                  className="size-4 accent-[var(--accent-primary)]"
+                  className="size-4 accent-[var(--primary)]"
                 />
                 <span className="grid min-w-0 gap-1">
-                  <span className="text-xs font-bold uppercase text-[var(--accent-primary)]">
+                  <span className="text-xs font-bold uppercase text-primary">
                     Opsi {option.optionCode}
                   </span>
-                  <span className="text-sm font-semibold text-[var(--text-primary)]">
-                    {option.label}
-                  </span>
+                  <span className="text-sm font-semibold text-foreground">{option.label}</span>
                 </span>
               </label>
             );
@@ -94,13 +92,13 @@ function QuestionControl({
       );
     case "short_text":
       return (
-        <label className="grid gap-2 text-sm font-semibold text-[var(--text-primary)]">
+        <label className="grid gap-2 text-sm font-semibold text-foreground">
           Jawaban singkat
           <textarea
             value={value}
             disabled={disabled}
             onChange={(event) => onValueChange(event.target.value)}
-            className="min-h-36 w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-panel)] px-4 py-4 text-base font-normal text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-soft)]"
+            className="min-h-36 w-full rounded-xl border border-border bg-card px-4 py-4 text-base font-normal text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             placeholder={item.placeholder ?? undefined}
             maxLength={500}
           />
@@ -108,7 +106,7 @@ function QuestionControl({
       );
     case "numeric":
       return (
-        <label className="grid gap-2 text-sm font-semibold text-[var(--text-primary)]">
+        <label className="grid gap-2 text-sm font-semibold text-foreground">
           Jawaban angka
           <input
             type="text"
@@ -120,7 +118,7 @@ function QuestionControl({
                 onValueChange(event.target.value);
               }
             }}
-            className="h-12 w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-panel)] px-4 text-base font-normal text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-soft)]"
+            className="h-12 w-full rounded-xl border border-border bg-card px-4 text-base font-normal text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             placeholder={item.placeholder ?? undefined}
             maxLength={64}
           />
@@ -143,23 +141,23 @@ export function TestQuestionPanel({
   return (
     // 2.5rem = the test layout's p-5 top+bottom; the old 9.5rem offset assumed a header that the
     // participant layout no longer has, which left a dead band under the card.
-    <article className="rounded-2xl h-full border border-[var(--border-default)] bg-[var(--surface-panel)] p-6 pb-24 xl:flex xl:h-[calc(100dvh-2.5rem)] xl:flex-col xl:pb-6">
+    <article className="rounded-xl h-full border border-border bg-card p-6 pb-24 xl:flex xl:h-[calc(100dvh-2.5rem)] xl:flex-col xl:pb-6">
       <div className="space-y-6 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-[var(--accent-primary)]">
+            <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-primary">
               Subtes {subtestCode}
             </span>
-            <span className="inline-flex items-center rounded-full border border-[var(--border-default)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+            <span className="inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
               {item.localNumber}/{totalItems}
             </span>
             {autosaveLabel ? (
-              <span aria-live="polite" className="text-xs font-semibold text-[var(--text-muted)]">
+              <span aria-live="polite" className="text-xs font-semibold text-muted-foreground">
                 {autosaveLabel}
               </span>
             ) : null}
           </div>
-          <h2 className="mt-4 text-2xl font-bold tracking-[-0.04em] text-[var(--text-primary)] sm:text-3xl">
+          <h2 className="mt-4 text-2xl font-bold tracking-[-0.04em] text-foreground sm:text-3xl">
             {item.prompt}
           </h2>
         </div>
@@ -167,12 +165,12 @@ export function TestQuestionPanel({
         <ProgressBar label="Progres menjawab" value={answeredCount} total={totalItems} />
 
         {mediaUrl ? (
-          <div className="overflow-hidden rounded-xl border border-[var(--border-default)]">
+          <div className="overflow-hidden rounded-xl border border-border">
             {/* eslint-disable-next-line @next/next/no-img-element -- signed URL, next/image cannot optimize it */}
             <img
               src={mediaUrl}
               alt={`Gambar soal ${item.localNumber}`}
-              className="max-h-80 w-full object-contain bg-[var(--surface-base)]"
+              className="max-h-80 w-full object-contain bg-background"
             />
           </div>
         ) : null}
@@ -187,20 +185,20 @@ export function TestQuestionPanel({
         </div>
       </div>
 
-      <div className="fixed inset-x-4 bottom-4 z-40 flex gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-3 xl:static xl:inset-auto xl:z-auto xl:mt-6 xl:border-0 xl:p-0 xl:shadow-none">
-        <button
+      <div className="fixed inset-x-4 bottom-4 z-40 flex gap-3 rounded-xl border border-border bg-card p-3 xl:static xl:inset-auto xl:z-auto xl:mt-6 xl:border-0 xl:p-0 xl:shadow-none">
+        {/* <button
           type="button"
           onClick={onSkip}
           disabled={disabled}
-          className="inline-flex w-1/2 h-12 flex-1 items-center justify-center rounded-xl border border-[var(--border-default)] px-5 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-subtle)] disabled:cursor-not-allowed disabled:opacity-50 xl:flex-none"
+          className="inline-flex w-1/2 h-12 flex-1 items-center justify-center rounded-xl border border-border px-5 text-sm font-semibold text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 xl:flex-none"
         >
           Lewati
-        </button>
+        </button> */}
         <button
           type="button"
           onClick={onSubmit}
           disabled={disabled || !canSubmitValue(item, value)}
-          className="inline-flex w-1/2 h-12 flex-1 items-center justify-center rounded-xl bg-[var(--accent-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50 xl:flex-none"
+          className="inline-flex w-full h-12 flex-1 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 xl:flex-none"
         >
           {status === "answered" ? "Perbarui & lanjut" : "Jawab & lanjut"}
         </button>
