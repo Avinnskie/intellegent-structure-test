@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -14,6 +15,14 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -154,6 +163,7 @@ export function SessionBulkModal() {
   const [expiresInHours, setExpiresInHours] = useState("48");
 
   const [reentryPolicy, setReentryPolicy] = useState<"single" | "multi">("multi");
+  const [includePapi, setIncludePapi] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [result, setResult] = useState<BulkResult | null>(null);
   const [hasCopiedAll, setHasCopiedAll] = useState(false);
@@ -187,6 +197,7 @@ export function SessionBulkModal() {
           })),
           expiresInHours: Number(expiresInHours),
           reentryPolicy,
+          includePapi,
         }),
       });
       if (response.ok) {
@@ -239,7 +250,7 @@ export function SessionBulkModal() {
         {result ? (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
+              <p className="text-sm font-semibold text-foreground">
                 {result.created.length} peserta + sesi + kode dibuat · berlaku sampai{" "}
                 {new Date(result.accessCodeExpiresAt).toLocaleString("id-ID")} ·{" "}
                 {result.reentryPolicy === "multi" ? "boleh masuk berulang" : "sekali pakai"}
@@ -248,36 +259,36 @@ export function SessionBulkModal() {
                 {hasCopiedAll ? "Tersalin ✓" : "Salin semua (nama + kode)"}
               </Button>
             </div>
-            <div className="max-h-80 overflow-x-hidden overflow-y-auto rounded-xl border border-[var(--border-default)]">
-              <table className="w-full table-fixed text-left text-sm">
-                <thead className="sticky top-0 bg-[var(--surface-subtle)] text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                  <tr>
-                    <th className="px-4 py-2">Nama</th>
-                    <th className="px-4 py-2">Tanggal lahir</th>
-                    <th className="px-4 py-2">Kode akses</th>
-                  </tr>
-                </thead>
-                <tbody className="text-[var(--text-primary)]">
+            <div className="max-h-80 overflow-x-hidden overflow-y-auto rounded-xl border border-border">
+              <Table className="w-full table-fixed text-left text-sm">
+                <TableHeader className="sticky top-0 bg-muted text-xs uppercase tracking-[0.08em] text-muted-foreground">
+                  <TableRow>
+                    <TableHead className="px-4 py-2">Nama</TableHead>
+                    <TableHead className="px-4 py-2">Tanggal lahir</TableHead>
+                    <TableHead className="px-4 py-2">Kode akses</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="text-foreground">
                   {result.created.map((row) => (
-                    <tr
+                    <TableRow
                       key={row.accessCodeMasked + row.fullName}
-                      className="border-t border-[var(--border-subtle)]"
+                      className="border-t border-border"
                     >
-                      <td className="break-words px-4 py-2 font-semibold [overflow-wrap:anywhere]">
+                      <TableCell className="break-words px-4 py-2 font-semibold [overflow-wrap:anywhere]">
                         {row.fullName}
-                      </td>
-                      <td className="break-words px-4 py-2 [overflow-wrap:anywhere]">
+                      </TableCell>
+                      <TableCell className="break-words px-4 py-2 [overflow-wrap:anywhere]">
                         {row.birthDate}
-                      </td>
-                      <td className="break-words px-4 py-2 font-mono font-bold [overflow-wrap:anywhere]">
+                      </TableCell>
+                      <TableCell className="break-words px-4 py-2 font-mono font-bold [overflow-wrap:anywhere]">
                         {row.accessCode}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
-            <div className="flex justify-end border-t border-[var(--border-subtle)] pt-4">
+            <div className="flex justify-end border-t border-border pt-4">
               <Button variant="outline" onClick={close}>
                 Selesai
               </Button>
@@ -357,14 +368,32 @@ export function SessionBulkModal() {
               </div>
             </div>
 
+            <div className="rounded-xl border border-border bg-muted p-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <Checkbox
+                  checked={includePapi}
+                  onCheckedChange={(checked) => setIncludePapi(checked === true)}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="text-sm font-semibold text-foreground">
+                    Sertakan PAPI Kostick untuk seluruh batch
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                    Satu kode akses untuk IST lalu PAPI. Peserta boleh istirahat di antaranya.
+                  </span>
+                </span>
+              </label>
+            </div>
+
             {text.trim() !== "" ? (
-              <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-base)] p-4 text-sm leading-6">
-                <p className="font-semibold text-[var(--text-primary)]">
+              <div className="rounded-xl border border-border bg-background p-4 text-sm leading-6">
+                <p className="font-semibold text-foreground">
                   {parsed.rows.length} baris siap dibuat
                   {parsed.errors.length > 0 ? ` · ${parsed.errors.length} baris bermasalah` : ""}
                 </p>
                 {parsed.errors.length > 0 ? (
-                  <ul className="mt-2 list-inside list-disc text-[var(--status-error)]">
+                  <ul className="mt-2 list-inside list-disc text-destructive">
                     {parsed.errors.slice(0, 5).map((error) => (
                       <li key={`${error.line}-${error.message}`}>
                         {error.line > 0 ? `Baris ${error.line}: ` : ""}
@@ -376,7 +405,7 @@ export function SessionBulkModal() {
                     ) : null}
                   </ul>
                 ) : parsed.rows.length > 0 ? (
-                  <p className="mt-1 text-[var(--text-secondary)]">
+                  <p className="mt-1 text-muted-foreground">
                     Contoh terbaca: {parsed.rows[0]?.fullName} — lahir {parsed.rows[0]?.birthDate}
                     {parsed.rows[0]?.gender ? ` — ${parsed.rows[0]?.gender}` : ""}. Impor bersifat
                     semua-atau-tidak: satu baris gagal berarti tidak ada yang dibuat.
@@ -385,7 +414,7 @@ export function SessionBulkModal() {
               </div>
             ) : null}
 
-            <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-4">
+            <div className="flex flex-wrap gap-3 border-t border-border pt-4">
               <Button disabled={!canSubmit} onClick={handleSubmit}>
                 {isBusy
                   ? "Membuat sesi massal…"
