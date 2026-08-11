@@ -1,0 +1,1601 @@
+{
+  "source": {
+    "workbook": "PAPI SCORING.xlsx",
+    "itemSheet": "SOAL",
+    "keySheet": "Formula",
+    "interpretationSheet": "Interpretasi",
+    "extractedAt": "2026-08-08",
+    "note": "Kunci dan teks item ditarik langsung dari workbook. Band interpretasi disalin apa adanya; rentang yang pada workbook menghasilkan FALSE ditandai pendingOwnerValidation, tidak diisi teks karangan."
+  },
+  "itemCount": 90,
+  "maxScorePerFactor": 9,
+  "totalScoreInvariant": 90,
+  "factors": [
+    {
+      "code": "N",
+      "name": "Need to Personally Finish a Task",
+      "group": "WORK_DIRECTION",
+      "kind": "need"
+    },
+    {
+      "code": "G",
+      "name": "Role of a Hard Intense Worker",
+      "group": "WORK_DIRECTION",
+      "kind": "role"
+    },
+    {
+      "code": "A",
+      "name": "Need to Achieve",
+      "group": "WORK_DIRECTION",
+      "kind": "need"
+    },
+    {
+      "code": "L",
+      "name": "Leadership Role",
+      "group": "LEADERSHIP",
+      "kind": "role"
+    },
+    {
+      "code": "P",
+      "name": "Need to Control Others",
+      "group": "LEADERSHIP",
+      "kind": "need"
+    },
+    {
+      "code": "I",
+      "name": "Ease in Decision Making",
+      "group": "LEADERSHIP",
+      "kind": "role"
+    },
+    {
+      "code": "T",
+      "name": "\"On the Go\" Type",
+      "group": "ACTIVITY",
+      "kind": "role"
+    },
+    {
+      "code": "V",
+      "name": "Vigorous Type",
+      "group": "ACTIVITY",
+      "kind": "role"
+    },
+    {
+      "code": "X",
+      "name": "Need to be Noticed",
+      "group": "SOCIAL_NATURE",
+      "kind": "need"
+    },
+    {
+      "code": "S",
+      "name": "Social Extension",
+      "group": "SOCIAL_NATURE",
+      "kind": "role"
+    },
+    {
+      "code": "B",
+      "name": "Need to Belong to Group",
+      "group": "SOCIAL_NATURE",
+      "kind": "need"
+    },
+    {
+      "code": "O",
+      "name": "Need for Closeness and Affection",
+      "group": "SOCIAL_NATURE",
+      "kind": "need"
+    },
+    {
+      "code": "R",
+      "name": "Theoretical Type",
+      "group": "WORK_STYLE",
+      "kind": "role"
+    },
+    {
+      "code": "D",
+      "name": "Interest in Working With Details",
+      "group": "WORK_STYLE",
+      "kind": "role"
+    },
+    {
+      "code": "C",
+      "name": "Organized Type",
+      "group": "WORK_STYLE",
+      "kind": "role"
+    },
+    {
+      "code": "Z",
+      "name": "Need for Change",
+      "group": "TEMPERAMENT",
+      "kind": "need"
+    },
+    {
+      "code": "E",
+      "name": "Emotionally Restrained Type",
+      "group": "TEMPERAMENT",
+      "kind": "role"
+    },
+    {
+      "code": "K",
+      "name": "Need for Defensive Aggressiveness",
+      "group": "TEMPERAMENT",
+      "kind": "need"
+    },
+    {
+      "code": "F",
+      "name": "Need to Support Authority",
+      "group": "FOLLOWERSHIP",
+      "kind": "need"
+    },
+    {
+      "code": "W",
+      "name": "Need for Rules and Supervision",
+      "group": "FOLLOWERSHIP",
+      "kind": "need"
+    }
+  ],
+  "groups": [
+    {
+      "code": "WORK_DIRECTION",
+      "label": "Work Direction",
+      "factors": ["N", "G", "A"]
+    },
+    {
+      "code": "LEADERSHIP",
+      "label": "Leadership",
+      "factors": ["L", "P", "I"]
+    },
+    {
+      "code": "ACTIVITY",
+      "label": "Activity",
+      "factors": ["T", "V"]
+    },
+    {
+      "code": "SOCIAL_NATURE",
+      "label": "Social Nature",
+      "factors": ["X", "S", "B", "O"]
+    },
+    {
+      "code": "WORK_STYLE",
+      "label": "Work Style",
+      "factors": ["R", "D", "C"]
+    },
+    {
+      "code": "TEMPERAMENT",
+      "label": "Temperament",
+      "factors": ["Z", "E", "K"]
+    },
+    {
+      "code": "FOLLOWERSHIP",
+      "label": "Followership",
+      "factors": ["F", "W"]
+    }
+  ],
+  "categoryBands": [
+    {
+      "minScore": 0,
+      "maxScore": 3,
+      "category": "LOW"
+    },
+    {
+      "minScore": 4,
+      "maxScore": 6,
+      "category": "MIDDLE"
+    },
+    {
+      "minScore": 7,
+      "maxScore": 9,
+      "category": "HIGH"
+    }
+  ],
+  "items": [
+    {
+      "number": 1,
+      "optionA": {
+        "text": "Saya seorang pekerja giat",
+        "factor": "G"
+      },
+      "optionB": {
+        "text": "Saya bukan seorang murung",
+        "factor": "E"
+      }
+    },
+    {
+      "number": 2,
+      "optionA": {
+        "text": "Saya suka bekerja lebih baik daripada orang lain",
+        "factor": "A"
+      },
+      "optionB": {
+        "text": "Saya melakukan pekerjaan hingga tuntas",
+        "factor": "N"
+      }
+    },
+    {
+      "number": 3,
+      "optionA": {
+        "text": "Saya suka memberi orang petunjuk bagaimana melakukan sesuatu",
+        "factor": "P"
+      },
+      "optionB": {
+        "text": "Saya senang memberitahukan orang apa yang harus dikerjakan",
+        "factor": "A"
+      }
+    },
+    {
+      "number": 4,
+      "optionA": {
+        "text": "Saya melakukan hal-hal yang lucu",
+        "factor": "X"
+      },
+      "optionB": {
+        "text": "Saya suka mengatakan kepada orang lain apa yang harus dikerjakan",
+        "factor": "P"
+      }
+    },
+    {
+      "number": 5,
+      "optionA": {
+        "text": "Saya suka bergabung didalam kelompok",
+        "factor": "B"
+      },
+      "optionB": {
+        "text": "Saya ingin diperhatikan didalam kelompok",
+        "factor": "X"
+      }
+    },
+    {
+      "number": 6,
+      "optionA": {
+        "text": "Saya suka menjalin persahabatan",
+        "factor": "O"
+      },
+      "optionB": {
+        "text": "Saya suka menggabungkan diri dalam suatu kelompok",
+        "factor": "B"
+      }
+    },
+    {
+      "number": 7,
+      "optionA": {
+        "text": "Jika saya rasa perlu, saya bisa cepat menyesuaikan diri",
+        "factor": "Z"
+      },
+      "optionB": {
+        "text": "Saya berusaha menjalin persahabatan",
+        "factor": "O"
+      }
+    },
+    {
+      "number": 8,
+      "optionA": {
+        "text": "Saya suka membalas jika benar-benar disakiti",
+        "factor": "K"
+      },
+      "optionB": {
+        "text": "Saya suka mengerjakan sesuatu hal yang baru dan berbeda",
+        "factor": "Z"
+      }
+    },
+    {
+      "number": 9,
+      "optionA": {
+        "text": "Saya ingin atasan menyukai saya",
+        "factor": "F"
+      },
+      "optionB": {
+        "text": "Saya suka memberitahu orang lain jika mereka berbuat salah",
+        "factor": "K"
+      }
+    },
+    {
+      "number": 10,
+      "optionA": {
+        "text": "Saya senang mengikuti petunjuk-petunjuk yang diberikan kepada saya",
+        "factor": "W"
+      },
+      "optionB": {
+        "text": "Saya ingin menyenangkan atasan saya",
+        "factor": "F"
+      }
+    },
+    {
+      "number": 11,
+      "optionA": {
+        "text": "Saya berusaha keras sekali",
+        "factor": "G"
+      },
+      "optionB": {
+        "text": "Saya adalah seorang yang rapi saya menempatkan segala sesuatu ditempatnya",
+        "factor": "C"
+      }
+    },
+    {
+      "number": 12,
+      "optionA": {
+        "text": "Saya mampu mempengaruhi orang lain untuk melakukan apa yang saya kehendaki",
+        "factor": "L"
+      },
+      "optionB": {
+        "text": "Saya tidak mudah marah",
+        "factor": "E"
+      }
+    },
+    {
+      "number": 13,
+      "optionA": {
+        "text": "Saya suka memberitahukan apa yang harus dikerjakan oleh kelompok",
+        "factor": "P"
+      },
+      "optionB": {
+        "text": "Saya selalu melakukan pekerjaan sampai tuntas",
+        "factor": "N"
+      }
+    },
+    {
+      "number": 14,
+      "optionA": {
+        "text": "Saya ingin menjadi orang yang menarik dan mengasyikkan",
+        "factor": "X"
+      },
+      "optionB": {
+        "text": "Saya ingin menjadi orang yang sangat berhasil",
+        "factor": "A"
+      }
+    },
+    {
+      "number": 15,
+      "optionA": {
+        "text": "Saya suka menyesuaikan diri dalam kelompok",
+        "factor": "B"
+      },
+      "optionB": {
+        "text": "Saya suka membantu orang mengambil keputusan",
+        "factor": "P"
+      }
+    },
+    {
+      "number": 16,
+      "optionA": {
+        "text": "Saya cemas bila seseorang tidak menyukai saya",
+        "factor": "O"
+      },
+      "optionB": {
+        "text": "Saya suka orang memperhatikan saya",
+        "factor": "X"
+      }
+    },
+    {
+      "number": 17,
+      "optionA": {
+        "text": "Saya suka mencoba hal-hal yang baru",
+        "factor": "Z"
+      },
+      "optionB": {
+        "text": "Saya lebih suka bekerja sama daripada bekerja sendiri",
+        "factor": "B"
+      }
+    },
+    {
+      "number": 18,
+      "optionA": {
+        "text": "Kadang-kadang saya menyalahkan orang lain bila ada sesuatu yang tidak beres",
+        "factor": "K"
+      },
+      "optionB": {
+        "text": "Saya merasa terganggu bila ada yang tidak menyukai saya",
+        "factor": "O"
+      }
+    },
+    {
+      "number": 19,
+      "optionA": {
+        "text": "Saya ingin menyenangkan atasan-atasan saya",
+        "factor": "F"
+      },
+      "optionB": {
+        "text": "Saya suka mencoba suatu pekerjaan yang baru dan berbeda",
+        "factor": "Z"
+      }
+    },
+    {
+      "number": 20,
+      "optionA": {
+        "text": "Saya suka penjelasan-penjelasan terperinci dalam menyelesaikan pekerjaan",
+        "factor": "W"
+      },
+      "optionB": {
+        "text": "Akan saya katakan kepada orang-orang yang bersangkutan bila mereka menjengkelkan saya",
+        "factor": "K"
+      }
+    },
+    {
+      "number": 21,
+      "optionA": {
+        "text": "Saya selalu berusaha keras",
+        "factor": "G"
+      },
+      "optionB": {
+        "text": "Saya suka melaksanakan setiap langkah dengan hati-hati",
+        "factor": "D"
+      }
+    },
+    {
+      "number": 22,
+      "optionA": {
+        "text": "Saya akan menjadi seorang pemimpin yang baik",
+        "factor": "L"
+      },
+      "optionB": {
+        "text": "Saya dapat mengorganisir suatu pekerjaan dengan baik",
+        "factor": "C"
+      }
+    },
+    {
+      "number": 23,
+      "optionA": {
+        "text": "Saya mudah tersinggung",
+        "factor": "I"
+      },
+      "optionB": {
+        "text": "Saya lamban dalam membuat keputusan-keputusan",
+        "factor": "E"
+      }
+    },
+    {
+      "number": 24,
+      "optionA": {
+        "text": "Saya suka mengerjakan beberapa pekerjaan sekaligus",
+        "factor": "X"
+      },
+      "optionB": {
+        "text": "Bila saya dalam kelompok, saya lebih sering sebagai pendengar",
+        "factor": "N"
+      }
+    },
+    {
+      "number": 25,
+      "optionA": {
+        "text": "Saya sangat senang bila mendapat undangan",
+        "factor": "B"
+      },
+      "optionB": {
+        "text": "saya ingin lebih baik dari yang lain dalam mengerjakan sesuatu",
+        "factor": "A"
+      }
+    },
+    {
+      "number": 26,
+      "optionA": {
+        "text": "Saya suka menjalin persahabatan",
+        "factor": "O"
+      },
+      "optionB": {
+        "text": "Saya suka memberi nasehat kepada orang lain",
+        "factor": "P"
+      }
+    },
+    {
+      "number": 27,
+      "optionA": {
+        "text": "Saya suka mengerjakan sesuatu hal yang baru dan berbeda",
+        "factor": "Z"
+      },
+      "optionB": {
+        "text": "Saya suka memberitahu bagaimana saya berhasil dalam melakukan sesuatu",
+        "factor": "X"
+      }
+    },
+    {
+      "number": 28,
+      "optionA": {
+        "text": "Jika memang saya benar, saya akan mempertahankannya",
+        "factor": "K"
+      },
+      "optionB": {
+        "text": "Saya ingin di terima dan diakui dalam kelompok",
+        "factor": "B"
+      }
+    },
+    {
+      "number": 29,
+      "optionA": {
+        "text": "Saya tidak ingin menjadi lain dari yang lain",
+        "factor": "F"
+      },
+      "optionB": {
+        "text": "Saya berusaha dekat dengan orang-orang",
+        "factor": "O"
+      }
+    },
+    {
+      "number": 30,
+      "optionA": {
+        "text": "Saya senang memberitahu orang bagaimana melakukan suatu pekerjaan",
+        "factor": "W"
+      },
+      "optionB": {
+        "text": "Saya berusaha dekat dengan orang-orang",
+        "factor": "Z"
+      }
+    },
+    {
+      "number": 31,
+      "optionA": {
+        "text": "Saya bekerja keras",
+        "factor": "G"
+      },
+      "optionB": {
+        "text": "Saya banyak berfikir dan membuat rencana",
+        "factor": "R"
+      }
+    },
+    {
+      "number": 32,
+      "optionA": {
+        "text": "Saya memimpin suatu kelompok",
+        "factor": "L"
+      },
+      "optionB": {
+        "text": "Saya tertarik dengan hal-hal yang lebih detail",
+        "factor": "D"
+      }
+    },
+    {
+      "number": 33,
+      "optionA": {
+        "text": "Saya membuat keputusan dengan mudah dan cepat",
+        "factor": "I"
+      },
+      "optionB": {
+        "text": "Saya merawat barang-barang saya dengan rapi dan teratur",
+        "factor": "C"
+      }
+    },
+    {
+      "number": 34,
+      "optionA": {
+        "text": "Saya mengerjakan sesuatu dengan cepat",
+        "factor": "T"
+      },
+      "optionB": {
+        "text": "Saya jarang marah atau sedih",
+        "factor": "E"
+      }
+    },
+    {
+      "number": 35,
+      "optionA": {
+        "text": "Saya ingin menjadi bagian dari suatu kelompok",
+        "factor": "B"
+      },
+      "optionB": {
+        "text": "Saya hanya ingin mengerjakan satu pekerjaan dalam satu saat",
+        "factor": "N"
+      }
+    },
+    {
+      "number": 36,
+      "optionA": {
+        "text": "Saya berusaha menjalin persahabatan",
+        "factor": "O"
+      },
+      "optionB": {
+        "text": "Saya berusaha keras untuk menjadi yang paling baik",
+        "factor": "A"
+      }
+    },
+    {
+      "number": 37,
+      "optionA": {
+        "text": "Saya suka baju-baju dan mobil-mobil model mutakhir",
+        "factor": "Z"
+      },
+      "optionB": {
+        "text": "Saya senang bertanggung jawab atas orang lain",
+        "factor": "P"
+      }
+    },
+    {
+      "number": 38,
+      "optionA": {
+        "text": "Saya senang berdebat",
+        "factor": "K"
+      },
+      "optionB": {
+        "text": "Saya senang mendapat perhatian",
+        "factor": "X"
+      }
+    },
+    {
+      "number": 39,
+      "optionA": {
+        "text": "Saya suka menyenangkan atasan saya",
+        "factor": "F"
+      },
+      "optionB": {
+        "text": "Saya tertarik untuk menjadi bagian dari suatu kelompok",
+        "factor": "B"
+      }
+    },
+    {
+      "number": 40,
+      "optionA": {
+        "text": "Saya suka mematuhi peraturan dengan sungguh-sungguh",
+        "factor": "W"
+      },
+      "optionB": {
+        "text": "Saya ingin agar orang-orang benar-benar mengenal saya",
+        "factor": "O"
+      }
+    },
+    {
+      "number": 41,
+      "optionA": {
+        "text": "Saya berusaha keras sekali",
+        "factor": "G"
+      },
+      "optionB": {
+        "text": "Saya sangat ramah",
+        "factor": "S"
+      }
+    },
+    {
+      "number": 42,
+      "optionA": {
+        "text": "Orang-orang menganggap saya adalah pemimpin yang baik",
+        "factor": "L"
+      },
+      "optionB": {
+        "text": "Saya berfikir panjang dan hati-hati",
+        "factor": "R"
+      }
+    },
+    {
+      "number": 43,
+      "optionA": {
+        "text": "Bila ada kesempatan, saya akan memanfaatkannya",
+        "factor": "I"
+      },
+      "optionB": {
+        "text": "Saya senang mengurusi hal-hal yang kecil",
+        "factor": "D"
+      }
+    },
+    {
+      "number": 44,
+      "optionA": {
+        "text": "Orang-orang menganggap saya bekerja dengan cepat",
+        "factor": "T"
+      },
+      "optionB": {
+        "text": "Orang-orang berpendapat bahwa saya rapi dan teratur",
+        "factor": "C"
+      }
+    },
+    {
+      "number": 45,
+      "optionA": {
+        "text": "Saya suka berolahraga",
+        "factor": "V"
+      },
+      "optionB": {
+        "text": "Saya memiliki kepribadian yang menyenangkan",
+        "factor": "E"
+      }
+    },
+    {
+      "number": 46,
+      "optionA": {
+        "text": "Saya senang jika orangdekat dan bersahabat dengan saya",
+        "factor": "O"
+      },
+      "optionB": {
+        "text": "Saya selalu berusaha menyelesaikan pekerjaan yang telah saya mulai",
+        "factor": "N"
+      }
+    },
+    {
+      "number": 47,
+      "optionA": {
+        "text": "Saya suka bereksperimen dan mencoba hal-hal yang baru",
+        "factor": "Z"
+      },
+      "optionB": {
+        "text": "Saya senang menyelesaikan dengan baik pekerjaan yang sulit",
+        "factor": "A"
+      }
+    },
+    {
+      "number": 48,
+      "optionA": {
+        "text": "Saya senang diperlakukan secara adil",
+        "factor": "K"
+      },
+      "optionB": {
+        "text": "Saya suka memberitahu orang bagaimana mengerjakan sesuatu",
+        "factor": "P"
+      }
+    },
+    {
+      "number": 49,
+      "optionA": {
+        "text": "Saya suka melakukan apa yang diharapkan dari saya",
+        "factor": "F"
+      },
+      "optionB": {
+        "text": "Saya suka bila orang perduli terhadap saya",
+        "factor": "X"
+      }
+    },
+    {
+      "number": 50,
+      "optionA": {
+        "text": "Saya suka penjelasan-penjelasan yang terperinci dalam bekerja",
+        "factor": "W"
+      },
+      "optionB": {
+        "text": "Saya senang berada diantara orang-orang",
+        "factor": "B"
+      }
+    },
+    {
+      "number": 51,
+      "optionA": {
+        "text": "Saya selalu berusaha menyelesaikan tugas-tugas secara sempurna",
+        "factor": "G"
+      },
+      "optionB": {
+        "text": "Saya adalah orang yang tak mengenal lelah",
+        "factor": "V"
+      }
+    },
+    {
+      "number": 52,
+      "optionA": {
+        "text": "Saya adalah tipe pemimpin",
+        "factor": "L"
+      },
+      "optionB": {
+        "text": "Saya mudah bergaul",
+        "factor": "S"
+      }
+    },
+    {
+      "number": 53,
+      "optionA": {
+        "text": "Saya suka mengambil kesempatan-kesempatan yang ada",
+        "factor": "I"
+      },
+      "optionB": {
+        "text": "Saya banyak berfikir",
+        "factor": "R"
+      }
+    },
+    {
+      "number": 54,
+      "optionA": {
+        "text": "Saya bekerja dengan tempo yang tinggi dan mantap",
+        "factor": "T"
+      },
+      "optionB": {
+        "text": "Saya senang menangani detail suatu pekerjaan",
+        "factor": "D"
+      }
+    },
+    {
+      "number": 55,
+      "optionA": {
+        "text": "Saya memiliki banyak tenaga untuk berolah raga dan bermain",
+        "factor": "V"
+      },
+      "optionB": {
+        "text": "Saya merawat barang-barang saya dengan rapi dan teratur",
+        "factor": "C"
+      }
+    },
+    {
+      "number": 56,
+      "optionA": {
+        "text": "Saya dapat bergaul baik dengan semua orang",
+        "factor": "S"
+      },
+      "optionB": {
+        "text": "Saya orang yang berwatak tenang",
+        "factor": "E"
+      }
+    },
+    {
+      "number": 57,
+      "optionA": {
+        "text": "Saya suka bertemu dengan orang-orang baru dan melakukan sesuatu yang baru",
+        "factor": "Z"
+      },
+      "optionB": {
+        "text": "Saya selalu ingin menyelesaikan pekerjaan yang saya mulai",
+        "factor": "N"
+      }
+    },
+    {
+      "number": 58,
+      "optionA": {
+        "text": "Saya biasanya mempertahankan pendapat yang saya yakini",
+        "factor": "K"
+      },
+      "optionB": {
+        "text": "Saya biasanya suka bekerja keras",
+        "factor": "A"
+      }
+    },
+    {
+      "number": 59,
+      "optionA": {
+        "text": "Saya menyambut baik saran-saran dari orang yang saya kagumi",
+        "factor": "F"
+      },
+      "optionB": {
+        "text": "Saya senang bertanggung jawab atas orang lain",
+        "factor": "P"
+      }
+    },
+    {
+      "number": 60,
+      "optionA": {
+        "text": "Saya membiarkan orang lain mempengaruhi saya",
+        "factor": "W"
+      },
+      "optionB": {
+        "text": "Saya senang mendapatkan banyak perhatian",
+        "factor": "X"
+      }
+    },
+    {
+      "number": 61,
+      "optionA": {
+        "text": "Saya biasanya bekerja keras",
+        "factor": "G"
+      },
+      "optionB": {
+        "text": "Saya biasanya bekerja cepat",
+        "factor": "T"
+      }
+    },
+    {
+      "number": 62,
+      "optionA": {
+        "text": "Bila saya berbicara orang-orang mendengarkan",
+        "factor": "L"
+      },
+      "optionB": {
+        "text": "Saya sangat mahir menggunakan peralatan",
+        "factor": "V"
+      }
+    },
+    {
+      "number": 63,
+      "optionA": {
+        "text": "Saya lamban dalam membuat persahabatan",
+        "factor": "I"
+      },
+      "optionB": {
+        "text": "Saya lamban dalam memutuskan sesuatu",
+        "factor": "S"
+      }
+    },
+    {
+      "number": 64,
+      "optionA": {
+        "text": "Saya biasanya makan dengan cepat",
+        "factor": "T"
+      },
+      "optionB": {
+        "text": "Saya senang membaca",
+        "factor": "R"
+      }
+    },
+    {
+      "number": 65,
+      "optionA": {
+        "text": "Saya menyukai pekerjaan dimana saya banyak bergerak",
+        "factor": "V"
+      },
+      "optionB": {
+        "text": "Saya senang pada pekerjaan yang membutuhkan ketelitian",
+        "factor": "D"
+      }
+    },
+    {
+      "number": 66,
+      "optionA": {
+        "text": "Saya mudah membuat sebanyak mungkin teman",
+        "factor": "S"
+      },
+      "optionB": {
+        "text": "Saya mudah menemukan kembali barang-barang yang saya simpan",
+        "factor": "C"
+      }
+    },
+    {
+      "number": 67,
+      "optionA": {
+        "text": "Saya merencanakan sesuatu jauh-jauh sebelumnya",
+        "factor": "R"
+      },
+      "optionB": {
+        "text": "Saya selalu menyenangkan",
+        "factor": "E"
+      }
+    },
+    {
+      "number": 68,
+      "optionA": {
+        "text": "Saya menjunjung tinggi nama baik saya",
+        "factor": "K"
+      },
+      "optionB": {
+        "text": "Saya memusatkan perhatian pada satu persoalan sampai persoalan tersebut terpecahkan",
+        "factor": "N"
+      }
+    },
+    {
+      "number": 69,
+      "optionA": {
+        "text": "Saya suka menyenangkan orang-orang yang saya hormati dan kagumi",
+        "factor": "F"
+      },
+      "optionB": {
+        "text": "Saya ingin sukses dan berhasil",
+        "factor": "A"
+      }
+    },
+    {
+      "number": 70,
+      "optionA": {
+        "text": "Saya senang orang lain yang membuat keputusan untuk kelompok",
+        "factor": "W"
+      },
+      "optionB": {
+        "text": "Saya suka membuat keputusan untuk kelompok",
+        "factor": "P"
+      }
+    },
+    {
+      "number": 71,
+      "optionA": {
+        "text": "Saya selalu berusaha keras",
+        "factor": "G"
+      },
+      "optionB": {
+        "text": "Saya memutuskan sesuatu dengan mudah dan cepat",
+        "factor": "I"
+      }
+    },
+    {
+      "number": 72,
+      "optionA": {
+        "text": "Kelompok biasanya menjalankan apa yang saya inginkan",
+        "factor": "L"
+      },
+      "optionB": {
+        "text": "Saya biasanya berkerja cepat-cepat",
+        "factor": "T"
+      }
+    },
+    {
+      "number": 73,
+      "optionA": {
+        "text": "Saya sering merasa lelah",
+        "factor": "I"
+      },
+      "optionB": {
+        "text": "Saya lamban dalam memutuskan sesuatu",
+        "factor": "V"
+      }
+    },
+    {
+      "number": 74,
+      "optionA": {
+        "text": "Saya bekerja dengan cepat",
+        "factor": "T"
+      },
+      "optionB": {
+        "text": "Saya mudah berteman",
+        "factor": "S"
+      }
+    },
+    {
+      "number": 75,
+      "optionA": {
+        "text": "Saya biasanya bersemangat dan bergairah",
+        "factor": "V"
+      },
+      "optionB": {
+        "text": "Saya memerlukan banyak waktu untuk berfikir",
+        "factor": "R"
+      }
+    },
+    {
+      "number": 76,
+      "optionA": {
+        "text": "Saya sangat ramah kepada orang",
+        "factor": "S"
+      },
+      "optionB": {
+        "text": "Saya senang pada pekerjaan yang membutuhkan ketepatan",
+        "factor": "D"
+      }
+    },
+    {
+      "number": 77,
+      "optionA": {
+        "text": "Saya banyak sekali berfikir dan membuat rencana",
+        "factor": "R"
+      },
+      "optionB": {
+        "text": "Saya meletakkan segalanya pada tempatnya",
+        "factor": "C"
+      }
+    },
+    {
+      "number": 78,
+      "optionA": {
+        "text": "Saya senang pada pekerjaan yang membutuhkan ketelitian dan detail",
+        "factor": "D"
+      },
+      "optionB": {
+        "text": "Saya tidak mudah marah",
+        "factor": "E"
+      }
+    },
+    {
+      "number": 79,
+      "optionA": {
+        "text": "Saya suka menurut pada orang-orang yang saya kagumi",
+        "factor": "F"
+      },
+      "optionB": {
+        "text": "Saya selalu menyelesaikan pekerjaan yang telah saya mulai",
+        "factor": "N"
+      }
+    },
+    {
+      "number": 80,
+      "optionA": {
+        "text": "Saya suka mengikuti petunjuk-petunjuk yang jelas",
+        "factor": "W"
+      },
+      "optionB": {
+        "text": "Saya senang bekerja keras",
+        "factor": "A"
+      }
+    },
+    {
+      "number": 81,
+      "optionA": {
+        "text": "Saya berusaha mendapatkan apa yang saya inginkan",
+        "factor": "G"
+      },
+      "optionB": {
+        "text": "Saya seorang pemimpin yang baik",
+        "factor": "L"
+      }
+    },
+    {
+      "number": 82,
+      "optionA": {
+        "text": "Saya dapat membuat orang lain bekerja keras",
+        "factor": "L"
+      },
+      "optionB": {
+        "text": "Saya adalah type orang yang tidak kenal susah",
+        "factor": "I"
+      }
+    },
+    {
+      "number": 83,
+      "optionA": {
+        "text": "Saya mengambil keputusan dengan cepat",
+        "factor": "I"
+      },
+      "optionB": {
+        "text": "Saya berbicara dengan cepat",
+        "factor": "T"
+      }
+    },
+    {
+      "number": 84,
+      "optionA": {
+        "text": "Rasanya saya bekerja dengan tergesa-gesa",
+        "factor": "T"
+      },
+      "optionB": {
+        "text": "Saya berlatih / berolah raga dengan teratur",
+        "factor": "V"
+      }
+    },
+    {
+      "number": 85,
+      "optionA": {
+        "text": "Saya tidak suka bertemu kebanyakan orang",
+        "factor": "V"
+      },
+      "optionB": {
+        "text": "Saya cepat merasa lelah",
+        "factor": "S"
+      }
+    },
+    {
+      "number": 86,
+      "optionA": {
+        "text": "Saya mempunyai banyak sekali teman",
+        "factor": "S"
+      },
+      "optionB": {
+        "text": "Saya banyak menghabiskan waktu untuk berfikir",
+        "factor": "R"
+      }
+    },
+    {
+      "number": 87,
+      "optionA": {
+        "text": "Saya suka menerapkan teori-teori dalam bekerja",
+        "factor": "R"
+      },
+      "optionB": {
+        "text": "Saya suka mengerjakan sesuatu sampai pada hal-hal yang detail dan jelas",
+        "factor": "D"
+      }
+    },
+    {
+      "number": 88,
+      "optionA": {
+        "text": "Saya suka mengerjakan sesuatu sampai pada hal-hal yang detail dan jelas",
+        "factor": "D"
+      },
+      "optionB": {
+        "text": "Saya suka mengatur dan mengorganisir pekerjaan saya",
+        "factor": "C"
+      }
+    },
+    {
+      "number": 89,
+      "optionA": {
+        "text": "Saya meletakkan segalanya pada tempatnya",
+        "factor": "C"
+      },
+      "optionB": {
+        "text": "Saya selalu menyenangkan",
+        "factor": "E"
+      }
+    },
+    {
+      "number": 90,
+      "optionA": {
+        "text": "Saya senang diberi petunjuk apa yang harus dikerjakan",
+        "factor": "W"
+      },
+      "optionB": {
+        "text": "Saya harus menyelesaikan apa yang saya mulai",
+        "factor": "N"
+      }
+    }
+  ],
+  "interpretationBands": {
+    "N": [
+      {
+        "minScore": 0,
+        "maxScore": 2,
+        "text": "Menunda atau menghindari pekerjaan",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 3,
+        "maxScore": 3,
+        "text": "Berhati-hati atau ragu dalam bekerja",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 4,
+        "maxScore": 6,
+        "text": "Cukup bertanggung jawab pada pekerjaan",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 7,
+        "maxScore": 9,
+        "text": "Tekun, tanggung jawab tinggi",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "G": [
+      {
+        "minScore": 0,
+        "maxScore": 4,
+        "text": "Bekerja untuk kesenangan saja, bukan hasil optimal",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 5,
+        "maxScore": 7,
+        "text": "Kemauan bekerja keras tinggi",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 8,
+        "maxScore": 9,
+        "text": null,
+        "pendingOwnerValidation": true
+      }
+    ],
+    "A": [
+      {
+        "minScore": 0,
+        "maxScore": 5,
+        "text": "Ketidakpastian tujuan, kepuasan dalam suatu pekerjaan, tidak ada usaha lebih",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 6,
+        "maxScore": 9,
+        "text": "Tujuan jelas, kebutuhan sukses dan ambisi tinggi",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "L": [
+      {
+        "minScore": 0,
+        "maxScore": 4,
+        "text": "Cenderung tidak secara aktif menggunakan orang lain dalam bekerja",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 5,
+        "maxScore": 9,
+        "text": "Memproyeksikan dirinya sebagai pemimpin, melibatkan orang lain dalam mencapai tujuan",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "P": [
+      {
+        "minScore": 0,
+        "maxScore": 4,
+        "text": "Menurunnya keinginan untuk bertanggung jawab pada pekerjaan dan tindakan orang lain",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 5,
+        "maxScore": 9,
+        "text": "Butuh menerima tanggung jawab orang lain, menjadi orang yang bertanggung jawab",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "I": [
+      {
+        "minScore": 0,
+        "maxScore": 2,
+        "text": "Cenderung ragu menolak mengambil keputusan",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 3,
+        "maxScore": 4,
+        "text": "Berhati-hati membuat keputusan",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 5,
+        "maxScore": 7,
+        "text": "Berhati-hati, lancar dan mudah mengambil keputusan",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 8,
+        "maxScore": 9,
+        "text": "Tidak ragu dalam mengambil keputusan",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "T": [
+      {
+        "minScore": 0,
+        "maxScore": 4,
+        "text": "Melakukan segala sesuatu menurut kemauannya sendiri",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 5,
+        "maxScore": 9,
+        "text": "Tergolong aktif secara internal dan mental",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "V": [
+      {
+        "minScore": 0,
+        "maxScore": 5,
+        "text": "Cenderung pasif",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 6,
+        "maxScore": 7,
+        "text": "Aktif secara fisik, cenderung sportif",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 8,
+        "maxScore": 9,
+        "text": null,
+        "pendingOwnerValidation": true
+      }
+    ],
+    "X": [
+      {
+        "minScore": 0,
+        "maxScore": 2,
+        "text": "Cenderung pemalu",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 3,
+        "maxScore": 3,
+        "text": "Rendah hati, tulus",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 4,
+        "maxScore": 5,
+        "text": "Memiliki pola perilaku yang unik",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 6,
+        "maxScore": 9,
+        "text": "Membutuhkan perhatian nyata",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "S": [
+      {
+        "minScore": 0,
+        "maxScore": 6,
+        "text": "Perhatian rendah terhadap hubungan sosial, kurang percaya pada orang lain",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 7,
+        "maxScore": 9,
+        "text": "Kepercayaan tinggi dalam hubungan sosial, suka interaksi sosial",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "B": [
+      {
+        "minScore": 0,
+        "maxScore": 3,
+        "text": "Selektif",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 4,
+        "maxScore": 5,
+        "text": "Butuh diterima tapi tidak mudah dipengaruhi oleh kelompok",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 6,
+        "maxScore": 9,
+        "text": "Butuh disukai dan diakui, mudah dipengaruhi",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "O": [
+      {
+        "minScore": 0,
+        "maxScore": 3,
+        "text": "Tidak suka hubungan perorangan",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 4,
+        "maxScore": 4,
+        "text": "Sadar akan hubungan perorangan, tapi tidak terlalu tergantung",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 5,
+        "maxScore": 9,
+        "text": "Sangat tergantung, butuh penerimaan diri",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "R": [
+      {
+        "minScore": 0,
+        "maxScore": 4,
+        "text": "Kurang perhatian, bersifat praktis",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 5,
+        "maxScore": 9,
+        "text": "Nilai-nilai penalaran tergolong tinggi",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "D": [
+      {
+        "minScore": 0,
+        "maxScore": 3,
+        "text": "Menyadari kebutuhan akan kecermatan, tetapi tidak berminat bekerja detail",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 4,
+        "maxScore": 9,
+        "text": "Minat tinggi untuk bekerja secara detail",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "C": [
+      {
+        "minScore": 0,
+        "maxScore": 3,
+        "text": "Fleksibel, tidak teratur",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 4,
+        "maxScore": 5,
+        "text": "Teratur tapi tidak tergolong fleksibel",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 6,
+        "maxScore": 9,
+        "text": "Keteraturan tinggi, cenderung kaku",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "Z": [
+      {
+        "minScore": 0,
+        "maxScore": 2,
+        "text": "Tidak suka berubah",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 3,
+        "maxScore": 4,
+        "text": "Tidak suka perubahan jika dipaksakan",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 5,
+        "maxScore": 6,
+        "text": "Mudah menyesuaikan diri",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 7,
+        "maxScore": 7,
+        "text": "Membuat perubahan yang selektif, berpikir jauh ke depan",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 8,
+        "maxScore": 9,
+        "text": "Mudah gelisah dan frustrasi karena segala sesuatu tidak berjalan fantastis",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "E": [
+      {
+        "minScore": 0,
+        "maxScore": 2,
+        "text": "Terbuka, cepat bereaksi, tidak normatif",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 3,
+        "maxScore": 3,
+        "text": "Terbuka",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 4,
+        "maxScore": 6,
+        "text": "Punya pendekatan emosional seimbang, mampu mengendalikan",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 7,
+        "maxScore": 8,
+        "text": null,
+        "pendingOwnerValidation": true
+      },
+      {
+        "minScore": 9,
+        "maxScore": 9,
+        "text": "Sangat normatif, kebutuhan pengendalian diri yang berlebihan",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "K": [
+      {
+        "minScore": 0,
+        "maxScore": 2,
+        "text": "Menghindari masalah, melunak dalam mengenali situasi sebagai masalah",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 3,
+        "maxScore": 4,
+        "text": "Suka lingkungan tenang, menghindari konflik",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 5,
+        "maxScore": 5,
+        "text": "Keras kepala",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 6,
+        "maxScore": 7,
+        "text": "Agresi berhubungan dengan kerja, dorongan semangat bersaing",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 8,
+        "maxScore": 9,
+        "text": "Agresif, cenderung defensif",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "F": [
+      {
+        "minScore": 0,
+        "maxScore": 2,
+        "text": "Cenderung egois, kemungkinan bisa memberontak",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 3,
+        "maxScore": 3,
+        "text": "Mengurus kepentingan sendiri",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 4,
+        "maxScore": 5,
+        "text": "Setia terhadap perusahaan",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 6,
+        "maxScore": 9,
+        "text": "Bersikap setia dan membantu, kemungkinan bantuannya bersifat politis",
+        "pendingOwnerValidation": false
+      }
+    ],
+    "W": [
+      {
+        "minScore": 0,
+        "maxScore": 4,
+        "text": "Berorientasi pada tujuan, mandiri",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 5,
+        "maxScore": 5,
+        "text": "Kebutuhan pengarahan dan harapan yang dirumuskan untuknya",
+        "pendingOwnerValidation": false
+      },
+      {
+        "minScore": 6,
+        "maxScore": 9,
+        "text": "Meningkatnya orientasi terhadap tugas dan membutuhkan instruksi yang jelas",
+        "pendingOwnerValidation": false
+      }
+    ]
+  }
+}
