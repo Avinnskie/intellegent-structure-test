@@ -16,6 +16,14 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { calculateExactAge } from "@/lib/domain/age";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -156,7 +164,7 @@ export function ParticipantManager({ candidates }: { candidates: readonly Candid
               <div className="grid gap-2">
                 <Label>
                   Jenis kelamin{" "}
-                  <span className="font-normal text-[var(--text-muted)]">(opsional)</span>
+                  <span className="font-normal text-muted-foreground">(opsional)</span>
                 </Label>
                 <Select
                   value={draft.gender}
@@ -165,11 +173,7 @@ export function ParticipantManager({ candidates }: { candidates: readonly Candid
                   <SelectTrigger className="w-full">
                     <SelectValue>
                       {(value: string | null) =>
-                        value === "L"
-                          ? "Laki-laki"
-                          : value === "P"
-                            ? "Perempuan"
-                            : "—"
+                        value === "L" ? "Laki-laki" : value === "P" ? "Perempuan" : "—"
                       }
                     </SelectValue>
                   </SelectTrigger>
@@ -188,8 +192,7 @@ export function ParticipantManager({ candidates }: { candidates: readonly Candid
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="candidate-education">
-                  Pendidikan{" "}
-                  <span className="font-normal text-[var(--text-muted)]">(opsional)</span>
+                  Pendidikan <span className="font-normal text-muted-foreground">(opsional)</span>
                 </Label>
                 <Input
                   id="candidate-education"
@@ -209,9 +212,7 @@ export function ParticipantManager({ candidates }: { candidates: readonly Candid
                 }
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {(value: string | null) => value ?? "—"}
-                  </SelectValue>
+                  <SelectValue>{(value: string | null) => value ?? "—"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {TEST_PURPOSES.map((item) => (
@@ -222,7 +223,7 @@ export function ParticipantManager({ candidates }: { candidates: readonly Candid
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-4">
+            <div className="flex flex-wrap gap-3 border-t border-border pt-4">
               <Button
                 disabled={isBusy || draft.fullName.trim() === "" || draft.birthDate === ""}
                 onClick={handleSave}
@@ -237,15 +238,15 @@ export function ParticipantManager({ candidates }: { candidates: readonly Candid
         ) : null}
       </Modal>
 
-      <article className="overflow-x-auto rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-6">
+      <article className="overflow-x-auto rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-2xl font-bold tracking-[-0.03em] text-[var(--text-primary)]">
+          <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">
             Peserta terdaftar
           </h2>
           <div className="flex items-center gap-4">
-            <p className="text-sm text-[var(--text-muted)]">{candidates.length} peserta</p>
+            <p className="text-sm text-muted-foreground">{candidates.length} peserta</p>
             <Button
-              className="h-12 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] px-3"
+              className="h-12 bg-primary hover:bg-primary/90 px-3"
               onClick={() => setDraft(EMPTY_DRAFT)}
             >
               Tambah peserta
@@ -253,30 +254,32 @@ export function ParticipantManager({ candidates }: { candidates: readonly Candid
           </div>
         </div>
         {candidates.length === 0 ? (
-          <p className="mt-6 rounded-xl border border-dashed border-[var(--border-default)] bg-[var(--surface-base)] p-6 text-sm leading-6 text-[var(--text-secondary)]">
+          <p className="mt-6 rounded-xl border border-dashed border-border bg-background p-6 text-sm leading-6 text-muted-foreground">
             Belum ada peserta. Tambahkan peserta lalu buat sesi tes untuknya.
           </p>
         ) : (
-          <table className="mt-6 min-w-full text-left">
-            <thead className="text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              <tr>
-                <th className="pb-3">Nama</th>
-                <th className="pb-3">Tanggal lahir</th>
-                <th className="pb-3">Usia saat ini</th>
-                <th className="pb-3">Tujuan</th>
-                <th className="pb-3">Terdaftar</th>
-                <th className="pb-3">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm text-[var(--text-primary)]">
+          <Table className="mt-6 min-w-full text-left">
+            <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+              <TableRow>
+                <TableHead className="pb-3">Nama</TableHead>
+                <TableHead className="pb-3">Tanggal lahir</TableHead>
+                <TableHead className="pb-3">Usia saat ini</TableHead>
+                <TableHead className="pb-3">Tujuan</TableHead>
+                <TableHead className="pb-3">Terdaftar</TableHead>
+                <TableHead className="pb-3">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="text-sm text-foreground">
               {candidates.map((row) => (
-                <tr key={row.id} className="border-t border-[var(--border-subtle)]">
-                  <td className="py-4 font-semibold">{row.fullName}</td>
-                  <td className="py-4">{row.birthDate}</td>
-                  <td className="py-4">{calculateExactAge(row.birthDate, today)} tahun</td>
-                  <td className="py-4">{row.testPurpose}</td>
-                  <td className="py-4">{row.createdAt.slice(0, 10)}</td>
-                  <td className="py-4">
+                <TableRow key={row.id} className="border-t border-border">
+                  <TableCell className="py-4 font-semibold">{row.fullName}</TableCell>
+                  <TableCell className="py-4">{row.birthDate}</TableCell>
+                  <TableCell className="py-4">
+                    {calculateExactAge(row.birthDate, today)} tahun
+                  </TableCell>
+                  <TableCell className="py-4">{row.testPurpose}</TableCell>
+                  <TableCell className="py-4">{row.createdAt.slice(0, 10)}</TableCell>
+                  <TableCell className="py-4">
                     <span className="flex flex-wrap gap-1">
                       <Button
                         variant="link"
@@ -299,18 +302,18 @@ export function ParticipantManager({ candidates }: { candidates: readonly Candid
                       <Button
                         variant="link"
                         size="sm"
-                        className="h-auto p-0 text-[var(--status-error)]"
+                        className="h-auto p-0 text-destructive underline"
                         disabled={isBusy}
                         onClick={() => setPendingDelete(row)}
                       >
                         Hapus
                       </Button>
                     </span>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
       </article>
     </section>
