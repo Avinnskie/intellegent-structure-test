@@ -1,5 +1,6 @@
 import { CourseRail } from "@/components/participant/course-rail";
 import { StartSubtestButton } from "@/components/participant/start-subtest-button";
+import { RichText } from "@/components/ui/rich-text";
 import type { SubtestCode } from "@/lib/ist-subtests";
 
 type TutorialScreenProps = {
@@ -48,9 +49,12 @@ export function TutorialScreen({ token, subtest, tutorial, videoUrl = null }: Tu
               </div>
               {}
             </div>
-            <p className="mt-3 whitespace-pre-line text-base leading-7 text-muted-foreground">
-              {tutorial.textContent}
-            </p>
+            {/* Instruksi ditulis HR lewat editor berformat; dirender sebagai
+                HTML tersanitasi agar penomoran dan penebalan ikut tampil. */}
+            <RichText
+              value={tutorial.textContent}
+              className="mt-3 text-base leading-7 text-muted-foreground"
+            />
 
             {videoUrl ? (
               <div className="mt-6 overflow-hidden rounded-xl border border-border">

@@ -11,9 +11,33 @@ import {
   subtestVersions,
   tutorialVersions,
 } from "../db/schema.ts";
+import { isRichTextEmpty, sanitizeRichText, toPlainText } from "../domain/rich-text.ts";
 import { SUBTEST_CODES, type SubtestCode } from "../ist-subtests.ts";
 import type { AuthContext } from "./authz.ts";
 import { writeAudit } from "./audit.ts";
+
+/**
+ * Teks berformat dari editor HR.
+ *
+ * Pembersihan dilakukan di sini, bukan hanya di komponen editor. Skema ini
+ * dilewati setiap jalur tulis — termasuk permintaan yang dikirim langsung ke
+ * API tanpa melalui antarmuka — sehingga inilah batas keamanan yang sebenarnya.
+ *
+ * Batas panjang diukur pada teks tanpa tag. Kalau markup ikut dihitung, satu
+ * soal pendek yang diberi penomoran dan penebalan bisa ditolak hanya karena
+ * tagnya, dan pesan galatnya akan membingungkan penyuntingnya.
+ */
+function richTextSchema(maxPlainLength: number) {
+  return z
+    .string()
+    .max(maxPlainLength * 8, "Teks terlalu panjang.")
+    .transform(sanitizeRichText)
+    .refine((value) => !isRichTextEmpty(value), "Teks tidak boleh kosong.")
+    .refine(
+      (value) => toPlainText(value).length <= maxPlainLength,
+      `Teks maksimal ${maxPlainLength} karakter.`,
+    );
+}
 
 const NOT_FOUND_MESSAGE = "Data tidak ditemukan.";
 const NOT_DRAFT_MESSAGE =
@@ -95,7 +119,7 @@ export async function listTutorials(db: DbLike): Promise<TutorialSubtestDto[]> {
 }
 
 export const tutorialContentSchema = z.object({
-  textContent: z.string().trim().min(1).max(10_000),
+  textContent: richTextSchema(10_000),
   videoReference: z.string().trim().min(1).max(500).optional(),
 });
 
@@ -488,7 +512,7 @@ const optionInputSchema = z.object({
 });
 
 const itemContentSchema = z.object({
-  prompt: z.string().trim().min(1).max(2000),
+  prompt: richTextSchema(2000),
   placeholder: z.string().trim().min(1).max(200).optional(),
   mediaReference: z.string().trim().min(1).max(500).nullable().optional(),
 });

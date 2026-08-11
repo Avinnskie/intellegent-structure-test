@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { TagsInput } from "@/components/ui/tags-input";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Textarea } from "@/components/ui/textarea";
+import { isRichTextEmpty, toPlainText } from "@/lib/domain/rich-text.ts";
 import { useToast } from "@/components/ui/toast";
 import type { QuestionBankItemDto, QuestionBankSubtestDto } from "@/lib/server/content.ts";
 import { X } from "lucide-react";
@@ -354,12 +356,12 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
 
             <div className="grid gap-2">
               <Label htmlFor="item-prompt">Pertanyaan</Label>
-              <Textarea
+              <RichTextEditor
                 id="item-prompt"
+                ariaLabel="Pertanyaan"
                 value={draft.prompt}
-                onChange={(event) => setDraft({ ...draft, prompt: event.target.value })}
-                rows={3}
-                maxLength={2000}
+                onChange={(prompt) => setDraft({ ...draft, prompt })}
+                minHeight="6rem"
               />
             </div>
 
@@ -531,7 +533,7 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
                 disabled={
                   isBusy ||
                   draft.isUploading ||
-                  draft.prompt.trim() === "" ||
+                  isRichTextEmpty(draft.prompt) ||
                   draft.options.some((option) => option.label.trim() === "") ||
                   (draft.itemType === "choice" && !draft.correctOptionCode) ||
                   (draft.itemType === "numeric" && draft.acceptedValues.trim() === "")
@@ -588,7 +590,7 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
                 </TableCell>
                 <TableCell className="py-4">{item.itemType}</TableCell>
                 <TableCell className="max-w-md py-4 text-muted-foreground">
-                  <span className="line-clamp-2">{item.prompt}</span>
+                  <span className="line-clamp-2">{toPlainText(item.prompt)}</span>
                 </TableCell>
                 <TableCell className="py-4">
                   <div className="max-w-[200px] truncate" title={item.mediaReference ?? undefined}>

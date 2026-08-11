@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Textarea } from "@/components/ui/textarea";
+import { isRichTextEmpty, toPlainText } from "@/lib/domain/rich-text.ts";
 import { useToast } from "@/components/ui/toast";
 import type { TutorialSubtestDto, TutorialVersionDto } from "@/lib/server/content.ts";
 import { X } from "lucide-react";
@@ -222,12 +224,12 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="tutorial-text">Teks tutorial</Label>
-                <Textarea
+                <RichTextEditor
                   id="tutorial-text"
+                  ariaLabel="Teks tutorial"
                   value={editor.textContent}
-                  onChange={(event) => setEditor({ ...editor, textContent: event.target.value })}
-                  rows={8}
-                  maxLength={10_000}
+                  onChange={(textContent) => setEditor({ ...editor, textContent })}
+                  minHeight="12rem"
                 />
               </div>
 
@@ -272,7 +274,7 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
 
               <div className="flex flex-wrap gap-3 border-t border-border pt-4">
                 <Button
-                  disabled={isBusy || editor.isUploading || editor.textContent.trim() === ""}
+                  disabled={isBusy || editor.isUploading || isRichTextEmpty(editor.textContent)}
                   onClick={handleSaveDraft}
                   className="h-12 bg-primary hover:bg-primary/90"
                 >
@@ -315,8 +317,10 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                     </span>
                   </TableCell>
                   <TableCell className="max-w-md py-4">
-                    <span className="line-clamp-2 whitespace-pre-line text-muted-foreground">
-                      {version.textContent}
+                    {/* Ringkasan tabel memakai teks tanpa tag; tanpa ini HR
+                        membaca markup mentah di kolom pratinjau. */}
+                    <span className="line-clamp-2 text-muted-foreground">
+                      {toPlainText(version.textContent)}
                     </span>
                     {version.videoReference ? (
                       <span className="mt-1 block font-mono text-xs text-muted-foreground">
