@@ -20,9 +20,13 @@ export function SessionRowActions({
   const router = useRouter();
   const { push } = useToast();
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isSkippingPapi, setIsSkippingPapi] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
 
   const isDeletable = status === "code_generated" || status === "code_validated";
+  // Tahap PAPI yang belum tuntas boleh ditutup HR bila peserta tidak melanjutkan.
+  const canSkipPapi =
+    status === "papi_pending" || status === "papi_tutorial" || status === "papi_in_progress";
 
   async function handleDelete() {
     setIsConfirming(false);
@@ -43,9 +47,32 @@ export function SessionRowActions({
     }
   }
 
+  async function handleSkipPapi() {
+    setIsSkippingPapi(false);
+    setIsBusy(true);
+    try {
+      const response = await fetch(`/api/hr/sessions/${sessionId}/papi/skip`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reason: "hr_closed_early" }),
+      });
+      if (response.ok) {
+        push("success", `Sesi ${candidateName} ditutup tanpa PAPI. Hasil IST tetap diproses.`);
+        router.refresh();
+        return;
+      }
+      const envelope = (await response.json().catch(() => ({}))) as ErrorEnvelope;
+      push("error", envelope.error?.message ?? "Tidak dapat menghubungi server. Coba lagi.");
+    } catch {
+      push("error", "Tidak dapat menghubungi server. Coba lagi.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   return (
     <span className="flex flex-wrap gap-3">
-      <Link href={`/hr/sessions/${sessionId}`} className="font-semibold text-[var(--accent-primary)]">
+      <Link href={`/hr/sessions/${sessionId}`} className="font-semibold text-primary">
         Detail
       </Link>
       {isDeletable ? (
@@ -53,11 +80,30 @@ export function SessionRowActions({
           type="button"
           disabled={isBusy}
           onClick={() => setIsConfirming(true)}
-          className="font-semibold text-[var(--status-error)] hover:underline"
+          className="font-semibold text-destructive hover:underline"
         >
           Hapus
         </button>
       ) : null}
+      {canSkipPapi ? (
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => setIsSkippingPapi(true)}
+          className="font-semibold text-muted-foreground hover:underline"
+        >
+          Tutup tanpa PAPI
+        </button>
+      ) : null}
+      <ConfirmDialog
+        open={isSkippingPapi}
+        title={`Tutup sesi ${candidateName} tanpa PAPI?`}
+        description="Hasil IST tetap dihitung dan dilaporkan. Jawaban PAPI yang sudah masuk tidak diskor — skor ipsatif hanya sah bila seluruh 90 nomor terisi. Kode akses langsung dinonaktifkan dan tindakan ini tercatat di audit."
+        confirmLabel="Tutup tanpa PAPI"
+        isBusy={isBusy}
+        onConfirm={() => void handleSkipPapi()}
+        onCancel={() => setIsSkippingPapi(false)}
+      />
       <ConfirmDialog
         open={isConfirming}
         title={`Hapus sesi ${candidateName}?`}
