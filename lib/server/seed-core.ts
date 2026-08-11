@@ -15,6 +15,7 @@ import { allQuestions, questionsBySubtest } from "../ist-questions.ts";
 import { subtests } from "../ist-subtests.ts";
 import { writeAudit } from "./audit.ts";
 import { insertSeedContent } from "./seed-content.ts";
+import { insertSeedPapi } from "./seed-papi.ts";
 import { DEFAULT_APPROVED_BY, insertSeedScoring } from "./seed-scoring.ts";
 
 export {
@@ -45,6 +46,15 @@ export type SeedSummary = {
   readonly organizationId: string;
   readonly formVersionId: string;
   readonly counts: SeedCounts;
+  /**
+   * Form PAPI di-seed terpisah dari form IST. Database yang form IST-nya
+   * sudah ada tetap memerlukan ini, jadi statusnya dilaporkan sendiri.
+   */
+  readonly papi: {
+    readonly created: boolean;
+    readonly papiFormVersionId: string;
+    readonly itemCount: number;
+  };
 };
 
 class SeedCoreError extends Error {
@@ -101,17 +111,35 @@ async function countSeeded(db: DbLike): Promise<SeedCounts> {
 
 async function seedWithin(db: DbLike, organizationName: string): Promise<SeedSummary> {
   const organizationId = await ensureOrganization(db, organizationName);
+
+  // PAPI berdiri sendiri terhadap form IST dan idempoten. Dijalankan lebih dulu
+  // agar database yang form IST-nya sudah ada tetap mendapatkan form PAPI.
+  const papi = await insertSeedPapi(db);
+
   const [existingForm] = await db
     .select({ id: assessmentFormVersions.id })
     .from(assessmentFormVersions)
     .where(eq(assessmentFormVersions.formCode, SEED_FORM_CODE))
     .limit(1);
   if (existingForm) {
+    if (papi.created) {
+      await writeAudit(db, {
+        organizationId,
+        actorType: "system",
+        actorId: "system",
+        action: "seed.papi_create",
+        objectType: "papi_form_version",
+        objectId: papi.papiFormVersionId,
+        metadata: { source: "seed", itemCount: papi.itemCount, checksum: papi.checksum },
+      });
+    }
+
     return {
       created: false,
       organizationId,
       formVersionId: existingForm.id,
       counts: await countSeeded(db),
+      papi,
     };
   }
 
@@ -148,9 +176,15 @@ async function seedWithin(db: DbLike, organizationName: string): Promise<SeedSum
     action: "seed.create",
     objectType: "assessment_form_version",
     objectId: formVersion.id,
-    metadata: { formCode: SEED_FORM_CODE, source: "seed", ...counts },
+    metadata: {
+      formCode: SEED_FORM_CODE,
+      source: "seed",
+      papiFormVersionId: papi.papiFormVersionId,
+      papiItemCount: papi.itemCount,
+      ...counts,
+    },
   });
-  return { created: true, organizationId, formVersionId: formVersion.id, counts };
+  return { created: true, organizationId, formVersionId: formVersion.id, counts, papi };
 }
 
 export async function runSeed(
