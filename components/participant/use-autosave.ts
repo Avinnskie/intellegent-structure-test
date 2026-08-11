@@ -34,8 +34,7 @@ export function useAutosave(saveUrl: string) {
         if (await attempt()) {
           return true;
         }
-      } catch {
-      }
+      } catch {}
 
       await new Promise((resolve) => window.setTimeout(resolve, RETRY_DELAY_MS));
       if (generation !== generationRef.current) {
