@@ -16,13 +16,13 @@ export function LoginForm({ next, denied }: LoginFormProps) {
     state.message ?? (denied ? "Akun Anda tidak memiliki akses ke portal ini." : null);
 
   return (
-    <form className="mt-7 min-w-0 space-y-4" action={formAction}>
+    <form className="min-w-0 space-y-4" action={formAction}>
       <input type="hidden" name="next" value={next} />
 
       <label className="block space-y-2">
-        <span className="text-sm font-semibold text-[var(--text-primary)]">Email</span>
+        <span className="text-sm font-semibold text-foreground">Email</span>
         <input
-          className="min-w-0 w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-base)] px-4 py-3.5 text-base text-[var(--text-primary)]"
+          className="min-w-0 w-full rounded-xl border border-border bg-background px-4 py-3.5 text-base text-foreground"
           type="email"
           name="email"
           autoComplete="username"
@@ -32,9 +32,9 @@ export function LoginForm({ next, denied }: LoginFormProps) {
       </label>
 
       <label className="block space-y-2">
-        <span className="text-sm font-semibold text-[var(--text-primary)]">Kata sandi</span>
+        <span className="text-sm font-semibold text-foreground">Kata sandi</span>
         <input
-          className="min-w-0 w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-base)] px-4 py-3.5 text-base text-[var(--text-primary)]"
+          className="min-w-0 w-full rounded-xl border border-border bg-background px-4 py-3.5 text-base text-foreground"
           placeholder="••••••••"
           type="password"
           name="password"
@@ -46,7 +46,7 @@ export function LoginForm({ next, denied }: LoginFormProps) {
       <button
         type="submit"
         disabled={isPending}
-        className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[var(--accent-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:opacity-60"
+        className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
       >
         {isPending ? "Memverifikasi…" : "Masuk"}
       </button>
@@ -54,7 +54,7 @@ export function LoginForm({ next, denied }: LoginFormProps) {
       {message ? (
         <p
           role="alert"
-          className="rounded-xl border border-[var(--status-error)]/30 bg-[color-mix(in_srgb,var(--status-error)_8%,white)] px-4 py-3 text-sm leading-6 text-[var(--status-error)]"
+          className="rounded-xl border border-[var(--destructive)]/30 bg-[color-mix(in_srgb,var(--destructive)_8%,white)] px-4 py-3 text-sm leading-6 text-destructive"
         >
           {message}
         </p>
