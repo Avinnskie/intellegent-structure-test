@@ -4,6 +4,7 @@ import type { DbLike } from "../db/client.ts";
 import { accessCodes, assessmentSessions, responses, subtestAttempts } from "../db/schema.ts";
 import {
   assertSessionTransition,
+  isPapiStageStatus,
   nextSubtestCode,
   type SessionStatus,
 } from "../domain/session-state.ts";
@@ -78,6 +79,7 @@ type LockedSession = {
   completedAt: Date | null;
   formVersionId: string;
   scoringKeyVersionId: string;
+  includesPapi: number;
 };
 
 async function lockSession(tx: DbLike, sessionId: string): Promise<LockedSession> {
@@ -88,6 +90,7 @@ async function lockSession(tx: DbLike, sessionId: string): Promise<LockedSession
       completedAt: assessmentSessions.completedAt,
       formVersionId: assessmentSessions.formVersionId,
       scoringKeyVersionId: assessmentSessions.scoringKeyVersionId,
+      includesPapi: assessmentSessions.includesPapi,
     })
     .from(assessmentSessions)
     .where(eq(assessmentSessions.id, sessionId))
@@ -124,21 +127,32 @@ async function selectAttempt(
   return row ?? null;
 }
 
-function closingChain(
-  from: SessionStatus,
-  code: SubtestCode,
-): { status: SessionStatus; nextCode: SubtestCode | null } {
+type ClosingChain = {
+  status: SessionStatus;
+  nextCode: SubtestCode | null;
+  /** IST tuntas dan tidak ada tahap lanjutan — sesi boleh ditutup. */
+  batteryFinished: boolean;
+};
+
+function closingChain(from: SessionStatus, code: SubtestCode, includesPapi: boolean): ClosingChain {
   assertSessionTransition(from, "subtest_completed");
 
   const next = nextSubtestCode(code);
   if (next) {
     assertSessionTransition("subtest_completed", "tutorial_next");
-    return { status: "tutorial_next", nextCode: next };
+    return { status: "tutorial_next", nextCode: next, batteryFinished: false };
+  }
+
+  // Subtes IST terakhir ditutup. Sesi baterai berhenti di jeda istirahat:
+  // token tetap berlaku, skoring IST menunggu sampai PAPI selesai atau dilewati.
+  if (includesPapi) {
+    assertSessionTransition("subtest_completed", "papi_pending");
+    return { status: "papi_pending", nextCode: null, batteryFinished: false };
   }
 
   assertSessionTransition("subtest_completed", "test_completed");
   assertSessionTransition("test_completed", "needs_ge_scoring");
-  return { status: "needs_ge_scoring", nextCode: null };
+  return { status: "needs_ge_scoring", nextCode: null, batteryFinished: true };
 }
 
 async function lockResponses(tx: DbLike, attemptId: string, now: Date): Promise<void> {
@@ -187,14 +201,14 @@ async function completeWithin(
 
   await lockResponses(tx, attempt.id, now);
 
-  const chain = closingChain(locked.status, code);
+  const chain = closingChain(locked.status, code, locked.includesPapi === 1);
 
   const [advanced] = await tx
     .update(assessmentSessions)
     .set({
       status: chain.status,
       currentSubtestCode: chain.nextCode ?? locked.currentSubtestCode,
-      ...(chain.nextCode === null ? { completedAt: now } : {}),
+      ...(chain.batteryFinished ? { completedAt: now } : {}),
     })
     .where(eq(assessmentSessions.id, session.sessionId))
     .returning({
@@ -206,7 +220,7 @@ async function completeWithin(
     throw new Error("Status sesi gagal diperbarui setelah subtes ditutup.");
   }
 
-  if (chain.nextCode === null) {
+  if (chain.batteryFinished) {
     await tx
       .update(accessCodes)
       .set({ status: "completed" })
@@ -234,7 +248,7 @@ async function completeWithin(
     },
   });
 
-  if (chain.nextCode === null) {
+  if (chain.batteryFinished) {
     const hasManualGe = await sessionHasManualGePending(
       tx,
       session.sessionId,
@@ -300,7 +314,8 @@ async function finishWithin(
   if (
     locked.status === "needs_ge_scoring" ||
     locked.status === "calculated" ||
-    locked.status === "needs_review"
+    locked.status === "needs_review" ||
+    isPapiStageStatus(locked.status)
   ) {
     return ok({
       sessionStatus: toParticipantStatus(locked.status),
