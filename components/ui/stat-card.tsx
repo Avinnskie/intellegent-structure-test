@@ -1,3 +1,5 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
 type StatCardProps = {
   readonly label: string;
   readonly value: string;
@@ -6,14 +8,14 @@ type StatCardProps = {
 
 export function StatCard({ label, value, detail }: StatCardProps) {
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-5">
-      <p className="text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-        {label}
-      </p>
-      <p className="mt-4 font-mono text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-        {value}
-      </p>
-      <p className="mt-2 text-sm text-[var(--text-secondary)]">{detail}</p>
-    </article>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardDescription>{label}</CardDescription>
+        <CardTitle className="text-3xl font-semibold tabular-nums">{value}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-xs text-muted-foreground">{detail}</p>
+      </CardContent>
+    </Card>
   );
 }
