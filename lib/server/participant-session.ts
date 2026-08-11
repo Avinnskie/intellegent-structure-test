@@ -31,7 +31,14 @@ const LAST_SEEN_THROTTLE_MS = 30_000;
 type ResponseStatusValue = (typeof responses.$inferSelect)["responseStatus"];
 
 export type ParticipantSessionStatus =
-  "tutorial" | "question" | "finished" | "paused" | "unavailable";
+  | "tutorial"
+  | "question"
+  | "papi_rest"
+  | "papi_tutorial"
+  | "papi_question"
+  | "finished"
+  | "paused"
+  | "unavailable";
 
 const PARTICIPANT_STATUS: Readonly<Record<SessionStatus, ParticipantSessionStatus>> = {
   code_generated: "unavailable",
@@ -40,6 +47,10 @@ const PARTICIPANT_STATUS: Readonly<Record<SessionStatus, ParticipantSessionStatu
   subtest_in_progress: "question",
   subtest_completed: "tutorial",
   tutorial_next: "tutorial",
+  papi_pending: "papi_rest",
+  papi_tutorial: "papi_tutorial",
+  papi_in_progress: "papi_question",
+  papi_completed: "finished",
   test_completed: "finished",
   needs_ge_scoring: "finished",
   calculated: "finished",
@@ -483,6 +494,12 @@ function routeFor(
       return `/test/${token}/tutorial/${code}`;
     case "question":
       return `/test/${token}/question/${code}/${firstUnansweredLocalNumber(items)}`;
+    case "papi_rest":
+      return `/test/${token}/papi`;
+    case "papi_tutorial":
+      return `/test/${token}/papi/tutorial`;
+    case "papi_question":
+      return `/test/${token}/papi/question`;
     case "finished":
       return `/test/${token}/complete`;
     case "paused":
