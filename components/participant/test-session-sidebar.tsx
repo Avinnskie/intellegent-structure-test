@@ -36,15 +36,13 @@ export function SessionTimer({
   readonly className?: string;
 }) {
   return (
-    <div
-      className={`rounded-xl border border-[var(--border-default)] bg-[var(--accent-warm-soft)] px-5 py-4 text-center ${className}`}
-    >
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+    <div className={`rounded-xl border border-border bg-accent px-5 py-4 text-center ${className}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         Sisa waktu
       </p>
       <p
         aria-live="off"
-        className="mt-2 font-mono text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]"
+        className="mt-2 font-mono text-3xl font-semibold tracking-[-0.04em] text-foreground"
       >
         {minutes}:{seconds}
       </p>
@@ -56,11 +54,11 @@ export function TestSessionSidebar({ state, onJump, onComplete }: TestSessionSid
   return (
     <aside className="space-y-6 mb-20">
       {/* <SessionTimer minutes={state.minutes} seconds={state.seconds} className="hidden xl:block" /> */}
-      <article className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-panel)] p-5">
-        <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+      <article className="rounded-xl border border-border bg-card p-5">
+        <p className="text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           Navigasi soal
         </p>
-        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
           {state.unansweredCount} soal belum dijawab.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -69,10 +67,10 @@ export function TestSessionSidebar({ state, onJump, onComplete }: TestSessionSid
             const skipped = item.status === "skipped";
             const isCurrent = item.localNumber === state.currentItem;
             const stateClass = answered
-              ? "border-[var(--accent-primary)] bg-[var(--accent-soft)] text-[var(--accent-primary)]"
+              ? "border-primary bg-accent text-primary"
               : skipped
-                ? "border-[var(--status-warning)] text-[var(--status-warning)]"
-                : "border-[var(--border-default)] text-[var(--text-primary)]";
+                ? "border-[var(--color-amber-500, #f59e0b)] text-[var(--color-amber-500, #f59e0b)]"
+                : "border-border text-foreground";
 
             return (
               <button
@@ -83,8 +81,8 @@ export function TestSessionSidebar({ state, onJump, onComplete }: TestSessionSid
                 aria-label={`Butir ${item.localNumber}${answered ? ", sudah terjawab" : skipped ? ", dilewati" : ", belum dijawab"}`}
                 className={`inline-flex h-10 min-w-10 items-center justify-center rounded-full border px-3 text-sm font-semibold ${stateClass} ${
                   isCurrent
-                    ? "ring-2 ring-[var(--accent-primary)] ring-offset-2 ring-offset-[var(--surface-panel)]"
-                    : "hover:bg-[var(--surface-subtle)]"
+                    ? "ring-2 ring-[var(--primary)] ring-offset-2 ring-offset-[var(--card)]"
+                    : "hover:bg-muted"
                 }`}
               >
                 {item.localNumber}
@@ -95,7 +93,7 @@ export function TestSessionSidebar({ state, onJump, onComplete }: TestSessionSid
         <button
           type="button"
           onClick={onComplete}
-          className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl border border-[var(--border-default)] px-4 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-subtle)]"
+          className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold text-foreground hover:bg-muted"
         >
           Selesaikan subtes {state.code}
         </button>
