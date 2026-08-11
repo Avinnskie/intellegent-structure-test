@@ -7,6 +7,10 @@ export const SESSION_STATUSES = [
   "subtest_in_progress",
   "subtest_completed",
   "tutorial_next",
+  "papi_pending",
+  "papi_tutorial",
+  "papi_in_progress",
+  "papi_completed",
   "test_completed",
   "needs_ge_scoring",
   "calculated",
@@ -24,12 +28,41 @@ export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
 const SYSTEM_EXCEPTIONS: readonly SessionStatus[] = ["expired", "cancelled", "invalidated", "void"];
 
+/** Tahap PAPI: peserta memakai token yang sama, boleh istirahat sebelum melanjutkan. */
+export const PAPI_STAGE_STATUSES: readonly SessionStatus[] = [
+  "papi_pending",
+  "papi_tutorial",
+  "papi_in_progress",
+  "papi_completed",
+];
+
+export function isPapiStageStatus(status: SessionStatus): boolean {
+  return PAPI_STAGE_STATUSES.includes(status);
+}
+
+/**
+ * Status tempat HR boleh menutup sesi lebih awal tanpa PAPI
+ * (peserta tidak melanjutkan). Dicatat di `papi_skip_reason`.
+ */
+export const PAPI_SKIPPABLE_STATUSES: readonly SessionStatus[] = [
+  "papi_pending",
+  "papi_tutorial",
+  "papi_in_progress",
+];
+
+export function canSkipPapi(status: SessionStatus): boolean {
+  return PAPI_SKIPPABLE_STATUSES.includes(status);
+}
+
 export const PAUSABLE_STATUSES: readonly SessionStatus[] = [
   "code_validated",
   "tutorial",
   "tutorial_next",
   "subtest_in_progress",
   "subtest_completed",
+  "papi_pending",
+  "papi_tutorial",
+  "papi_in_progress",
 ];
 
 export const TERMINAL_STATUSES: readonly SessionStatus[] = [
@@ -45,14 +78,29 @@ const FLOW: Readonly<Record<SessionStatus, readonly SessionStatus[]>> = {
   code_validated: ["tutorial"],
   tutorial: ["subtest_in_progress"],
   subtest_in_progress: ["subtest_completed"],
-  subtest_completed: ["tutorial_next", "test_completed"],
+  // IST tuntas: langsung tutup bila sesi tanpa PAPI, atau masuk tahap PAPI.
+  subtest_completed: ["tutorial_next", "papi_pending", "test_completed"],
   tutorial_next: ["subtest_in_progress"],
+  // Jeda istirahat. Peserta kembali dengan token yang sama; HR boleh menutup lebih awal.
+  papi_pending: ["papi_tutorial", "test_completed"],
+  papi_tutorial: ["papi_in_progress", "papi_pending", "test_completed"],
+  papi_in_progress: ["papi_completed", "papi_pending", "test_completed"],
+  papi_completed: ["test_completed"],
   test_completed: ["needs_ge_scoring", "calculated"],
   needs_ge_scoring: ["calculated", "needs_review"],
   calculated: ["reviewed", "final", "needs_review"],
   reviewed: ["final"],
   final: [],
-  paused_by_admin: ["tutorial", "tutorial_next", "subtest_in_progress", "cancelled", "void"],
+  paused_by_admin: [
+    "tutorial",
+    "tutorial_next",
+    "subtest_in_progress",
+    "papi_pending",
+    "papi_tutorial",
+    "papi_in_progress",
+    "cancelled",
+    "void",
+  ],
   expired: [],
   cancelled: [],
   invalidated: [],
@@ -95,4 +143,12 @@ export type { SubtestCode };
 
 export function nextSubtestCode(code: SubtestCode): SubtestCode | null {
   return SUBTEST_ORDER[SUBTEST_ORDER.indexOf(code) + 1] ?? null;
+}
+
+/**
+ * Status setelah subtes IST terakhir ditutup. Sesi baterai berhenti di
+ * `papi_pending` supaya peserta boleh istirahat dulu sebelum PAPI.
+ */
+export function statusAfterFinalSubtest(includesPapi: boolean): SessionStatus {
+  return includesPapi ? "papi_pending" : "test_completed";
 }
