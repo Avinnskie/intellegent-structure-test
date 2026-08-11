@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ArrowRight } from "lucide-react";
 
 export default async function HrDashboardPage() {
   const db = getDb();
@@ -31,11 +32,6 @@ export default async function HrDashboardPage() {
       value: String(metrics.active),
       detail: "Tutorial s.d. subtes terakhir",
     },
-    {
-      label: "Menunggu kalkulasi",
-      value: String(metrics.waitingGeScoring),
-      detail: "Periksa kelengkapan kunci GE",
-    },
     { label: "Hasil final", value: String(metrics.finalized), detail: "Siap diekspor" },
   ];
 
@@ -52,7 +48,7 @@ export default async function HrDashboardPage() {
       }
     >
       <section className="space-y-8">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           {cards.map((metric) => (
             <StatCard
               key={metric.label}
@@ -76,9 +72,9 @@ export default async function HrDashboardPage() {
               </div>
               <Link
                 href="/hr/sessions"
-                className="text-sm font-semibold text-primary hover:underline"
+                className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
               >
-                Semua sesi
+                Semua sesi <ArrowRight size={14} />
               </Link>
             </div>
             {metrics.recentSessions.length === 0 ? (
@@ -111,7 +107,7 @@ export default async function HrDashboardPage() {
                         <TableCell className="py-4">
                           <Link
                             href={`/hr/sessions/${row.sessionId}`}
-                            className="font-semibold text-primary"
+                            className="underline font-semibold text-primary"
                           >
                             Detail
                           </Link>
