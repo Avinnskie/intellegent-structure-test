@@ -140,8 +140,6 @@ export function TestQuestionPanel({
   const { subtestCode, item, totalItems, answeredCount, status, value } = state;
 
   return (
-    // 2.5rem = the test layout's p-5 top+bottom; the old 9.5rem offset assumed a header that the
-    // participant layout no longer has, which left a dead band under the card.
     <article className="rounded-xl h-full border border-border bg-card p-6 pb-24 xl:flex xl:h-[calc(100dvh-2.5rem)] xl:flex-col xl:pb-6">
       <div className="space-y-6 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
         <div>
