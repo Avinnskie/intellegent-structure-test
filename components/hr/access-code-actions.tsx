@@ -89,7 +89,7 @@ export function AccessCodeActions({
           type="button"
           onClick={() => setPending("regenerate")}
           disabled={isBusy}
-          className="inline-flex h-11 items-center justify-center rounded-xl bg-[var(--accent-primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           Buat ulang kode
         </button>
@@ -97,7 +97,7 @@ export function AccessCodeActions({
           type="button"
           onClick={() => setPending("revoke")}
           disabled={isBusy || !canRevoke}
-          className="inline-flex h-11 items-center justify-center rounded-xl border border-[var(--status-error)]/40 px-4 text-sm font-semibold text-[var(--status-error)] hover:bg-[color-mix(in_srgb,var(--status-error)_8%,white)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-11 items-center justify-center rounded-xl border border-[var(--destructive)]/40 px-4 text-sm font-semibold text-destructive hover:bg-[color-mix(in_srgb,var(--destructive)_8%,white)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Cabut kode
         </button>
@@ -125,12 +125,12 @@ export function AccessCodeActions({
       />
 
       {regenerated ? (
-        <div className="rounded-xl border border-[var(--accent-primary)] bg-[var(--accent-soft)] p-5">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">
+        <div className="rounded-xl border border-primary bg-accent p-5">
+          <p className="text-sm font-semibold text-foreground">
             Kode baru — salin SEKARANG, tidak akan ditampilkan lagi:
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-4">
-            <p className="font-mono text-2xl font-bold tracking-[0.06em] text-[var(--text-primary)]">
+            <p className="font-mono text-2xl font-bold tracking-[0.06em] text-foreground">
               {regenerated.accessCode}
             </p>
             <button
@@ -141,12 +141,12 @@ export function AccessCodeActions({
                   push("success", "Kode tersalin ke clipboard.");
                 });
               }}
-              className="inline-flex h-10 items-center justify-center rounded-xl bg-[var(--accent-primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white hover:bg-primary/90"
             >
               {hasCopied ? "Tersalin ✓" : "Salin"}
             </button>
           </div>
-          <p className="mt-2 text-xs text-[var(--text-muted)]">
+          <p className="mt-2 text-xs text-muted-foreground">
             Berlaku sampai {new Date(regenerated.accessCodeExpiresAt).toLocaleString("id-ID")}.
           </p>
         </div>
