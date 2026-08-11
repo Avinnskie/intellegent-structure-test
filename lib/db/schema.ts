@@ -32,6 +32,10 @@ export const sessionStatus = pgEnum("session_status", [
   "subtest_in_progress",
   "subtest_completed",
   "tutorial_next",
+  "papi_pending",
+  "papi_tutorial",
+  "papi_in_progress",
+  "papi_completed",
   "test_completed",
   "needs_ge_scoring",
   "calculated",
@@ -72,6 +76,19 @@ export const resultStatus = pgEnum("result_status", [
 ]);
 export const actorType = pgEnum("actor_type", ["user", "participant", "system"]);
 export const reentryPolicy = pgEnum("reentry_policy", ["single", "multi"]);
+export const papiOptionCode = pgEnum("papi_option_code", ["A", "B"]);
+export const papiFactorKind = pgEnum("papi_factor_kind", ["role", "need"]);
+export const papiSegmentCloseReason = pgEnum("papi_segment_close_reason", [
+  "navigated",
+  "completed",
+  "stale",
+  "admin",
+]);
+export const papiSkipReason = pgEnum("papi_skip_reason", [
+  "participant_declined",
+  "hr_closed_early",
+  "not_required",
+]);
 
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -297,6 +314,17 @@ export const assessmentSessions = pgTable(
       .references(() => normSetVersions.id),
     pinnedTutorialVersions: jsonb("pinned_tutorial_versions").notNull(),
     reentryPolicy: reentryPolicy("reentry_policy").notNull().default("single"),
+    /**
+     * Sesi baterai: IST wajib, PAPI menyusul dengan token yang sama.
+     * Versi form PAPI di-pin saat sesi dibuat, sejalan dengan pinning IST (spec 10A).
+     */
+    includesPapi: integer("includes_papi").notNull().default(0),
+    papiFormVersionId: uuid("papi_form_version_id").references(
+      (): AnyPgColumn => papiFormVersions.id,
+    ),
+    papiSkipReason: papiSkipReason("papi_skip_reason"),
+    papiSkippedBy: uuid("papi_skipped_by").references((): AnyPgColumn => users.id),
+    papiSkippedAt: timestamp("papi_skipped_at", { withTimezone: true }),
     status: sessionStatus("status").notNull().default("code_generated"),
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
     startedAt: timestamp("started_at", { withTimezone: true }),
@@ -321,8 +349,16 @@ export const accessCodes = pgTable(
     sessionId: uuid("session_id")
       .notNull()
       .references(() => assessmentSessions.id),
-    codeHash: text("code_hash").notNull().unique(),
+    /**
+     * Kode akses lengkap, ditampilkan apa adanya kepada HR.
+     * Nama kolomnya masih `code_masked` karena alasan historis.
+     */
     codeMasked: text("code_masked").notNull(),
+    /**
+     * Kunci pencarian saat peserta memasukkan kode di `/test`.
+     * Wajib dipertahankan: pencocokan dilakukan lewat hash, bukan teks.
+     */
+    codeHash: text("code_hash").notNull().unique(),
     status: accessCodeStatus("status").notNull().default("active"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     failedAttempts: integer("failed_attempts").notNull().default(0),
@@ -490,6 +526,181 @@ export const reports = pgTable("reports", {
     .references(() => users.id),
   generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/* ------------------------------------------------------------------ *
+ * PAPI Kostick — modul paralel.
+ *
+ * Sengaja tidak menumpang tabel IST: PAPI tidak punya norma umur, tidak
+ * punya IQ, dan skornya ipsatif (total selalu 90) sehingga tidak boleh
+ * masuk pipeline RW -> SW -> IQ. Yang dibagi hanya sesi, token, dan audit.
+ * ------------------------------------------------------------------ */
+
+export const papiFormVersions = pgTable(
+  "papi_form_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    formCode: text("form_code").notNull(),
+    version: integer("version").notNull(),
+    title: text("title").notNull(),
+    itemCount: integer("item_count").notNull(),
+    engineVersion: text("engine_version").notNull(),
+    status: contentStatus("status").notNull().default("draft"),
+    effectiveDate: date("effective_date"),
+    approvedBy: text("approved_by"),
+    checksum: text("checksum"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("papi_form_code_version_ux").on(t.formCode, t.version)],
+);
+
+export const papiItemVersions = pgTable(
+  "papi_item_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    papiFormVersionId: uuid("papi_form_version_id")
+      .notNull()
+      .references(() => papiFormVersions.id),
+    itemNumber: integer("item_number").notNull(),
+    optionAText: text("option_a_text").notNull(),
+    optionAFactor: text("option_a_factor").notNull(),
+    optionBText: text("option_b_text").notNull(),
+    optionBFactor: text("option_b_factor").notNull(),
+  },
+  (t) => [uniqueIndex("papi_item_form_number_ux").on(t.papiFormVersionId, t.itemNumber)],
+);
+
+/**
+ * Percobaan pengerjaan PAPI. Tidak punya `expires_at` — ini disengaja.
+ * PAPI tidak dibatasi waktu; durasi hanya direkam sebagai data observasi.
+ */
+export const papiAttempts = pgTable(
+  "papi_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => assessmentSessions.id),
+    papiFormVersionId: uuid("papi_form_version_id")
+      .notNull()
+      .references(() => papiFormVersions.id),
+    status: attemptStatus("status").notNull().default("in_progress"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    completionReason: completionReason("completion_reason"),
+    resumeCount: integer("resume_count").notNull().default(0),
+  },
+  (t) => [uniqueIndex("papi_attempt_session_ux").on(t.sessionId)],
+);
+
+/**
+ * Rentang waktu aktif. Elapsed = jumlah segmen, bukan selisih mulai-selesai,
+ * supaya jeda istirahat peserta tidak ikut terhitung sebagai waktu mengerjakan.
+ */
+export const papiAttemptSegments = pgTable(
+  "papi_attempt_segments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    papiAttemptId: uuid("papi_attempt_id")
+      .notNull()
+      .references(() => papiAttempts.id),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    lastHeartbeatAt: timestamp("last_heartbeat_at", { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    closeReason: papiSegmentCloseReason("close_reason"),
+  },
+  (t) => [
+    index("papi_segment_attempt_ix").on(t.papiAttemptId),
+    check("papi_segment_range_ck", sql`ended_at is null or ended_at >= started_at`),
+  ],
+);
+
+export const papiResponses = pgTable(
+  "papi_responses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => assessmentSessions.id),
+    papiAttemptId: uuid("papi_attempt_id")
+      .notNull()
+      .references(() => papiAttempts.id),
+    itemNumber: integer("item_number").notNull(),
+    optionCode: papiOptionCode("option_code"),
+    responseStatus: responseStatus("response_status").notNull().default("unanswered"),
+    answeredAt: timestamp("answered_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("papi_response_attempt_item_ux").on(t.papiAttemptId, t.itemNumber),
+    index("papi_response_session_ix").on(t.sessionId),
+    check("papi_response_item_range_ck", sql`item_number between 1 and 90`),
+  ],
+);
+
+export const papiResults = pgTable(
+  "papi_results",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => assessmentSessions.id),
+    papiAttemptId: uuid("papi_attempt_id")
+      .notNull()
+      .references(() => papiAttempts.id),
+    papiFormVersionId: uuid("papi_form_version_id")
+      .notNull()
+      .references(() => papiFormVersions.id),
+    status: resultStatus("status").notNull().default("draft"),
+    roleTotal: integer("role_total").notNull(),
+    needTotal: integer("need_total").notNull(),
+    totalScore: integer("total_score").notNull(),
+    elapsedSeconds: integer("elapsed_seconds").notNull(),
+    profile: jsonb("profile").notNull(),
+    /** Faktor yang band interpretasinya belum divalidasi pemilik tes. */
+    pendingInterpretationFactors: text("pending_interpretation_factors").array().notNull(),
+    engineVersion: text("engine_version").notNull(),
+    reviewNotes: text("review_notes"),
+    supersededById: uuid("superseded_by_id").references((): AnyPgColumn => papiResults.id),
+    calculatedBy: uuid("calculated_by").references(() => users.id),
+    calculatedAt: timestamp("calculated_at", { withTimezone: true }).notNull().defaultNow(),
+    finalizedBy: uuid("finalized_by").references(() => users.id),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("papi_result_session_ix").on(t.sessionId),
+    check("papi_result_total_ck", sql`total_score = 90`),
+  ],
+);
+
+export const papiFactorScores = pgTable(
+  "papi_factor_scores",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    papiResultId: uuid("papi_result_id")
+      .notNull()
+      .references(() => papiResults.id),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => assessmentSessions.id),
+    factorCode: text("factor_code").notNull(),
+    factorName: text("factor_name").notNull(),
+    groupCode: text("group_code").notNull(),
+    factorKind: papiFactorKind("factor_kind").notNull(),
+    score: integer("score").notNull(),
+    category: text("category").notNull(),
+    interpretation: text("interpretation"),
+    interpretationPending: integer("interpretation_pending").notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex("papi_factor_score_result_ux").on(t.papiResultId, t.factorCode),
+    index("papi_factor_score_session_ix").on(t.sessionId),
+    check("papi_factor_score_range_ck", sql`score between 0 and 9`),
+  ],
+);
 
 export const auditLogs = pgTable(
   "audit_logs",
