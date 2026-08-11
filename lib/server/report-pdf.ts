@@ -9,6 +9,8 @@ import {
   type DocumentProps,
 } from "@react-pdf/renderer";
 import type { ResultDto } from "./calculate.ts";
+import type { PapiResultDto, PapiStageDto } from "./papi-result-read.ts";
+import { buildPapiPage, buildPapiSkippedPage } from "./report-pdf-papi.ts";
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: "Helvetica", color: "#1a1a1a" },
@@ -39,16 +41,6 @@ const styles = StyleSheet.create({
   },
   chartValue: { fontSize: 8, marginBottom: 2 },
   chartLabel: { fontSize: 8, marginTop: 3, color: "#555555" },
-  footer: {
-    position: "absolute",
-    bottom: 32,
-    left: 40,
-    right: 40,
-    fontSize: 8,
-    color: "#777777",
-    borderTop: "1 solid #dddddd",
-    paddingTop: 8,
-  },
   versions: { marginTop: 14, fontSize: 8, color: "#777777" },
   totalRow: { flexDirection: "row" as const, paddingVertical: 4, marginTop: 2 },
   bold: { fontFamily: "Helvetica-Bold" },
@@ -63,7 +55,30 @@ function identityLine(label: string, value: string): ReactElement {
   );
 }
 
-export function buildReportDocument(data: ResultDto): ReactElement<DocumentProps> {
+export type PapiReportAttachment = {
+  readonly stage: PapiStageDto;
+  readonly result: PapiResultDto | null;
+};
+
+/**
+ * Halaman PAPI hanya ikut bila sesi memang memuatnya. Bila tahap PAPI
+ * dilewati, laporan tetap memuat satu halaman penjelas alih-alih diam —
+ * pembaca laporan harus tahu bagian itu tidak dikerjakan, bukan hilang.
+ */
+function papiPages(papi: PapiReportAttachment | null, candidateName: string): ReactElement[] {
+  if (!papi || !papi.stage.includesPapi) {
+    return [];
+  }
+  if (papi.result) {
+    return [buildPapiPage(papi.result)];
+  }
+  return [buildPapiSkippedPage(papi.stage, candidateName)];
+}
+
+export function buildReportDocument(
+  data: ResultDto,
+  papi: PapiReportAttachment | null = null,
+): ReactElement<DocumentProps> {
   const maxSw = Math.max(...data.subtests.map((subtest) => subtest.standardScore), 1);
 
   const chartColumns = data.subtests.map((subtest) =>
@@ -93,7 +108,7 @@ export function buildReportDocument(data: ResultDto): ReactElement<DocumentProps
   return h(
     Document,
     {
-      title: `Laporan IST — ${data.candidate.fullName}`,
+      title: `${papi?.result ? "Laporan IST + PAPI" : "Laporan IST"} — ${data.candidate.fullName}`,
       author: "IST Assessment Platform",
       creationDate: new Date(data.calculatedAt),
       modificationDate: new Date(data.calculatedAt),
@@ -133,23 +148,14 @@ export function buildReportDocument(data: ResultDto): ReactElement<DocumentProps
         h(Text, { style: [styles.cellNum, styles.bold] }, String(data.totals.standardScore)),
         h(Text, { style: styles.cellCat }, ""),
       ),
-      h(
-        Text,
-        { style: styles.versions },
-        `Versi: form ${data.versions.formVersionId} · kunci ${data.versions.scoringKeyVersionId}` +
-          ` · norma ${data.versions.normSetVersionId} · engine ${data.versions.engineVersion}\n` +
-          `Dihitung ${data.calculatedAt} · Difinalisasi ${data.finalizedAt ?? "—"}`,
-      ),
-      h(
-        Text,
-        { style: styles.footer, fixed: true },
-        "Laporan ini tidak memuat keputusan otomatis diterima/ditolak. Interpretasi akhir menjadi" +
-          " wewenang psikolog/HR yang berwenang.",
-      ),
     ),
+    ...papiPages(papi, data.candidate.fullName),
   );
 }
 
-export async function renderReportPdf(data: ResultDto): Promise<Buffer> {
-  return renderToBuffer(buildReportDocument(data));
+export async function renderReportPdf(
+  data: ResultDto,
+  papi: PapiReportAttachment | null = null,
+): Promise<Buffer> {
+  return renderToBuffer(buildReportDocument(data, papi));
 }
