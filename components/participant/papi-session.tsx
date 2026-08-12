@@ -114,10 +114,7 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
         setSubmitting(false);
         return;
       }
-      // PAPI bukan lagi bagian terakhir baterai — IST menyusul setelahnya.
-      // Tujuan diambil dari status yang dikembalikan server, bukan ditulis
-      // tetap di sini, supaya perubahan urutan berikutnya tidak perlu menyentuh
-      // komponen ini lagi.
+
       const dto = (await response.json()) as { sessionStatus?: string };
       router.replace(
         dto.sessionStatus === "finished" ? `/test/${token}/complete` : `/test/${token}/papi`,
@@ -136,7 +133,7 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
   }
 
   return (
-    <div className="w-full max-w-3xl">
+    <div className="w-full max-w-3xl px-5">
       <header className="sticky top-0 z-10 -mx-1 bg-card/60 backdrop-blur-2xl px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
