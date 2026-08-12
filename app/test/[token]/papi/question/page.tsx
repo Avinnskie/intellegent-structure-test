@@ -14,7 +14,7 @@ export default async function PapiQuestionPage({ params }: { params: Promise<{ t
     redirect("/test");
   }
 
-  if (state.sessionStatus === "papi_rest" || state.sessionStatus === "papi_tutorial") {
+  if (state.sessionStatus === "papi_tutorial") {
     try {
       state = await startPapi(db, token);
     } catch {

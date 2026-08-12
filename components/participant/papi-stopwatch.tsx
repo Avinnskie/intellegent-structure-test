@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 
 type PapiStopwatchProps = {
-  /** Detik terakumulasi dari server saat halaman dirender. */
   readonly baselineSeconds: number;
 };
 

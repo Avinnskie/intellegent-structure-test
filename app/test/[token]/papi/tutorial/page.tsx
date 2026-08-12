@@ -21,7 +21,7 @@ export default async function PapiTutorialPage({ params }: { params: Promise<{ t
   if (state.sessionStatus === "papi_question") {
     redirect(`/test/${token}/papi/question`);
   }
-  if (state.sessionStatus !== "papi_rest" && state.sessionStatus !== "papi_tutorial") {
+  if (state.sessionStatus !== "papi_tutorial") {
     redirect(state.nextRoute);
   }
 

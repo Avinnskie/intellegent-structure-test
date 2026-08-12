@@ -7,17 +7,6 @@ import {
 } from "../papi-factors.ts";
 import { papiFactor } from "./official-papi.ts";
 
-/**
- * Kunci PAPI tidak bebas disunting.
- *
- * Instrumen ini hanya sah bila tiap huruf faktor muncul persis 9 kali di antara
- * 180 opsi, dan tiap nomor mempertemukan dua huruf sejenis (Role lawan Role,
- * atau Need lawan Need). Melanggar itu membuat skor faktor bisa melampaui 9 dan
- * profil ipsatifnya kehilangan makna — kegagalan yang tidak terlihat sampai
- * berbulan-bulan kemudian. Karena itu setiap penyuntingan divalidasi utuh,
- * bukan per baris.
- */
-
 export type PapiDraftItem = {
   readonly itemNumber: number;
   readonly optionAText: string;
@@ -57,7 +46,6 @@ export type PapiKeyViolation =
 export type PapiKeyValidation = {
   readonly valid: boolean;
   readonly violations: readonly PapiKeyViolation[];
-  /** Sebaran kemunculan tiap huruf, untuk ditampilkan sebagai indikator di UI. */
   readonly frequencies: Readonly<Record<PapiFactorCode, number>>;
 };
 

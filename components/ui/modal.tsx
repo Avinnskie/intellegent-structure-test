@@ -19,10 +19,6 @@ type ModalProps = {
   readonly children: ReactNode;
 };
 
-/**
- * Pembungkus di atas shadcn Dialog. Prop-nya sengaja dipertahankan
- * seperti versi sebelumnya agar seluruh pemanggil tetap bekerja.
- */
 export function Modal({ open, title, description, size = "md", onClose, children }: ModalProps) {
   return (
     <Dialog

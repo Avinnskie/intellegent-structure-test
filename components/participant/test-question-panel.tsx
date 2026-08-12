@@ -156,14 +156,6 @@ export function TestQuestionPanel({
               </span>
             ) : null}
           </div>
-          {/*
-            Teks soal ditulis HR lewat editor berformat, jadi ia dirender sebagai
-            HTML yang sudah dibersihkan — bukan teks polos. Sebelumnya baris baru
-            hilang dan penebalan tidak muncul sama sekali.
-
-            `RichText` mengatur ukuran per tingkat judul di dalamnya, jadi bungkus
-            luar ini hanya menetapkan ukuran dasar.
-          */}
           <div className="mt-4 text-2xl font-bold tracking-[-0.04em] text-foreground sm:text-3xl">
             <RichText value={item.prompt} />
           </div>
@@ -173,7 +165,6 @@ export function TestQuestionPanel({
 
         {mediaUrl ? (
           <div className="overflow-hidden rounded-xl border border-border">
-            {/* eslint-disable-next-line @next/next/no-img-element -- signed URL, next/image cannot optimize it */}
             <img
               src={mediaUrl}
               alt={`Gambar soal ${item.localNumber}`}

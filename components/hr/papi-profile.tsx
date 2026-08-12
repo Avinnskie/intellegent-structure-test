@@ -174,7 +174,6 @@ export function PapiProfile({ result }: { result: PapiResultDto }) {
   );
 }
 
-/** Ditampilkan bila sesi memuat PAPI tetapi belum ada hasilnya. */
 export function PapiStageNotice({
   skipped,
   skipReason,

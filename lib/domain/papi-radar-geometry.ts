@@ -1,28 +1,15 @@
 import { PAPI_MAX_FACTOR_SCORE } from "../papi-factors.ts";
 
-/**
- * Geometri radar PAPI, terpisah dari cara menggambarnya.
- *
- * Dipakai oleh laporan PDF (primitif SVG @react-pdf) dan dapat diuji tanpa
- * merender apa pun. Sumbu pertama berada tepat di atas, lalu berputar searah
- * jarum jam.
- */
-
 export type RadarPoint = { readonly x: number; readonly y: number };
 
 export type RadarLayout = {
   readonly size: number;
   readonly center: RadarPoint;
   readonly radius: number;
-  /** Cincin skala, dari terdalam ke terluar. */
   readonly rings: readonly { readonly score: number; readonly points: string }[];
-  /** Garis jari-jari dari pusat ke tepi tiap sumbu. */
   readonly spokes: readonly { readonly from: RadarPoint; readonly to: RadarPoint }[];
-  /** Poligon nilai peserta. */
   readonly valuePoints: string;
-  /** Titik nilai per sumbu, untuk penanda bulat. */
   readonly valueDots: readonly RadarPoint[];
-  /** Posisi label di luar lingkaran, beserta perataan teksnya. */
   readonly labels: readonly {
     readonly x: number;
     readonly y: number;
@@ -42,7 +29,6 @@ function toPoints(points: readonly RadarPoint[]): string {
   return points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
 }
 
-/** Perataan teks agar label kiri dan kanan tidak menabrak lingkaran. */
 function anchorFor(x: number, centerX: number, tolerance = 1): "start" | "middle" | "end" {
   if (x > centerX + tolerance) return "start";
   if (x < centerX - tolerance) return "end";

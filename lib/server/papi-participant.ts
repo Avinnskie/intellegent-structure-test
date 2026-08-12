@@ -1,7 +1,8 @@
 import { and, asc, eq } from "drizzle-orm";
 import { ApiError } from "../api/errors.ts";
 import type { DbLike } from "../db/client.ts";
-import { papiAttempts, papiItemVersions, papiResponses } from "../db/schema.ts";
+import { assessmentSessions, papiAttempts, papiItemVersions, papiResponses } from "../db/schema.ts";
+import { SUBTEST_ORDER } from "../domain/session-state.ts";
 import { asPapiOptionCode, PAPI_ITEM_COUNT, type PapiOptionCode } from "../papi-factors.ts";
 import { writeAudit } from "./audit.ts";
 import { calculatePapiResult } from "./papi-calculate.ts";
@@ -369,5 +370,31 @@ export async function completePapi(db: DbLike, token: string): Promise<PapiCompl
       elapsedSeconds,
       completedAt: now.toISOString(),
     };
+  });
+}
+
+/**
+ * Peserta menutup layar jeda dan memulai IST.
+ *
+ * Titik ini hanya ada karena urutan dibalik: PAPI sudah terkunci dan terskor,
+ * IST belum tersentuh. Idempoten — peserta yang menekan tombol dua kali, atau
+ * kembali ke tautan lama setelah IST dimulai, tidak boleh membuat galat.
+ */
+export async function startIstAfterPapi(db: DbLike, token: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    const session = await resolveParticipantSession(tx, token);
+    const locked = await lockPapiSession(tx, session.sessionId);
+
+    if (locked.status === "tutorial" || locked.status === "subtest_in_progress") {
+      return;
+    }
+    if (locked.status !== "papi_completed") {
+      throw papiNotAvailable();
+    }
+
+    await tx
+      .update(assessmentSessions)
+      .set({ status: "tutorial", currentSubtestCode: SUBTEST_ORDER[0] })
+      .where(eq(assessmentSessions.id, session.sessionId));
   });
 }

@@ -276,8 +276,6 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                     </span>
                   </TableCell>
                   <TableCell className="max-w-md py-4">
-                    {/* Ringkasan tabel memakai teks tanpa tag; tanpa ini HR
-                        membaca markup mentah di kolom pratinjau. */}
                     <span className="line-clamp-2 text-muted-foreground">
                       {toPlainText(version.textContent)}
                     </span>

@@ -73,11 +73,6 @@ function AnswerCard({ answer }: { readonly answer: PapiAnswerRow }) {
   );
 }
 
-/**
- * Lembar jawaban mentah PAPI pada halaman detail sesi.
- * Menampilkan pilihan peserta apa adanya beserta huruf faktor yang dihasilkan,
- * sehingga psikolog dapat menelusuri skor sampai ke item asalnya.
- */
 export function PapiAnswerSheet({ sheet }: { readonly sheet: PapiAnswerSheetDto }) {
   const complete = sheet.answeredCount === sheet.itemCount;
 

@@ -7,6 +7,7 @@ import { hashAccessCode } from "../domain/access-code.ts";
 import {
   assertSessionTransition,
   InvalidTransitionError,
+  statusAfterCodeValidation,
   SUBTEST_ORDER,
   type SessionStatus,
 } from "../domain/session-state.ts";
@@ -112,10 +113,10 @@ async function expireCode(db: DbLike, lookup: CodeLookup): Promise<never> {
   throw codeStateError("expired");
 }
 
-function assertStartable(from: SessionStatus): void {
+function assertStartable(from: SessionStatus, includesPapi: boolean): void {
   try {
     assertSessionTransition(from, "code_validated");
-    assertSessionTransition("code_validated", "tutorial");
+    assertSessionTransition("code_validated", statusAfterCodeValidation(includesPapi));
   } catch (error) {
     if (error instanceof InvalidTransitionError) {
       throw new ApiError("SESSION_NOT_ACTIVE", SESSION_NOT_ACTIVE_MESSAGE, 409);
@@ -124,8 +125,18 @@ function assertStartable(from: SessionStatus): void {
   }
 }
 
+/**
+ * Status yang boleh dilanjutkan dengan kode yang sama.
+ *
+ * Tahap PAPI kini berada di awal baterai, jadi ia ikut di sini — tanpa itu,
+ * peserta yang berhenti di tengah PAPI tidak bisa masuk kembali sama sekali.
+ */
 const RESUMABLE_STATUSES: ReadonlySet<SessionStatus> = new Set([
   "code_validated",
+  "papi_pending",
+  "papi_tutorial",
+  "papi_in_progress",
+  "papi_completed",
   "tutorial",
   "subtest_in_progress",
   "subtest_completed",
@@ -166,6 +177,7 @@ async function issueSessionToken(
         status: assessmentSessions.status,
         currentSubtestCode: assessmentSessions.currentSubtestCode,
         reentryPolicy: assessmentSessions.reentryPolicy,
+        includesPapi: assessmentSessions.includesPapi,
       })
       .from(assessmentSessions)
       .where(eq(assessmentSessions.id, lookup.sessionId))
@@ -221,11 +233,17 @@ async function issueSessionToken(
       throw codeStateError(code.status);
     }
 
-    assertStartable(session.status);
+    const includesPapi = session.includesPapi === 1;
+    assertStartable(session.status, includesPapi);
 
+    // `currentSubtestCode` tetap disetel walau PAPI yang dibuka lebih dulu:
+    // ia menandai dari mana IST akan dimulai setelah PAPI selesai.
     const [advanced] = await tx
       .update(assessmentSessions)
-      .set({ status: "tutorial", currentSubtestCode: FIRST_SUBTEST_CODE })
+      .set({
+        status: statusAfterCodeValidation(includesPapi),
+        currentSubtestCode: FIRST_SUBTEST_CODE,
+      })
       .where(eq(assessmentSessions.id, lookup.sessionId))
       .returning({ status: assessmentSessions.status });
 

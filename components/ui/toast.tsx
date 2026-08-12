@@ -9,10 +9,6 @@ type ToastContextValue = {
   push: (kind: ToastKind, message: string) => void;
 };
 
-/**
- * Pembungkus tipis di atas Sonner. API `useToast().push(kind, message)`
- * dipertahankan supaya seluruh call site lama tetap berjalan tanpa perubahan.
- */
 export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <>

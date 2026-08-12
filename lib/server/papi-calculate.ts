@@ -1,6 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import type { DbLike } from "../db/client.ts";
-import { assessmentSessions, papiFactorScores, papiResults } from "../db/schema.ts";
+import {
+  assessmentSessions,
+  papiFactorScores,
+  papiResults,
+  subtestAttempts,
+} from "../db/schema.ts";
 import { PAPI_ENGINE_VERSION } from "../domain/official-papi.ts";
 import { buildPapiProfile } from "../domain/papi-scoring.ts";
 import { assertSessionTransition, type SessionStatus } from "../domain/session-state.ts";
@@ -78,13 +83,16 @@ export async function calculatePapiResult(
     },
   });
 
-  return closeBatterySession(
-    tx,
-    input.organizationId,
-    input.sessionId,
-    "papi_completed",
-    input.now,
-  );
+  /**
+   * PAPI selesai TIDAK lagi menutup sesi — IST masih menunggu di belakangnya.
+   *
+   * Sesi berhenti di `papi_completed`, yang merangkap layar jeda: jawaban PAPI
+   * sudah terkunci dan terskor, peserta boleh berhenti, lalu kembali dengan
+   * token yang sama untuk memulai IST.
+   * Statusnya sudah disetel oleh pemanggil sebelum skoring dijalankan, jadi di
+   * sini cukup dikembalikan apa adanya.
+   */
+  return "papi_completed";
 }
 
 export async function closeBatterySession(
@@ -118,6 +126,45 @@ export async function closeBatterySession(
 
   if (!updated) {
     throw new Error(`Status sesi ${sessionId} gagal ditutup.`);
+  }
+
+  /**
+   * Sejak PAPI dikerjakan lebih dulu, sesi bisa ditutup sebelum IST tersentuh.
+   *
+   * Menjalankan pipeline pada nol jawaban tidak menghasilkan galat — ia
+   * menghasilkan RW 0 di sembilan subtes, lalu menormakannya menjadi IQ yang
+   * tampak sah tetapi tidak berarti apa-apa. Angka semacam itu bisa terbawa ke
+   * laporan dan dipakai mengambil keputusan rekrutmen.
+   *
+   * Jadi sesi tanpa satu pun subtes IST yang tuntas berhenti di `needs_review`
+   * agar HR menilainya sendiri, bukan menerima angka bikinan sistem.
+   */
+  const [istProgress] = await tx
+    .select({ total: count() })
+    .from(subtestAttempts)
+    .where(
+      and(eq(subtestAttempts.sessionId, sessionId), eq(subtestAttempts.status, "completed")),
+    );
+
+  if ((istProgress?.total ?? 0) === 0) {
+    assertSessionTransition("needs_ge_scoring", "needs_review");
+    const [flagged] = await tx
+      .update(assessmentSessions)
+      .set({ status: "needs_review" })
+      .where(eq(assessmentSessions.id, sessionId))
+      .returning({ status: assessmentSessions.status });
+
+    await writeAudit(tx, {
+      organizationId,
+      actorType: "system",
+      actorId: null,
+      action: "session.needs_review",
+      objectType: "assessment_session",
+      objectId: sessionId,
+      metadata: { reason: "ist_not_attempted", closedFrom: from },
+    });
+
+    return flagged?.status ?? "needs_review";
   }
 
   const hasManualGe = await sessionHasManualGePending(

@@ -143,12 +143,11 @@ function closingChain(from: SessionStatus, code: SubtestCode, includesPapi: bool
     return { status: "tutorial_next", nextCode: next, batteryFinished: false };
   }
 
-  // Subtes IST terakhir ditutup. Sesi baterai berhenti di jeda istirahat:
-  // token tetap berlaku, skoring IST menunggu sampai PAPI selesai atau dilewati.
-  if (includesPapi) {
-    assertSessionTransition("subtest_completed", "papi_pending");
-    return { status: "papi_pending", nextCode: null, batteryFinished: false };
-  }
+  // Subtes IST terakhir ditutup, dan IST kini bagian penghabisan baterai —
+  // PAPI sudah dikerjakan serta diskor sebelum peserta sampai di sini. Jadi
+  // tidak ada lagi tahap menyusul: sesi baterai maupun sesi IST-saja sama-sama
+  // langsung ditutup dan masuk skoring.
+  void includesPapi;
 
   assertSessionTransition("subtest_completed", "test_completed");
   assertSessionTransition("test_completed", "needs_ge_scoring");

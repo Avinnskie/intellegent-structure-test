@@ -1,16 +1,6 @@
 import { toDisplayHtml } from "@/lib/domain/rich-text.ts";
 import { cn } from "@/lib/utils.ts";
 
-/**
- * Menampilkan teks berformat yang ditulis HR.
- *
- * Sengaja terpisah dari `rich-text-editor.tsx`: berkas itu menarik Tiptap, dan
- * halaman peserta tidak boleh ikut mengunduh seluruh editor hanya untuk
- * membaca satu soal.
- *
- * Nilai selalu melewati `toDisplayHtml`, jadi pemanggil tidak pernah bisa
- * menyisipkan HTML mentah walau tanpa sengaja.
- */
 export function RichText({
   value,
   className,

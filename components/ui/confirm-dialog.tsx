@@ -26,11 +26,6 @@ type ConfirmDialogProps = {
   readonly onConfirm: (inputValue: string) => void;
   readonly onCancel: () => void;
 };
-
-/**
- * Pembungkus di atas shadcn AlertDialog, lengkap dengan input opsional
- * (misalnya alasan pencabutan kode). API-nya tidak berubah dari versi lama.
- */
 export function ConfirmDialog({
   open,
   title,

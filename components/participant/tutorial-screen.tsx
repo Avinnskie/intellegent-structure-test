@@ -49,8 +49,6 @@ export function TutorialScreen({ token, subtest, tutorial, videoUrl = null }: Tu
               </div>
               {}
             </div>
-            {/* Instruksi ditulis HR lewat editor berformat; dirender sebagai
-                HTML tersanitasi agar penomoran dan penebalan ikut tampil. */}
             <RichText
               value={tutorial.textContent}
               className="mt-3 text-base leading-7 text-muted-foreground"

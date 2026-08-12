@@ -114,7 +114,14 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
         setSubmitting(false);
         return;
       }
-      router.replace(`/test/${token}/complete`);
+      // PAPI bukan lagi bagian terakhir baterai — IST menyusul setelahnya.
+      // Tujuan diambil dari status yang dikembalikan server, bukan ditulis
+      // tetap di sini, supaya perubahan urutan berikutnya tidak perlu menyentuh
+      // komponen ini lagi.
+      const dto = (await response.json()) as { sessionStatus?: string };
+      router.replace(
+        dto.sessionStatus === "finished" ? `/test/${token}/complete` : `/test/${token}/papi`,
+      );
     } catch {
       setSubmitError("Koneksi terputus. Periksa jaringan lalu coba lagi.");
       setSubmitting(false);

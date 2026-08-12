@@ -53,7 +53,6 @@ export function SessionTimer({
 export function TestSessionSidebar({ state, onJump, onComplete }: TestSessionSidebarProps) {
   return (
     <aside className="space-y-6 mb-20">
-      {/* <SessionTimer minutes={state.minutes} seconds={state.seconds} className="hidden xl:block" /> */}
       <article className="rounded-xl border border-border bg-card p-5">
         <p className="text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           Navigasi soal

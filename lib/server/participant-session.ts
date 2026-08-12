@@ -47,10 +47,12 @@ const PARTICIPANT_STATUS: Readonly<Record<SessionStatus, ParticipantSessionStatu
   subtest_in_progress: "question",
   subtest_completed: "tutorial",
   tutorial_next: "tutorial",
+  // Tahap PAPI kini di depan baterai. `papi_completed` merangkap layar jeda:
+  // PAPI sudah terkunci dan terskor, IST belum dimulai.
   papi_pending: "papi_rest",
   papi_tutorial: "papi_tutorial",
   papi_in_progress: "papi_question",
-  papi_completed: "finished",
+  papi_completed: "papi_rest",
   test_completed: "finished",
   needs_ge_scoring: "finished",
   calculated: "finished",

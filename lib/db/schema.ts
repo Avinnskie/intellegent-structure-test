@@ -314,10 +314,6 @@ export const assessmentSessions = pgTable(
       .references(() => normSetVersions.id),
     pinnedTutorialVersions: jsonb("pinned_tutorial_versions").notNull(),
     reentryPolicy: reentryPolicy("reentry_policy").notNull().default("single"),
-    /**
-     * Sesi baterai: IST wajib, PAPI menyusul dengan token yang sama.
-     * Versi form PAPI di-pin saat sesi dibuat, sejalan dengan pinning IST (spec 10A).
-     */
     includesPapi: integer("includes_papi").notNull().default(0),
     papiFormVersionId: uuid("papi_form_version_id").references(
       (): AnyPgColumn => papiFormVersions.id,
@@ -349,15 +345,7 @@ export const accessCodes = pgTable(
     sessionId: uuid("session_id")
       .notNull()
       .references(() => assessmentSessions.id),
-    /**
-     * Kode akses lengkap, ditampilkan apa adanya kepada HR.
-     * Nama kolomnya masih `code_masked` karena alasan historis.
-     */
     codeMasked: text("code_masked").notNull(),
-    /**
-     * Kunci pencarian saat peserta memasukkan kode di `/test`.
-     * Wajib dipertahankan: pencocokan dilakukan lewat hash, bukan teks.
-     */
     codeHash: text("code_hash").notNull().unique(),
     status: accessCodeStatus("status").notNull().default("active"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -527,14 +515,6 @@ export const reports = pgTable("reports", {
   generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/* ------------------------------------------------------------------ *
- * PAPI Kostick — modul paralel.
- *
- * Sengaja tidak menumpang tabel IST: PAPI tidak punya norma umur, tidak
- * punya IQ, dan skornya ipsatif (total selalu 90) sehingga tidak boleh
- * masuk pipeline RW -> SW -> IQ. Yang dibagi hanya sesi, token, dan audit.
- * ------------------------------------------------------------------ */
-
 export const papiFormVersions = pgTable(
   "papi_form_versions",
   {
@@ -569,10 +549,6 @@ export const papiItemVersions = pgTable(
   (t) => [uniqueIndex("papi_item_form_number_ux").on(t.papiFormVersionId, t.itemNumber)],
 );
 
-/**
- * Percobaan pengerjaan PAPI. Tidak punya `expires_at` — ini disengaja.
- * PAPI tidak dibatasi waktu; durasi hanya direkam sebagai data observasi.
- */
 export const papiAttempts = pgTable(
   "papi_attempts",
   {
@@ -592,10 +568,6 @@ export const papiAttempts = pgTable(
   (t) => [uniqueIndex("papi_attempt_session_ux").on(t.sessionId)],
 );
 
-/**
- * Rentang waktu aktif. Elapsed = jumlah segmen, bukan selisih mulai-selesai,
- * supaya jeda istirahat peserta tidak ikut terhitung sebagai waktu mengerjakan.
- */
 export const papiAttemptSegments = pgTable(
   "papi_attempt_segments",
   {
@@ -660,7 +632,7 @@ export const papiResults = pgTable(
     totalScore: integer("total_score").notNull(),
     elapsedSeconds: integer("elapsed_seconds").notNull(),
     profile: jsonb("profile").notNull(),
-    /** Faktor yang band interpretasinya belum divalidasi pemilik tes. */
+
     pendingInterpretationFactors: text("pending_interpretation_factors").array().notNull(),
     engineVersion: text("engine_version").notNull(),
     reviewNotes: text("review_notes"),

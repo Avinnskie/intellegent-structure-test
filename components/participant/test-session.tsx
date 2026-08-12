@@ -61,12 +61,6 @@ export function TestSession({
 }: TestSessionProps) {
   const router = useRouter();
 
-  /*
-    Nomor aktif disimpan di klien. Sebelumnya tiap perpindahan memakai
-    `router.push`, yang memicu render server penuh: resolusi token, pembacaan
-    sesi, transaksi `startSubtest`, dan penandatanganan URL media. Padahal
-    seluruh soal subtes ini sudah ada di `items` sejak halaman dimuat.
-  */
   const [itemState, setItemState] = useState<ActiveItemState>({
     activeLocal: currentLocal,
     seenServerLocal: currentLocal,
@@ -100,11 +94,6 @@ export function TestSession({
     setLocalStatuses(initialStatuses);
   }
 
-  /*
-    Jawaban seluruh soal subtes disimpan di klien. Prop `items` hanya diambil
-    sekali saat subtes dibuka, sehingga tanpa peta ini kembali ke soal
-    sebelumnya akan menampilkan isian kosong.
-  */
   const [drafts, setDrafts] = useState<DraftMap>(() => seedDrafts(items));
   const [draftsBase, setDraftsBase] = useState(items);
   if (draftsBase !== items) {
@@ -171,20 +160,6 @@ export function TestSession({
   }, [token]);
 
   const goTo = useCallback((localNumber: number) => {
-    /*
-      URL sengaja TIDAK disinkronkan di sini.
-
-      Next App Router menambal `history.pushState`/`replaceState` dan
-      memperlakukannya sebagai pembaruan router. Karena nomor soal adalah segmen
-      dinamis rute, mengubahnya berarti kecocokan rute yang berbeda: Next
-      menjalankan navigasi, komponen dipasang ulang, dan `useState` kembali ke
-      nilai prop semula — peserta terlempar balik ke soal yang sama.
-
-      Perpindahan karena itu murni state React. Konsekuensinya, memuat ulang
-      halaman di tengah subtes akan mendarat pada nomor yang tertulis di URL,
-      bukan nomor terakhir yang dibuka. Jawaban tidak terpengaruh karena sudah
-      tersimpan di server.
-    */
     setItemState((previous) => moveActiveItem(previous, localNumber));
     window.scrollTo({ top: 0 });
   }, []);

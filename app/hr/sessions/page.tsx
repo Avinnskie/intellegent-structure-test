@@ -19,17 +19,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default async function HrSessionsPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string; query?: string }>;
 }) {
+  const ALL_SESSION_STATUSES = "__all__";
   const { status, query } = await searchParams;
+
+  const selectedStatus = status && status !== ALL_SESSION_STATUSES ? status : undefined;
+
   const db = getDb();
   const ctx = await requireHrUser(db);
+
   const sessions = await listSessions(db, ctx, {
-    status: status || undefined,
+    status: selectedStatus,
     query: query || undefined,
   });
   const candidates = await listCandidates(db, ctx);
@@ -64,6 +77,23 @@ export default async function HrSessionsPage({
           </label>
           <label className="grid gap-2 text-sm font-semibold text-foreground">
             Status
+            {/* <Select name="status" defaultValue={selectedStatus ?? ALL_SESSION_STATUSES}>
+              <SelectTrigger id="status-filter" className="h-11 w-44 rounded-xl">
+                <SelectValue placeholder="Semua status" />
+              </SelectTrigger>
+
+              <SelectContent className="max-h-60">
+                <SelectGroup>
+                  <SelectItem value={ALL_SESSION_STATUSES}>Semua status</SelectItem>
+
+                  {Object.entries(SESSION_STATUS_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select> */}
             <select
               name="status"
               defaultValue={status ?? ""}

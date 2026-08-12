@@ -8,16 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { sanitizeRichText, toDisplayHtml } from "@/lib/domain/rich-text.ts";
 import { cn } from "@/lib/utils.ts";
 
-/**
- * Editor teks berformat untuk soal dan tutorial.
- *
- * Ukuran huruf diatur lewat tingkat judul (H1-H3), bukan lewat `style`.
- * Alasannya ada di `lib/domain/rich-text.ts`: pembersih membuang semua atribut,
- * sehingga apa pun yang bergantung pada `style` tidak akan selamat sampai ke
- * halaman peserta. Tingkat judul juga membuat ukuran konsisten antar soal,
- * ketimbang tiap penyunting memilih angka piksel sendiri.
- */
-
 type Props = {
   readonly value: string;
   readonly onChange: (html: string) => void;
