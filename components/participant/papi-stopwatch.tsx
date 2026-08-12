@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-type PapiStopwatchProps = {
-  readonly baselineSeconds: number;
-};
+import { readElapsedSeconds, type ElapsedState } from "@/lib/papi-elapsed.ts";
 
 function format(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -15,23 +12,41 @@ function format(totalSeconds: number): string {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-export function PapiStopwatch({ baselineSeconds }: PapiStopwatchProps) {
-  const [ticks, setTicks] = useState(0);
-  const [syncedBaseline, setSyncedBaseline] = useState(baselineSeconds);
+/**
+ * Penghitung lama pengerjaan PAPI. Bukan batas waktu.
+ *
+ * Waktunya dihitung dari sauh di `ElapsedState`, bukan dari jumlah tick yang
+ * dikumpulkan komponen ini. Versi sebelumnya menyimpan hitungan tick sendiri
+ * dan menyetelnya ulang ke nol setiap kali nilai dari server berubah — dan
+ * karena nilai itu ikut datang bersama tiap balasan penyimpanan jawaban,
+ * penghitung ter-reset berkali-kali saat peserta menjawab cepat.
+ *
+ * Menghitung ulang dari sauh juga membuat penghitung tetap benar setelah tab
+ * ditinggalkan, saat peramban memperlambat atau menghentikan interval.
+ */
+export function PapiStopwatch({ elapsed }: { readonly elapsed: ElapsedState }) {
+  const [seconds, setSeconds] = useState(elapsed.baselineSeconds);
+  const [seenElapsed, setSeenElapsed] = useState(elapsed);
 
-  if (syncedBaseline !== baselineSeconds) {
-    setSyncedBaseline(baselineSeconds);
-    setTicks(0);
+  // Sauh baru dari heartbeat langsung dipakai saat render, bukan lewat efek.
+  // `baselineSeconds` dibaca apa adanya — tanpa memanggil jam — supaya render
+  // tetap murni; selisih detiknya menyusul pada tick berikutnya.
+  if (seenElapsed !== elapsed) {
+    setSeenElapsed(elapsed);
+    setSeconds(elapsed.baselineSeconds);
   }
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setTicks((current) => current + 1);
+      // Jam dibaca di dalam interval, bukan saat render, dan selalu dihitung
+      // ulang dari sauh. Karena itu penghitung tetap benar setelah tab
+      // ditinggalkan, saat peramban memperlambat atau menghentikan interval.
+      setSeconds(readElapsedSeconds(elapsed, Date.now()));
     }, 1000);
     return () => window.clearInterval(timer);
-  }, []);
-
-  const seconds = baselineSeconds + ticks;
+    // Sauh hanya berubah saat heartbeat memajukan waktu, jadi interval
+    // dipasang ulang paling sering sekali per 30 detik.
+  }, [elapsed]);
 
   return (
     <div className="flex items-center gap-2">

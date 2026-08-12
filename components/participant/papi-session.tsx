@@ -2,6 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createElapsedState,
+  reconcileElapsed,
+  type ElapsedState,
+} from "@/lib/papi-elapsed.ts";
 import { PapiStopwatch } from "./papi-stopwatch";
 
 export type PapiSessionItem = {
@@ -28,13 +33,16 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
   const [answers, setAnswers] = useState<Record<number, "A" | "B" | null>>(() =>
     Object.fromEntries(items.map((item) => [item.number, item.selected])),
   );
-  const [elapsedSeconds, setElapsedSeconds] = useState(initialElapsedSeconds);
+  const [elapsed, setElapsed] = useState<ElapsedState>(() =>
+    createElapsedState(initialElapsedSeconds, Date.now()),
+  );
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [page, setPage] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showUnanswered, setShowUnanswered] = useState(false);
   const pendingSaves = useRef(0);
+  const inFlight = useRef<Map<number, AbortController>>(new Map());
 
   const answeredCount = useMemo(
     () => Object.values(answers).filter((value) => value !== null).length,
@@ -56,7 +64,9 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
         const response = await fetch(`/api/sessions/${token}/papi/heartbeat`, { method: "POST" });
         if (!response.ok) return;
         const payload = (await response.json()) as { elapsedSeconds: number };
-        setElapsedSeconds(payload.elapsedSeconds);
+        // Heartbeat kini satu-satunya sumber koreksi waktu, dan koreksinya
+        // hanya diterima bila memajukan penghitung.
+        setElapsed((current) => reconcileElapsed(current, payload.elapsedSeconds, Date.now()));
       } catch {}
     }, HEARTBEAT_MS);
     return () => window.clearInterval(timer);
@@ -64,6 +74,13 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
 
   const save = useCallback(
     async (itemNumber: number, option: "A" | "B") => {
+      // Ganti pilihan pada nomor yang sama menggugurkan permintaan sebelumnya.
+      // Tanpa ini, peserta yang berubah pikiran mengirim dua permintaan yang
+      // saling berlomba, dan yang menang belum tentu pilihan terakhirnya.
+      inFlight.current.get(itemNumber)?.abort();
+      const controller = new AbortController();
+      inFlight.current.set(itemNumber, controller);
+
       pendingSaves.current += 1;
       setSaveState("menyimpan");
       try {
@@ -71,20 +88,30 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
           method: "PUT",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ option }),
+          signal: controller.signal,
         });
         if (!response.ok) {
           setSaveState("gagal");
           return;
         }
-        const payload = (await response.json()) as { elapsedSeconds: number };
-        setElapsedSeconds(payload.elapsedSeconds);
-        pendingSaves.current -= 1;
-        if (pendingSaves.current <= 0) {
-          pendingSaves.current = 0;
-          setSaveState("tersimpan");
+        // Balasan sengaja tidak dibaca: ia tidak lagi memuat waktu maupun
+        // jumlah terjawab, dan keduanya sudah diketahui di layar ini.
+      } catch (error) {
+        // Permintaan yang sengaja digugurkan bukan kegagalan.
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setSaveState("gagal");
         }
-      } catch {
-        setSaveState("gagal");
+        return;
+      } finally {
+        if (inFlight.current.get(itemNumber) === controller) {
+          inFlight.current.delete(itemNumber);
+        }
+        pendingSaves.current -= 1;
+      }
+
+      if (pendingSaves.current <= 0) {
+        pendingSaves.current = 0;
+        setSaveState("tersimpan");
       }
     },
     [token],
@@ -144,7 +171,7 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
               Terjawab {answeredCount} dari {itemCount}
             </p>
           </div>
-          <PapiStopwatch baselineSeconds={elapsedSeconds} />
+          <PapiStopwatch elapsed={elapsed} />
         </div>
 
         <div

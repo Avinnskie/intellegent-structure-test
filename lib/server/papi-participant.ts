@@ -1,10 +1,19 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { ApiError } from "../api/errors.ts";
 import type { DbLike } from "../db/client.ts";
-import { assessmentSessions, papiAttempts, papiItemVersions, papiResponses } from "../db/schema.ts";
+import {
+  assessmentSessions,
+  papiAttempts,
+  papiItemVersions,
+  papiResponses,
+  participantTokens,
+} from "../db/schema.ts";
 import { SUBTEST_ORDER } from "../domain/session-state.ts";
 import { asPapiOptionCode, PAPI_ITEM_COUNT, type PapiOptionCode } from "../papi-factors.ts";
+import { getServerConfig } from "../config.ts";
+import { hashSessionToken } from "../domain/session-token.ts";
 import { writeAudit } from "./audit.ts";
+import { dbNow } from "./db-clock.ts";
 import { calculatePapiResult } from "./papi-calculate.ts";
 import {
   advancePapiStatus,
@@ -51,11 +60,19 @@ export type PapiStateDto = {
   items: readonly PapiItemDto[];
 };
 
+/**
+ * Balasan penyimpanan sengaja tidak lagi memuat `answeredCount` maupun
+ * `elapsedSeconds`.
+ *
+ * Keduanya menuntut satu kueri tambahan per klik, dan keduanya sudah diketahui
+ * klien: jumlah terjawab dihitung dari state jawaban di layar, sedangkan waktu
+ * berjalan sendiri dan disinkronkan lewat heartbeat. Mengirimkannya di sini
+ * justru menjadi sumber bug — balasan yang tiba tidak berurutan menimpa
+ * penghitung dengan nilai yang lebih lama.
+ */
 export type PapiSaveDto = {
   itemNumber: number;
   selected: PapiOptionCode;
-  answeredCount: number;
-  elapsedSeconds: number;
   savedAt: string;
 };
 
@@ -195,6 +212,24 @@ export async function startPapi(db: DbLike, token: string): Promise<PapiStateDto
   return getPapiState(db, token);
 }
 
+/**
+ * Menyimpan satu jawaban PAPI.
+ *
+ * Jalur ini sengaja dibuat sependek mungkin karena dijalankan 90 kali per
+ * peserta, satu kali tiap klik. Versi sebelumnya membungkus delapan kueri
+ * berurutan dalam satu transaksi — termasuk `SELECT ... FOR UPDATE` atas baris
+ * sesi, pemindaian 90 baris jawaban untuk menghitung sisa, dan agregasi seluruh
+ * segmen waktu. Di lingkungan produksi, dengan basis data di belakang jaringan,
+ * setiap kueri menambah satu perjalanan bolak-balik dan klik terasa berat.
+ *
+ * Lebih buruk lagi, kunci baris itu membuat klik-klik berurutan saling
+ * mengantre: peserta yang menjawab cepat justru paling terdampak.
+ *
+ * Sekarang hanya ada satu UPDATE. Seluruh syarat — token sah, sesi berada di
+ * tahap PAPI, attempt masih berjalan — dipindahkan ke dalam WHERE lewat
+ * subkueri, sehingga basis data memeriksanya sendiri secara atomik tanpa
+ * transaksi dan tanpa kunci.
+ */
 export async function savePapiAnswer(
   db: DbLike,
   token: string,
@@ -209,50 +244,73 @@ export async function savePapiAnswer(
     throw new ApiError("ITEM_NOT_FOUND", ITEM_NOT_FOUND, 404);
   }
 
-  return db.transaction(async (tx) => {
-    const session = await resolveParticipantSession(tx, token);
-    const now = await selectNow(tx, session.sessionId);
-    const locked = await lockPapiSession(tx, session.sessionId);
+  const tokenHash = hashSessionToken(token, getServerConfig().SESSION_TOKEN_SECRET);
 
-    if (!locked.includesPapi) {
-      throw papiNotAvailable();
-    }
-    if (locked.status !== "papi_in_progress") {
-      throw papiAlreadyClosed();
-    }
+  const eligibleAttempts = db
+    .select({ id: papiAttempts.id })
+    .from(papiAttempts)
+    .innerJoin(assessmentSessions, eq(papiAttempts.sessionId, assessmentSessions.id))
+    .innerJoin(participantTokens, eq(participantTokens.sessionId, assessmentSessions.id))
+    .where(
+      and(
+        eq(participantTokens.tokenHash, tokenHash),
+        isNull(participantTokens.revokedAt),
+        eq(assessmentSessions.status, "papi_in_progress"),
+        eq(assessmentSessions.includesPapi, 1),
+        eq(papiAttempts.status, "in_progress"),
+      ),
+    );
 
-    const attempt = await selectPapiAttempt(tx, session.sessionId);
-    if (!attempt || attempt.status !== "in_progress") {
-      throw papiAlreadyClosed();
-    }
+  const updated = await db
+    .update(papiResponses)
+    .set({ optionCode: option, responseStatus: "answered", answeredAt: dbNow() })
+    .where(
+      and(
+        eq(papiResponses.itemNumber, rawItemNumber),
+        inArray(papiResponses.papiAttemptId, eligibleAttempts),
+      ),
+    )
+    .returning({ id: papiResponses.id, answeredAt: papiResponses.answeredAt });
 
-    const updated = await tx
-      .update(papiResponses)
-      .set({ optionCode: option, responseStatus: "answered", answeredAt: now })
-      .where(
-        and(
-          eq(papiResponses.papiAttemptId, attempt.id),
-          eq(papiResponses.itemNumber, rawItemNumber),
-        ),
-      )
-      .returning({ id: papiResponses.id });
+  const row = updated[0];
+  if (!row) {
+    // Nol baris bisa berarti banyak hal: token dicabut, sesi sudah ditutup,
+    // atau nomor soal di luar jangkauan. Jalur lambat dipanggil hanya di sini,
+    // semata untuk memberi pesan galat yang tepat — bukan yang asal menebak.
+    await explainSaveRejection(db, token);
+    throw papiAlreadyClosed();
+  }
 
-    if (updated.length === 0) {
-      throw new ApiError("ITEM_NOT_FOUND", ITEM_NOT_FOUND, 404);
-    }
+  return {
+    itemNumber: rawItemNumber,
+    selected: option,
+    savedAt: (row.answeredAt ?? new Date()).toISOString(),
+  };
+}
 
-    await touchPapiSegment(tx, attempt.id, now);
+/**
+ * Menentukan alasan sebenarnya sebuah penyimpanan ditolak.
+ *
+ * Dipanggil hanya pada jalur galat, jadi biayanya tidak pernah dibayar peserta
+ * yang mengerjakan dengan normal.
+ */
+async function explainSaveRejection(db: DbLike, token: string): Promise<never> {
+  const session = await resolveParticipantSession(db, token);
+  const locked = await lockPapiSession(db, session.sessionId);
 
-    const missing = await unansweredPapiItems(tx, attempt.id);
+  if (!locked.includesPapi) {
+    throw papiNotAvailable();
+  }
+  if (locked.status !== "papi_in_progress") {
+    throw papiAlreadyClosed();
+  }
 
-    return {
-      itemNumber: rawItemNumber,
-      selected: option,
-      answeredCount: PAPI_ITEM_COUNT - missing.length,
-      elapsedSeconds: await papiElapsedSeconds(tx, attempt.id),
-      savedAt: now.toISOString(),
-    };
-  });
+  const attempt = await selectPapiAttempt(db, session.sessionId);
+  if (!attempt || attempt.status !== "in_progress") {
+    throw papiAlreadyClosed();
+  }
+
+  throw new ApiError("ITEM_NOT_FOUND", ITEM_NOT_FOUND, 404);
 }
 
 export async function papiHeartbeat(db: DbLike, token: string): Promise<PapiHeartbeatDto> {
