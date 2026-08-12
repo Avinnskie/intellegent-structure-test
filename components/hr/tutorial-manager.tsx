@@ -7,7 +7,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { Textarea } from "@/components/ui/textarea";
 import { isRichTextEmpty, toPlainText } from "@/lib/domain/rich-text.ts";
 import { useToast } from "@/components/ui/toast";
 import type { TutorialSubtestDto, TutorialVersionDto } from "@/lib/server/content.ts";
@@ -39,10 +38,7 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
   const { push } = useToast();
   const [selectedCode, setSelectedCode] = useState(subtests[0]?.code ?? "SE");
   const [isBusy, setIsBusy] = useState(false);
-  const [pending, setPending] = useState<{
-    action: "publish" | "archive";
-    version: TutorialVersionDto;
-  } | null>(null);
+  const [pending, setPending] = useState<TutorialVersionDto | null>(null);
 
   const [editor, setEditor] = useState<{
     id: string | null;
@@ -104,36 +100,28 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
     }
   }
 
-  async function handleSaveDraft() {
-    if (!editor || !selected) {
+  async function handleSave() {
+    if (!editor?.id) {
       return;
     }
-    const payload = {
-      textContent: editor.textContent.trim(),
+    const ok = await call(`/api/hr/tutorials/${editor.id}`, "PUT", {
+      textContent: editor.textContent,
       ...(editor.videoReference.trim() ? { videoReference: editor.videoReference.trim() } : {}),
-    };
-    const ok = editor.id
-      ? await call(`/api/hr/tutorials/${editor.id}`, "PUT", payload)
-      : await call("/api/hr/tutorials", "POST", { ...payload, subtestCode: selected.code });
+    });
     if (ok) {
       setEditor(null);
-      push("success", editor.id ? "Draft diperbarui." : "Draft baru dibuat.");
+      push("success", "Tutorial diperbarui.");
     }
   }
 
-  async function handleConfirmPending() {
+  async function handleConfirmDelete() {
     if (!pending) {
       return;
     }
-    const { action, version } = pending;
+    const version = pending;
     setPending(null);
-    if (await call(`/api/hr/tutorials/${version.id}/${action}`, "POST")) {
-      push(
-        "success",
-        action === "publish"
-          ? `v${version.version} diterbitkan.`
-          : `v${version.version} diarsipkan.`,
-      );
+    if (await call(`/api/hr/tutorials/${version.id}`, "DELETE")) {
+      push("success", `v${version.version} dihapus.`);
     }
   }
 
@@ -165,26 +153,13 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
       </div>
 
       <ConfirmDialog
-        open={pending?.action === "publish"}
-        title={`Terbitkan v${pending?.version.version}?`}
-        description="Versi terbit sebelumnya akan diarsipkan. Sesi yang sudah dibuat tetap memakai versi yang di-pin — hanya sesi baru yang memakai versi ini."
-        confirmLabel="Terbitkan"
-        isBusy={isBusy}
-        onConfirm={() => void handleConfirmPending()}
-        onCancel={() => setPending(null)}
-      />
-      <ConfirmDialog
-        open={pending?.action === "archive"}
-        title={`Arsipkan v${pending?.version.version}?`}
-        description={
-          pending?.version.status === "published"
-            ? "Versi ini sedang TERBIT. Pembuatan sesi baru akan GAGAL sampai versi lain diterbitkan untuk subtes ini."
-            : "Draft yang diarsipkan tidak dapat diterbitkan lagi."
-        }
-        confirmLabel="Arsipkan"
+        open={pending !== null}
+        title={`Hapus tutorial v${pending?.version}?`}
+        description="Tindakan ini permanen. Tutorial yang sedang dipakai sesi tidak dapat dihapus — server akan menolaknya."
+        confirmLabel="Hapus"
         tone="danger"
         isBusy={isBusy}
-        onConfirm={() => void handleConfirmPending()}
+        onConfirm={() => void handleConfirmDelete()}
         onCancel={() => setPending(null)}
       />
 
@@ -195,28 +170,12 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
               Tutorial {selected.code} — {selected.title}
             </h2>
           </div>
-          <button
-            type="button"
-            disabled={isBusy || editor !== null}
-            onClick={() => {
-              const published = selected.versions.find((version) => version.status === "published");
-              setEditor({
-                id: null,
-                textContent: published?.textContent ?? "",
-                videoReference: published?.videoReference ?? "",
-                isUploading: false,
-              });
-            }}
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Buat draft baru
-          </button>
         </div>
 
         <Modal
           open={editor !== null}
-          title={editor?.id ? "Edit draft tutorial" : `Draft tutorial baru — ${selected.code}`}
-          description="Draft dapat diedit bebas; setelah diterbitkan, versinya permanen dan di-pin oleh sesi."
+          title={`Edit tutorial ${selected.code}`}
+          description="Perubahan langsung berlaku, termasuk untuk sesi yang sudah dibuat."
           size="lg"
           onClose={() => setEditor(null)}
         >
@@ -275,10 +234,10 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
               <div className="flex flex-wrap gap-3 border-t border-border pt-4">
                 <Button
                   disabled={isBusy || editor.isUploading || isRichTextEmpty(editor.textContent)}
-                  onClick={handleSaveDraft}
+                  onClick={() => void handleSave()}
                   className="h-12 bg-primary hover:bg-primary/90"
                 >
-                  {editor.id ? "Simpan perubahan draft" : "Simpan sebagai draft"}
+                  Simpan perubahan
                 </Button>
                 <Button className="h-12" variant="outline" onClick={() => setEditor(null)}>
                   Batal
@@ -331,43 +290,29 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                   <TableCell className="py-4">{version.effectiveDate ?? "—"}</TableCell>
                   <TableCell className="py-4">
                     <span className="flex flex-wrap gap-3">
-                      {version.status === "draft" ? (
-                        <>
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() =>
-                              setEditor({
-                                id: version.id,
-                                textContent: version.textContent,
-                                videoReference: version.videoReference ?? "",
-                                isUploading: false,
-                              })
-                            }
-                            className="font-semibold text-primary hover:underline"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() => setPending({ action: "publish", version })}
-                            className="font-semibold text-primary hover:underline"
-                          >
-                            Terbitkan
-                          </button>
-                        </>
-                      ) : null}
-                      {version.status !== "archived" ? (
-                        <button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() => setPending({ action: "archive", version })}
-                          className="font-semibold text-destructive hover:underline"
-                        >
-                          Arsipkan
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() =>
+                          setEditor({
+                            id: version.id,
+                            textContent: version.textContent,
+                            videoReference: version.videoReference ?? "",
+                            isUploading: false,
+                          })
+                        }
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => setPending(version)}
+                        className="font-semibold text-destructive hover:underline"
+                      >
+                        Hapus
+                      </button>
                     </span>
                   </TableCell>
                 </TableRow>
