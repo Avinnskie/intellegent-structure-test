@@ -1,9 +1,10 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "../api/errors.ts";
 import type { DbLike } from "../db/client.ts";
 import {
   assessmentFormVersions,
+  assessmentSessions,
   itemOptions,
   itemScoringRules,
   itemVersions,
@@ -40,8 +41,6 @@ function richTextSchema(maxPlainLength: number) {
 }
 
 const NOT_FOUND_MESSAGE = "Data tidak ditemukan.";
-const NOT_DRAFT_MESSAGE =
-  "Hanya versi berstatus draft yang dapat diubah. Versi terbit bersifat permanen — buat draft baru.";
 const NO_PUBLISHED_FORM_MESSAGE = "Belum ada versi form berstatus published.";
 
 function notFound(): ApiError {
@@ -123,78 +122,12 @@ export const tutorialContentSchema = z.object({
   videoReference: z.string().trim().min(1).max(500).optional(),
 });
 
-export const createTutorialSchema = tutorialContentSchema.extend({
-  subtestCode: z.enum(SUBTEST_CODES),
-});
-
 export type TutorialActionDto = {
   tutorialVersionId: string;
   subtestCode: SubtestCode;
   version: number;
   status: string;
 };
-
-export async function createTutorialDraft(
-  db: DbLike,
-  ctx: AuthContext,
-  input: unknown,
-): Promise<TutorialActionDto> {
-  const data = createTutorialSchema.parse(input);
-
-  return db.transaction(async (tx) => {
-    const formId = await publishedFormId(tx);
-    const [subtest] = await tx
-      .select({ id: subtestVersions.id })
-      .from(subtestVersions)
-      .where(
-        and(eq(subtestVersions.formVersionId, formId), eq(subtestVersions.code, data.subtestCode)),
-      )
-      .for("update")
-      .limit(1);
-    if (!subtest) {
-      throw notFound();
-    }
-
-    const [latest] = await tx
-      .select({ version: tutorialVersions.version })
-      .from(tutorialVersions)
-      .where(eq(tutorialVersions.subtestVersionId, subtest.id))
-      .orderBy(desc(tutorialVersions.version))
-      .limit(1);
-    const version = (latest?.version ?? 0) + 1;
-
-    const [row] = await tx
-      .insert(tutorialVersions)
-      .values({
-        subtestVersionId: subtest.id,
-        version,
-        textContent: data.textContent,
-        videoReference: data.videoReference ?? null,
-        status: "draft",
-      })
-      .returning({ id: tutorialVersions.id });
-    if (!row) {
-      throw new Error("Draft tutorial gagal dibuat.");
-    }
-
-    await writeAudit(tx, {
-      organizationId: ctx.organizationId,
-      actorType: "user",
-      actorId: ctx.userId,
-      action: "tutorial.created",
-      objectType: "tutorial_version",
-      objectId: row.id,
-      metadata: { subtestCode: data.subtestCode, version },
-    });
-
-    return {
-      tutorialVersionId: row.id,
-      subtestCode: data.subtestCode,
-      version,
-      status: "draft",
-    };
-  });
-}
 
 type TutorialRow = {
   id: string;
@@ -227,7 +160,18 @@ async function lockTutorial(tx: DbLike, tutorialId: string): Promise<TutorialRow
   return row;
 }
 
-export async function updateTutorialDraft(
+/**
+ * Menyunting tutorial langsung di tempat.
+ *
+ * Alur draft -> terbit -> arsip sengaja dibuang: untuk teks instruksi, ia
+ * menambah tiga langkah tanpa memberi jaminan yang berarti. Statusnya tetap
+ * `published` karena pembuatan sesi baru mencari tutorial berstatus itu.
+ *
+ * Perubahan ikut terlihat oleh sesi yang sedang berjalan. Itu memang
+ * konsekuensinya, dan untuk teks instruksi justru yang diinginkan — perbaikan
+ * salah ketik langsung sampai ke peserta berikutnya tanpa menunggu terbit.
+ */
+export async function updateTutorial(
   db: DbLike,
   ctx: AuthContext,
   tutorialId: string,
@@ -237,13 +181,14 @@ export async function updateTutorialDraft(
 
   return db.transaction(async (tx) => {
     const tutorial = await lockTutorial(tx, tutorialId);
-    if (tutorial.status !== "draft") {
-      throw new ApiError("NOT_DRAFT", NOT_DRAFT_MESSAGE, 409);
-    }
 
     await tx
       .update(tutorialVersions)
-      .set({ textContent: data.textContent, videoReference: data.videoReference ?? null })
+      .set({
+        textContent: data.textContent,
+        videoReference: data.videoReference ?? null,
+        status: "published",
+      })
       .where(eq(tutorialVersions.id, tutorial.id));
 
     await writeAudit(tx, {
@@ -260,99 +205,79 @@ export async function updateTutorialDraft(
       tutorialVersionId: tutorial.id,
       subtestCode: tutorial.code as SubtestCode,
       version: tutorial.version,
-      status: "draft",
-    };
-  });
-}
-
-export async function publishTutorial(
-  db: DbLike,
-  ctx: AuthContext,
-  tutorialId: string,
-): Promise<TutorialActionDto> {
-  return db.transaction(async (tx) => {
-    const tutorial = await lockTutorial(tx, tutorialId);
-    if (tutorial.status !== "draft") {
-      throw new ApiError("NOT_DRAFT", NOT_DRAFT_MESSAGE, 409);
-    }
-
-    const [previous] = await tx
-      .select({ id: tutorialVersions.id, version: tutorialVersions.version })
-      .from(tutorialVersions)
-      .where(
-        and(
-          eq(tutorialVersions.subtestVersionId, tutorial.subtestVersionId),
-          eq(tutorialVersions.status, "published"),
-        ),
-      )
-      .limit(1);
-    if (previous) {
-      await tx
-        .update(tutorialVersions)
-        .set({ status: "archived" })
-        .where(eq(tutorialVersions.id, previous.id));
-    }
-
-    await tx
-      .update(tutorialVersions)
-      .set({ status: "published", effectiveDate: new Date().toISOString().slice(0, 10) })
-      .where(eq(tutorialVersions.id, tutorial.id));
-
-    await writeAudit(tx, {
-      organizationId: ctx.organizationId,
-      actorType: "user",
-      actorId: ctx.userId,
-      action: "tutorial.published",
-      objectType: "tutorial_version",
-      objectId: tutorial.id,
-      metadata: {
-        subtestCode: tutorial.code,
-        version: tutorial.version,
-        archivedVersionId: previous?.id ?? null,
-      },
-    });
-
-    return {
-      tutorialVersionId: tutorial.id,
-      subtestCode: tutorial.code as SubtestCode,
-      version: tutorial.version,
       status: "published",
     };
   });
 }
 
-export async function archiveTutorial(
+/**
+ * Menghapus tutorial secara permanen, dengan dua pengaman.
+ *
+ * Keduanya bukan kehati-hatian berlebih — masing-masing menutup kerusakan yang
+ * sudah terbukti bisa terjadi di sistem ini:
+ *
+ * 1. Sesi menyimpan id tutorial di `pinned_tutorial_versions`. Menghapus baris
+ *    yang sedang dipakai membuat layar tutorial peserta kosong di tengah tes,
+ *    dan barisnya tidak bisa dikembalikan.
+ * 2. Pembuatan sesi baru menolak jalan bila ada subtes tanpa tutorial terbit —
+ *    itulah galat `MASTER_DATA_MISSING`. Menghapus yang terakhir untuk satu
+ *    subtes akan mematikan pembuatan sesi untuk seluruh organisasi.
+ */
+export async function deleteTutorial(
   db: DbLike,
   ctx: AuthContext,
   tutorialId: string,
-): Promise<TutorialActionDto> {
+): Promise<{ tutorialVersionId: string; subtestCode: SubtestCode }> {
   return db.transaction(async (tx) => {
     const tutorial = await lockTutorial(tx, tutorialId);
-    if (tutorial.status === "archived") {
-      throw new ApiError("ALREADY_ARCHIVED", "Versi ini sudah diarsipkan.", 409);
+
+    const [used] = await tx
+      .select({ total: count() })
+      .from(assessmentSessions)
+      .where(
+        sql`${assessmentSessions.pinnedTutorialVersions}::jsonb @> ${JSON.stringify({
+          [tutorial.code]: tutorial.id,
+        })}::jsonb`,
+      );
+    if ((used?.total ?? 0) > 0) {
+      throw new ApiError(
+        "TUTORIAL_IN_USE",
+        `Tutorial ini dipakai ${used?.total} sesi yang sudah dibuat. Sunting isinya, jangan dihapus.`,
+        409,
+      );
     }
 
-    await tx
-      .update(tutorialVersions)
-      .set({ status: "archived" })
-      .where(eq(tutorialVersions.id, tutorial.id));
+    const [remaining] = await tx
+      .select({ total: count() })
+      .from(tutorialVersions)
+      .where(
+        and(
+          eq(tutorialVersions.subtestVersionId, tutorial.subtestVersionId),
+          eq(tutorialVersions.status, "published"),
+          ne(tutorialVersions.id, tutorial.id),
+        ),
+      );
+    if ((remaining?.total ?? 0) === 0) {
+      throw new ApiError(
+        "LAST_TUTORIAL",
+        `Ini satu-satunya tutorial untuk subtes ${tutorial.code}. Menghapusnya membuat sesi baru gagal dibuat.`,
+        409,
+      );
+    }
+
+    await tx.delete(tutorialVersions).where(eq(tutorialVersions.id, tutorial.id));
 
     await writeAudit(tx, {
       organizationId: ctx.organizationId,
       actorType: "user",
       actorId: ctx.userId,
-      action: "tutorial.archived",
+      action: "tutorial.deleted",
       objectType: "tutorial_version",
       objectId: tutorial.id,
       metadata: { subtestCode: tutorial.code, version: tutorial.version },
     });
 
-    return {
-      tutorialVersionId: tutorial.id,
-      subtestCode: tutorial.code as SubtestCode,
-      version: tutorial.version,
-      status: "archived",
-    };
+    return { tutorialVersionId: tutorial.id, subtestCode: tutorial.code as SubtestCode };
   });
 }
 
