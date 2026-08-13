@@ -18,8 +18,8 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Intelligenz Struktur Test",
-  description: "Platform pelaksanaan, skoring, dan pelaporan Intelligenz Struktur Test (IST).",
+  title: "CW Psychotest",
+  description: "Platform pelaksanaan, skoring, dan pelaporan CW Psychotest.",
 };
 
 export default function RootLayout({
