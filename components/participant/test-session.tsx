@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CourseRail } from "@/components/participant/course-rail";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   TestQuestionPanel,
   canSubmitValue,
@@ -105,6 +106,11 @@ export function TestSession({
   const draft = readDraft(drafts, currentItem.itemVersionId);
 
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [isConfirmingReview, setIsConfirmingReview] = useState(false);
+  // Perpindahan ke halaman periksa dirender di server, jadi ada jeda yang
+  // perlu terlihat. Tanpa ini tombol tampak tidak bereaksi dan peserta
+  // menekannya berulang kali.
+  const [isLeavingToReview, startLeavingToReview] = useTransition();
   const [draftItemId, setDraftItemId] = useState(currentItem.itemVersionId);
   if (draftItemId !== currentItem.itemVersionId) {
     setDraftItemId(currentItem.itemVersionId);
@@ -164,17 +170,29 @@ export function TestSession({
     window.scrollTo({ top: 0 });
   }, []);
 
+  /**
+   * Menuju halaman periksa. Bersifat satu arah.
+   *
+   * `replace`, bukan `push`: halaman periksa adalah titik tanpa balik, jadi
+   * halaman soal tidak boleh tertinggal di riwayat — tombol back peramban akan
+   * mengembalikan peserta ke sana lengkap dengan tombol jawab yang seharusnya
+   * sudah tidak berlaku.
+   */
   const goToReview = useCallback(() => {
-    router.push(`/test/${token}/review/${subtestCode}`);
+    startLeavingToReview(() => {
+      router.replace(`/test/${token}/review/${subtestCode}`);
+    });
   }, [router, token, subtestCode]);
 
   const advance = useCallback(() => {
     if (activeLocal >= totalItems) {
-      goToReview();
+      // Nomor terakhir juga melewati konfirmasi: menjawabnya tidak boleh
+      // diam-diam membawa peserta ke titik tanpa balik.
+      setIsConfirmingReview(true);
       return;
     }
     goTo(activeLocal + 1);
-  }, [activeLocal, totalItems, goTo, goToReview]);
+  }, [activeLocal, totalItems, goTo]);
 
   function handleValueChange(value: string) {
     if (isAdvancing) {
@@ -242,6 +260,20 @@ export function TestSession({
 
   return (
     <section className="h-full w-full lg:pb-0 grid gap-6 xl:grid-cols-[280px_1fr]">
+      <ConfirmDialog
+        open={isConfirmingReview}
+        title={`Selesaikan subtes ${subtestCode}?`}
+        description={
+          unansweredCount > 0
+            ? `Masih ada ${unansweredCount} soal yang belum dijawab, dan soal itu akan dinilai 0. Anda akan dibawa ke halaman pemeriksaan terakhir dan TIDAK dapat kembali ke soal.`
+            : `Seluruh soal sudah dijawab. Anda akan dibawa ke halaman pemeriksaan terakhir dan TIDAK dapat kembali ke soal.`
+        }
+        confirmLabel={isLeavingToReview ? "Menyiapkan…" : "Ya, lanjutkan"}
+        isBusy={isLeavingToReview}
+        tone="danger"
+        onConfirm={goToReview}
+        onCancel={() => setIsConfirmingReview(false)}
+      />
       <CourseRail currentCode={subtestCode} />
       <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
         {}
@@ -276,7 +308,7 @@ export function TestSession({
             unansweredCount,
           }}
           onJump={goTo}
-          onComplete={goToReview}
+          onComplete={() => setIsConfirmingReview(true)}
         />
       </div>
     </section>

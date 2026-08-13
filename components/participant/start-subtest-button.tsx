@@ -27,7 +27,8 @@ export function StartSubtestButton({ token, code }: { token: string; code: Subte
       );
 
       if (response.ok) {
-        router.push(`/test/${token}/question/${code}/1`);
+        // Satu arah: timer sudah berjalan, kembali ke tutorial tidak ada gunanya.
+        router.replace(`/test/${token}/question/${code}/1`);
         return;
       }
 
