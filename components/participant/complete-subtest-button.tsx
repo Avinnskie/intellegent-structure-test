@@ -36,11 +36,15 @@ export function CompleteSubtestButton({
 
       if (response.ok) {
         const dto = (await response.json()) as { sessionStatus?: string };
+        // `replace`, bukan `push`. Subtes yang sudah ditutup tidak dapat
+        // dibuka lagi, jadi halaman soalnya tidak boleh tertinggal di riwayat —
+        // tombol back peramban akan menampilkannya kembali dari cache klien,
+        // lengkap dengan tombol jawab yang sudah tidak berlaku.
         if (dto.sessionStatus === "finished") {
-          router.push(`/test/${token}/complete`);
+          router.replace(`/test/${token}/complete`);
           return;
         }
-        router.push(`/test/${token}/transition`);
+        router.replace(`/test/${token}/transition`);
         return;
       }
 
@@ -59,7 +63,7 @@ export function CompleteSubtestButton({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 w-full">
       {error ? (
         <p
           role="alert"
@@ -70,7 +74,7 @@ export function CompleteSubtestButton({
       ) : null}
       <button
         type="button"
-        onClick={handleComplete}
+        onClick={() => void handleComplete()}
         disabled={isCompleting}
         className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
       >
