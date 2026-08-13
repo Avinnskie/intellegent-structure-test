@@ -34,9 +34,6 @@ export function CourseRail({ currentCode }: { currentCode: SubtestCode }) {
               </span>
               <span className="hidden min-w-0 lg:block">
                 <span className="block text-sm font-bold text-foreground">{subtest.code}</span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {subtest.durationMinutes} menit
-                </span>
               </span>
             </li>
           );
