@@ -9,6 +9,7 @@ import {
   participantTokens,
 } from "../db/schema.ts";
 import { SUBTEST_ORDER } from "../domain/session-state.ts";
+import { findUnansweredPapiItems } from "../domain/papi-scoring.ts";
 import { asPapiOptionCode, PAPI_ITEM_COUNT, type PapiOptionCode } from "../papi-factors.ts";
 import { getServerConfig } from "../config.ts";
 import { hashSessionToken } from "../domain/session-token.ts";
@@ -19,6 +20,7 @@ import {
   advancePapiStatus,
   ensurePapiAttempt,
   lockPapiSession,
+  readPapiSession,
   papiAlreadyClosed,
   papiElapsedSeconds,
   papiIncomplete,
@@ -26,7 +28,7 @@ import {
   pausePapiSegments,
   selectPapiAttempt,
   touchPapiSegment,
-  unansweredPapiItems,
+  readPapiAnswers,
 } from "./papi-session.ts";
 import {
   resolveParticipantSession,
@@ -137,11 +139,22 @@ async function readItems(
   }));
 }
 
+/**
+ * Membaca keadaan tahap PAPI untuk peserta.
+ *
+ * Dijalankan setiap kali halaman kuesioner dimuat, jadi ongkosnya langsung
+ * terasa sebagai jeda sebelum soal muncul.
+ *
+ * Dulu seluruhnya dibungkus transaksi dengan `SELECT ... FOR UPDATE` atas baris
+ * sesi. Padahal fungsi ini tidak menulis apa pun: transaksinya menambah dua
+ * perjalanan bolak-balik (BEGIN dan COMMIT), sementara kuncinya menahan
+ * penulisan lain tanpa alasan. Keduanya dibuang.
+ */
 export async function getPapiState(db: DbLike, token: string): Promise<PapiStateDto> {
-  return db.transaction(async (tx) => {
+  {
+    const tx = db;
     const session = await resolveParticipantSession(tx, token);
-    const now = await selectNow(tx, session.sessionId);
-    const locked = await lockPapiSession(tx, session.sessionId);
+    const locked = await readPapiSession(tx, session.sessionId);
 
     if (!locked.includesPapi || locked.papiFormVersionId === null) {
       throw papiNotAvailable();
@@ -149,9 +162,14 @@ export async function getPapiState(db: DbLike, token: string): Promise<PapiState
 
     const participantStatus = toParticipantStatus(locked.status);
     const attempt = await selectPapiAttempt(tx, session.sessionId);
-    const items = await readItems(tx, locked.papiFormVersionId, attempt?.id ?? null);
-    const elapsedSeconds = attempt ? await papiElapsedSeconds(tx, attempt.id) : 0;
+    const [items, elapsedSeconds] = await Promise.all([
+      readItems(tx, locked.papiFormVersionId, attempt?.id ?? null),
+      attempt ? papiElapsedSeconds(tx, attempt.id) : Promise.resolve(0),
+    ]);
     const answeredCount = items.filter((item) => item.selected !== null).length;
+    // Jam server tidak lagi diambil lewat kueri tersendiri. Tahap PAPI tidak
+    // punya hitung mundur, jadi nilai ini hanya informatif bagi klien.
+    const now = new Date();
 
     return {
       sessionStatus: participantStatus,
@@ -165,7 +183,7 @@ export async function getPapiState(db: DbLike, token: string): Promise<PapiState
         .map((item) => item.number),
       items,
     };
-  });
+  }
 }
 
 /** Peserta menekan "mulai" atau kembali setelah istirahat. Idempoten. */
@@ -313,11 +331,18 @@ async function explainSaveRejection(db: DbLike, token: string): Promise<never> {
   throw new ApiError("ITEM_NOT_FOUND", ITEM_NOT_FOUND, 404);
 }
 
+/**
+ * Denyut dari halaman kuesioner, sekali tiap 30 detik.
+ *
+ * Ini satu-satunya sumber koreksi waktu yang tampil di layar peserta, jadi ia
+ * harus murah dan tidak boleh mengantre di belakang penulisan lain. Kunci baris
+ * sesi dibuang: menyegarkan segmen tidak bersaing dengan siapa pun.
+ */
 export async function papiHeartbeat(db: DbLike, token: string): Promise<PapiHeartbeatDto> {
   return db.transaction(async (tx) => {
     const session = await resolveParticipantSession(tx, token);
     const now = await selectNow(tx, session.sessionId);
-    const locked = await lockPapiSession(tx, session.sessionId);
+    const locked = await readPapiSession(tx, session.sessionId);
     const attempt = await selectPapiAttempt(tx, session.sessionId);
 
     if (attempt && locked.status === "papi_in_progress" && attempt.status === "in_progress") {
@@ -379,7 +404,12 @@ export async function completePapi(db: DbLike, token: string): Promise<PapiCompl
     }
 
     // Tidak ada jawaban kosong yang diam-diam dihitung. Wajib 90 dari 90.
-    const missing = await unansweredPapiItems(tx, attempt.id);
+    //
+    // Lembar jawaban dibaca sekali lalu dipakai ulang untuk skoring. Sebelumnya
+    // 90 baris yang sama dibaca dua kali: sekali untuk memeriksa kelengkapan,
+    // sekali lagi di dalam mesin skoring.
+    const { answers } = await readPapiAnswers(tx, attempt.id);
+    const missing = findUnansweredPapiItems(answers);
     if (missing.length > 0) {
       throw papiIncomplete(missing);
     }
@@ -421,6 +451,7 @@ export async function completePapi(db: DbLike, token: string): Promise<PapiCompl
       papiFormVersionId: attempt.papiFormVersionId,
       elapsedSeconds,
       now,
+      answers,
     });
 
     return {

@@ -22,7 +22,8 @@
     "test:e2e": "dotenv -e .env.local -e .env -- playwright test",
     "create-admin": "dotenv -e .env.local -e .env -- node --experimental-strip-types scripts/create-admin-user.ts",
     "db:check-papi": "dotenv -e .env.local -e .env -- node --experimental-strip-types scripts/check-papi-schema.ts",
-    "db:purge-sessions": "dotenv -e .env.local -e .env -- node --experimental-strip-types scripts/purge-session-data.ts"
+    "db:purge-sessions": "dotenv -e .env.local -e .env -- node --experimental-strip-types scripts/purge-session-data.ts",
+    "db:probe": "node --experimental-strip-types --import ./tests/helpers/alias-hooks.ts scripts/probe-queries.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

@@ -39,6 +39,22 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: import.meta.dirname,
   },
+  /**
+   * Halaman peserta tidak boleh disajikan dari cache klien.
+   *
+   * Router Cache milik Next menyimpan hasil render halaman dinamis selama
+   * beberapa saat, termasuk untuk navigasi mundur. Pada aplikasi biasa itu
+   * terasa cepat; di sini berbahaya — peserta yang menekan tombol back setelah
+   * menutup sebuah subtes dapat melihat kembali halaman soalnya, lengkap dengan
+   * tombol jawab yang sudah tidak berlaku, karena penjaga status di server
+   * tidak pernah ikut dijalankan.
+   *
+   * Dengan nol, setiap navigasi memaksa render ulang di server, sehingga
+   * pengalihan status selalu diberlakukan.
+   */
+  experimental: {
+    staleTimes: { dynamic: 0, static: 0 },
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

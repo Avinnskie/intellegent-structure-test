@@ -43,6 +43,39 @@ export type LockedPapiSession = {
   papiFormVersionId: string | null;
 };
 
+/**
+ * Membaca keadaan tahap PAPI tanpa mengunci.
+ *
+ * Dipakai jalur baca murni — memuat halaman, denyut waktu. Mengunci baris sesi
+ * di sana hanya menahan penulisan lain tanpa memberi jaminan apa pun, karena
+ * tidak ada yang diubah setelahnya.
+ */
+export async function readPapiSession(
+  tx: DbLike,
+  sessionId: string,
+): Promise<LockedPapiSession> {
+  const [row] = await tx
+    .select({
+      status: assessmentSessions.status,
+      includesPapi: assessmentSessions.includesPapi,
+      papiFormVersionId: assessmentSessions.papiFormVersionId,
+    })
+    .from(assessmentSessions)
+    .where(eq(assessmentSessions.id, sessionId))
+    .limit(1);
+
+  if (!row) {
+    throw new Error(`Sesi ${sessionId} hilang saat membaca tahap PAPI.`);
+  }
+
+  return {
+    status: row.status,
+    includesPapi: row.includesPapi === 1,
+    papiFormVersionId: row.papiFormVersionId,
+  };
+}
+
+/** Versi mengunci, dipakai jalur yang mengubah status sesi. */
 export async function lockPapiSession(tx: DbLike, sessionId: string): Promise<LockedPapiSession> {
   const [row] = await tx
     .select({

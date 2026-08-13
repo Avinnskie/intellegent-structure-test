@@ -7,7 +7,7 @@ import {
   subtestAttempts,
 } from "../db/schema.ts";
 import { PAPI_ENGINE_VERSION } from "../domain/official-papi.ts";
-import { buildPapiProfile } from "../domain/papi-scoring.ts";
+import { buildPapiProfile, type PapiAnswerSheet } from "../domain/papi-scoring.ts";
 import { assertSessionTransition, type SessionStatus } from "../domain/session-state.ts";
 import { writeAudit } from "./audit.ts";
 import { calculateResultAsSystem, sessionHasManualGePending } from "./calculate.ts";
@@ -20,13 +20,15 @@ export type CalculatePapiInput = {
   papiFormVersionId: string;
   elapsedSeconds: number;
   now: Date;
+  /** Lembar jawaban yang sudah dibaca pemanggil, agar tidak dibaca dua kali. */
+  answers?: PapiAnswerSheet;
 };
 
 export async function calculatePapiResult(
   tx: DbLike,
   input: CalculatePapiInput,
 ): Promise<SessionStatus> {
-  const { answers } = await readPapiAnswers(tx, input.attemptId);
+  const answers = input.answers ?? (await readPapiAnswers(tx, input.attemptId)).answers;
   const profile = buildPapiProfile(answers);
 
   const [result] = await tx
