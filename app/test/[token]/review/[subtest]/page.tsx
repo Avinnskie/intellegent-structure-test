@@ -72,13 +72,13 @@ export default async function ReviewPage({
           </p>
         )}
 
-        <div className="mt-8 grid gap-3 border-t border-border pt-6 sm:grid-cols-2">
-          <Link
+        <div className="mt-8 border-t border-border pt-6">
+          {/* <Link
             href={`/test/${token}/question/${code}/${pending[0]?.localNumber ?? 1}`}
             className="inline-flex h-12 items-center justify-center rounded-xl border border-border px-5 text-sm font-semibold text-foreground hover:bg-background"
           >
             Kembali mengerjakan
-          </Link>
+          </Link> */}
           <CompleteSubtestButton token={token} code={code} unansweredCount={pending.length} />
         </div>
       </div>
