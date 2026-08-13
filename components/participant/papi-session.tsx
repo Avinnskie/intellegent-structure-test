@@ -2,11 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  createElapsedState,
-  reconcileElapsed,
-  type ElapsedState,
-} from "@/lib/papi-elapsed.ts";
+import { createElapsedState, reconcileElapsed, type ElapsedState } from "@/lib/papi-elapsed.ts";
 import { PapiStopwatch } from "./papi-stopwatch";
 
 export type PapiSessionItem = {
