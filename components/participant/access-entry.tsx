@@ -38,7 +38,9 @@ export function AccessEntry() {
         if (typeof result.nextRoute === "string" && result.nextRoute.startsWith("/test/")) {
           setFeedbackTone("info");
           setFeedback("Kode valid. Membuka tutorial…");
-          router.push(result.nextRoute);
+          // Form kode akses tidak perlu tersimpan di riwayat; kembali ke sana hanya
+          // menghasilkan galat "kode sedang dipakai".
+          router.replace(result.nextRoute);
           return;
         }
         setFeedbackTone("danger");
