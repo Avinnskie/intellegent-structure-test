@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDateTime } from "@/lib/format-datetime.ts";
 
 export default async function HrScoringQueuePage() {
   const db = getDb();
@@ -46,7 +47,7 @@ export default async function HrScoringQueuePage() {
                 <TableRow key={row.sessionId} className="border-t border-border">
                   <TableCell className="py-4 font-semibold">{row.candidateName}</TableCell>
                   <TableCell className="py-4">
-                    {row.completedAt ? new Date(row.completedAt).toLocaleString("id-ID") : "—"}
+                    {formatDateTime(row.completedAt)}
                   </TableCell>
                   <TableCell className="py-4">{row.progress.answered} terjawab</TableCell>
                   <TableCell className="py-4">
