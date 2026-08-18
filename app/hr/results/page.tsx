@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDate } from "@/lib/format-datetime.ts";
 
 const RESULT_STATUSES: ReadonlySet<SessionStatus> = new Set([
   "test_completed",
@@ -62,7 +63,7 @@ export default async function HrResultsListPage() {
                     {sessionStatusLabel(row.status as SessionStatus)}
                   </TableCell>
                   <TableCell className="py-4">
-                    {row.completedAt ? new Date(row.completedAt).toLocaleDateString("id-ID") : "—"}
+                    {formatDate(row.completedAt)}
                   </TableCell>
                   <TableCell className="py-4">
                     <span className="flex flex-wrap gap-4">
