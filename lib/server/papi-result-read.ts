@@ -166,6 +166,8 @@ export async function getPapiAnswerSheet(
 /** Tahap PAPI pada sesi yang belum menghasilkan skor. */
 export type PapiStageDto = {
   readonly includesPapi: boolean;
+  /** Salah untuk sesi PAPI-saja — penanda bahwa laporan PAPI berdiri sendiri. */
+  readonly includesIst: boolean;
   readonly skipped: boolean;
   readonly skipReason: string | null;
   readonly skippedAt: string | null;
@@ -183,6 +185,7 @@ export async function getPapiStage(
   const [row] = await db
     .select({
       includesPapi: assessmentSessions.includesPapi,
+      includesIst: assessmentSessions.includesIst,
       skipReason: assessmentSessions.papiSkipReason,
       skippedAt: assessmentSessions.papiSkippedAt,
     })
@@ -201,6 +204,7 @@ export async function getPapiStage(
 
   return {
     includesPapi: row.includesPapi === 1,
+    includesIst: row.includesIst === 1,
     skipped: row.skipReason !== null,
     skipReason: row.skipReason,
     skippedAt: row.skippedAt?.toISOString() ?? null,

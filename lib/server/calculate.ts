@@ -58,6 +58,7 @@ export async function ensureAutomaticResult(
         status: assessmentSessions.status,
         formVersionId: assessmentSessions.formVersionId,
         scoringKeyVersionId: assessmentSessions.scoringKeyVersionId,
+        includesIst: assessmentSessions.includesIst,
       })
       .from(assessmentSessions)
       .where(
@@ -70,6 +71,18 @@ export async function ensureAutomaticResult(
       .limit(1);
     if (!session) {
       throw calculationNotFound();
+    }
+    /**
+     * Sesi PAPI-saja tidak punya IST untuk dihitung.
+     *
+     * Pengaman ini berdiri sendiri, terpisah dari pemeriksaan status di bawah.
+     * Status bisa tertinggal salah — sesi lama yang dibuat sebelum perbaikan
+     * ini masih terparkir di `needs_ge_scoring` — dan halaman hasil memanggil
+     * fungsi ini setiap kali dibuka. Tanpa penjaga di sini, pipeline IST tetap
+     * berjalan pada sesi tanpa waktu mulai dan halamannya gagal dimuat.
+     */
+    if (session.includesIst !== 1) {
+      return { kind: "unchanged" };
     }
     if (session.status !== "test_completed" && session.status !== "needs_ge_scoring") {
       return { kind: "unchanged" };

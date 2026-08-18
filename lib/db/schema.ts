@@ -205,6 +205,14 @@ export const tutorialVersions = pgTable(
       .references(() => subtestVersions.id),
     version: integer("version").notNull(),
     textContent: text("text_content").notNull(),
+    /**
+     * Daftar kata yang harus dihafal, khusus subtes ME.
+     *
+     * Terpisah dari `text_content` karena isinya hanya boleh tampil di dalam
+     * dialog berbatas waktu — bukan di halaman tutorial yang bisa dibaca
+     * sepuasnya. NULL untuk subtes lain.
+     */
+    memorizationText: text("memorization_text"),
     videoReference: text("video_reference"),
     status: contentStatus("status").notNull().default("draft"),
     effectiveDate: date("effective_date"),
@@ -315,6 +323,22 @@ export const assessmentSessions = pgTable(
     pinnedTutorialVersions: jsonb("pinned_tutorial_versions").notNull(),
     reentryPolicy: reentryPolicy("reentry_policy").notNull().default("single"),
     includesPapi: integer("includes_papi").notNull().default(0),
+    /**
+     * Sesi PAPI-saja: peserta mengerjakan kuesioner tanpa IST sama sekali.
+     *
+     * Dipisah dari `includes_papi`, bukan digabung jadi satu kolom "jenis
+     * sesi", supaya sesi lama tetap terbaca tanpa penafsiran ulang. Default 1
+     * benar untuk seluruh data lama karena IST dulu selalu wajib.
+     */
+    includesIst: integer("includes_ist").notNull().default(1),
+    /**
+     * Awal tahap menghafal subtes ME.
+     *
+     * Disimpan pada sesi, bukan pada `subtest_attempts`, karena menghafal
+     * berlangsung sebelum attempt dibuat. Nilainya hanya ditulis sekali —
+     * menyegarkan halaman membaca nilai yang sama, bukan memulai ulang.
+     */
+    memorizationStartedAt: timestamp("memorization_started_at", { withTimezone: true }),
     papiFormVersionId: uuid("papi_form_version_id").references(
       (): AnyPgColumn => papiFormVersions.id,
     ),

@@ -40,6 +40,8 @@ export function papiIncomplete(missing: readonly number[]): ApiError {
 export type LockedPapiSession = {
   status: SessionStatus;
   includesPapi: boolean;
+  /** Salah untuk sesi PAPI-saja: tidak ada IST di belakang kuesioner. */
+  includesIst: boolean;
   papiFormVersionId: string | null;
 };
 
@@ -58,6 +60,7 @@ export async function readPapiSession(
     .select({
       status: assessmentSessions.status,
       includesPapi: assessmentSessions.includesPapi,
+      includesIst: assessmentSessions.includesIst,
       papiFormVersionId: assessmentSessions.papiFormVersionId,
     })
     .from(assessmentSessions)
@@ -71,6 +74,7 @@ export async function readPapiSession(
   return {
     status: row.status,
     includesPapi: row.includesPapi === 1,
+    includesIst: row.includesIst === 1,
     papiFormVersionId: row.papiFormVersionId,
   };
 }
@@ -81,6 +85,7 @@ export async function lockPapiSession(tx: DbLike, sessionId: string): Promise<Lo
     .select({
       status: assessmentSessions.status,
       includesPapi: assessmentSessions.includesPapi,
+      includesIst: assessmentSessions.includesIst,
       papiFormVersionId: assessmentSessions.papiFormVersionId,
     })
     .from(assessmentSessions)
@@ -95,6 +100,7 @@ export async function lockPapiSession(tx: DbLike, sessionId: string): Promise<Lo
   return {
     status: row.status,
     includesPapi: row.includesPapi === 1,
+    includesIst: row.includesIst === 1,
     papiFormVersionId: row.papiFormVersionId,
   };
 }

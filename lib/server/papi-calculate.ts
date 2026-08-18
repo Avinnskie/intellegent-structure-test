@@ -105,12 +105,12 @@ export async function closeBatterySession(
   now: Date,
 ): Promise<SessionStatus> {
   assertSessionTransition(from, "test_completed");
-  assertSessionTransition("test_completed", "needs_ge_scoring");
 
   const [row] = await tx
     .select({
       formVersionId: assessmentSessions.formVersionId,
       scoringKeyVersionId: assessmentSessions.scoringKeyVersionId,
+      includesIst: assessmentSessions.includesIst,
     })
     .from(assessmentSessions)
     .where(eq(assessmentSessions.id, sessionId))
@@ -119,6 +119,41 @@ export async function closeBatterySession(
   if (!row) {
     throw new Error(`Sesi ${sessionId} hilang saat menutup baterai.`);
   }
+
+  /**
+   * Sesi PAPI-saja tidak pernah singgah di `needs_ge_scoring`.
+   *
+   * Status itu berarti "menunggu penilaian manual subtes GE" — dan GE adalah
+   * bagian IST, yang pada sesi ini memang tidak diminta. Versi pertama fitur
+   * PAPI-saja tetap menyetelnya, sehingga sesi Santos tampak menunggu penilaian
+   * GE yang tidak akan pernah ada, dan halaman hasil menjalankan pipeline IST
+   * lalu gagal dengan "sesi tidak memiliki waktu mulai".
+   *
+   * Tidak ada yang perlu dihitung di sini: hasil PAPI sudah tersimpan saat
+   * kuesioner ditutup. Jadi sesi langsung mendarat di `calculated`.
+   */
+  if (row.includesIst !== 1) {
+    assertSessionTransition("test_completed", "calculated");
+    const [selesai] = await tx
+      .update(assessmentSessions)
+      .set({ status: "calculated", completedAt: now })
+      .where(eq(assessmentSessions.id, sessionId))
+      .returning({ status: assessmentSessions.status });
+
+    await writeAudit(tx, {
+      organizationId,
+      actorType: "system",
+      actorId: null,
+      action: "session.closed_papi_only",
+      objectType: "assessment_session",
+      objectId: sessionId,
+      metadata: { reason: "ist_not_included", closedFrom: from },
+    });
+
+    return selesai?.status ?? "calculated";
+  }
+
+  assertSessionTransition("test_completed", "needs_ge_scoring");
 
   const [updated] = await tx
     .update(assessmentSessions)
@@ -140,6 +175,8 @@ export async function closeBatterySession(
    *
    * Jadi sesi tanpa satu pun subtes IST yang tuntas berhenti di `needs_review`
    * agar HR menilainya sendiri, bukan menerima angka bikinan sistem.
+   *
+   * Sesi PAPI-saja sudah ditangani di atas dan tidak pernah sampai ke sini.
    */
   const [istProgress] = await tx
     .select({ total: count() })

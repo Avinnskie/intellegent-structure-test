@@ -15,7 +15,7 @@ import { getServerConfig } from "../config.ts";
 import { hashSessionToken } from "../domain/session-token.ts";
 import { writeAudit } from "./audit.ts";
 import { dbNow } from "./db-clock.ts";
-import { calculatePapiResult } from "./papi-calculate.ts";
+import { calculatePapiResult, closeBatterySession } from "./papi-calculate.ts";
 import {
   advancePapiStatus,
   ensurePapiAttempt,
@@ -444,7 +444,7 @@ export async function completePapi(db: DbLike, token: string): Promise<PapiCompl
       metadata: { sessionId: session.sessionId, elapsedSeconds },
     });
 
-    const finalStatus = await calculatePapiResult(tx, {
+    const scoredStatus = await calculatePapiResult(tx, {
       organizationId: session.organizationId,
       sessionId: session.sessionId,
       attemptId: attempt.id,
@@ -453,6 +453,16 @@ export async function completePapi(db: DbLike, token: string): Promise<PapiCompl
       now,
       answers,
     });
+
+    /**
+     * Sesi PAPI-saja berhenti di sini: tidak ada IST di belakangnya, jadi
+     * layar jeda tidak punya tujuan dan sesi langsung ditutup serta diskor.
+     *
+     * Sesi baterai tetap berhenti di `papi_completed` — layar jeda sebelum IST.
+     */
+    const finalStatus = locked.includesIst
+      ? scoredStatus
+      : await closeBatterySession(tx, session.organizationId, session.sessionId, scoredStatus, now);
 
     return {
       sessionStatus: toParticipantStatus(finalStatus),
@@ -478,6 +488,12 @@ export async function startIstAfterPapi(db: DbLike, token: string): Promise<void
       return;
     }
     if (locked.status !== "papi_completed") {
+      throw papiNotAvailable();
+    }
+    if (!locked.includesIst) {
+      // Sesi PAPI-saja tidak punya IST untuk dibuka. Seharusnya tombolnya
+      // memang tidak pernah tampil, tetapi permintaan langsung ke API harus
+      // tetap ditolak dengan jelas.
       throw papiNotAvailable();
     }
 

@@ -6,15 +6,24 @@ import type { DbLike } from "../db/client.ts";
 import {
   accessCodes,
   assessmentFormVersions,
+  assessmentResults,
   assessmentSessions,
   candidates,
+  itemScores,
   itemVersions,
   normSetVersions,
+  papiAttempts,
+  papiAttemptSegments,
+  papiFactorScores,
   papiFormVersions,
+  papiResponses,
+  papiResults,
   participantTokens,
+  reports,
   responses,
   scoringKeyVersions,
   subtestAttempts,
+  subtestScores,
   subtestVersions,
   tutorialVersions,
 } from "../db/schema.ts";
@@ -301,6 +310,108 @@ export async function deleteSession(
   });
 }
 
+/**
+ * Menghapus sesi beserta SELURUH data pengerjaannya, apa pun statusnya.
+ *
+ * Berbeda dari `deleteSession`, yang sengaja menolak sesi yang sudah berjalan
+ * karena sesi semacam itu adalah riwayat assessment. Fungsi ini melewati
+ * penolakan tersebut, jadi hanya pantas dipakai untuk membereskan data uji
+ * coba atau sesi yang dibuat keliru — bukan sebagai jalan pintas sehari-hari.
+ *
+ * Yang hilang permanen: jawaban peserta, skor, hasil, dan laporan yang sudah
+ * dibuat. Bank soal, kunci skoring, norma, dan data peserta tidak disentuh.
+ *
+ * Urutan penghapusan mengikuti arah foreign key — anak lebih dulu. Dua tabel
+ * menunjuk ke dirinya sendiri (`superseded_by_id`) sehingga dikosongkan lebih
+ * dulu, kalau tidak PostgreSQL menolak.
+ */
+export async function forceDeleteSession(
+  db: DbLike,
+  ctx: AuthContext,
+  sessionId: string,
+): Promise<{ sessionId: string; statusAtDeletion: SessionStatus }> {
+  if (!z.uuid().safeParse(sessionId).success) {
+    throw notFound();
+  }
+
+  return db.transaction(async (tx) => {
+    const [session] = await tx
+      .select({ id: assessmentSessions.id, status: assessmentSessions.status })
+      .from(assessmentSessions)
+      .where(
+        and(
+          eq(assessmentSessions.id, sessionId),
+          eq(assessmentSessions.organizationId, ctx.organizationId),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!session) {
+      throw notFound();
+    }
+
+    const attemptIds = tx
+      .select({ id: subtestAttempts.id })
+      .from(subtestAttempts)
+      .where(eq(subtestAttempts.sessionId, session.id));
+    const responseIds = tx
+      .select({ id: responses.id })
+      .from(responses)
+      .where(eq(responses.sessionId, session.id));
+    const resultIds = tx
+      .select({ id: assessmentResults.id })
+      .from(assessmentResults)
+      .where(eq(assessmentResults.sessionId, session.id));
+    const papiAttemptIds = tx
+      .select({ id: papiAttempts.id })
+      .from(papiAttempts)
+      .where(eq(papiAttempts.sessionId, session.id));
+
+    // Rujukan ke diri sendiri dikosongkan dulu agar penghapusan tidak ditolak.
+    await tx
+      .update(assessmentResults)
+      .set({ supersededById: null })
+      .where(eq(assessmentResults.sessionId, session.id));
+    await tx
+      .update(papiResults)
+      .set({ supersededById: null })
+      .where(eq(papiResults.sessionId, session.id));
+    await tx
+      .update(accessCodes)
+      .set({ regeneratedFromId: null })
+      .where(eq(accessCodes.sessionId, session.id));
+
+    await tx.delete(reports).where(inArray(reports.resultId, resultIds));
+    await tx.delete(subtestScores).where(eq(subtestScores.sessionId, session.id));
+    await tx.delete(assessmentResults).where(eq(assessmentResults.sessionId, session.id));
+    await tx.delete(itemScores).where(inArray(itemScores.responseId, responseIds));
+    await tx.delete(responses).where(eq(responses.sessionId, session.id));
+    await tx.delete(subtestAttempts).where(inArray(subtestAttempts.id, attemptIds));
+    await tx.delete(papiFactorScores).where(eq(papiFactorScores.sessionId, session.id));
+    await tx.delete(papiResults).where(eq(papiResults.sessionId, session.id));
+    await tx
+      .delete(papiAttemptSegments)
+      .where(inArray(papiAttemptSegments.papiAttemptId, papiAttemptIds));
+    await tx.delete(papiResponses).where(eq(papiResponses.sessionId, session.id));
+    await tx.delete(papiAttempts).where(eq(papiAttempts.sessionId, session.id));
+    await tx.delete(participantTokens).where(eq(participantTokens.sessionId, session.id));
+    await tx.delete(accessCodes).where(eq(accessCodes.sessionId, session.id));
+    await tx.delete(assessmentSessions).where(eq(assessmentSessions.id, session.id));
+
+    await writeAudit(tx, {
+      organizationId: ctx.organizationId,
+      actorType: "user",
+      actorId: ctx.userId,
+      action: "session.force_deleted",
+      objectType: "assessment_session",
+      objectId: session.id,
+      metadata: { sessionId: session.id, statusAtDeletion: session.status },
+    });
+
+    return { sessionId: session.id, statusAtDeletion: session.status };
+  });
+}
+
 export const createSessionSchema = z.object({
   candidateId: z.uuid(),
   expiresInHours: z.number().int().min(1).max(MAX_CODE_TTL_HOURS).default(DEFAULT_CODE_TTL_HOURS),
@@ -308,7 +419,16 @@ export const createSessionSchema = z.object({
   reentryPolicy: z.enum(["single", "multi"]).default("single"),
   /** Sesi baterai IST + PAPI dalam satu kode akses. */
   includePapi: z.boolean().default(true),
-});
+  /** Sesi PAPI-saja dibuat dengan mematikan ini. */
+  includeIst: z.boolean().default(true),
+})
+  .refine(
+    (data) => data.includePapi || data.includeIst,
+    // Sesi tanpa keduanya tidak punya soal sama sekali: peserta memasukkan kode
+    // lalu langsung mendarat di layar selesai. Lebih baik ditolak di sini
+    // daripada baru ketahuan oleh peserta.
+    { message: "Sesi harus memuat IST, PAPI, atau keduanya.", path: ["includeIst"] },
+  );
 
 export type CreateSessionInput = z.input<typeof createSessionSchema>;
 
@@ -445,6 +565,7 @@ export async function createSession(
         pinnedTutorialVersions: master.pinnedTutorialVersions,
         reentryPolicy: data.reentryPolicy,
         includesPapi: papiFormVersionId === null ? 0 : 1,
+        includesIst: data.includeIst ? 1 : 0,
         papiFormVersionId,
         scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
         createdBy: ctx.userId,
@@ -547,7 +668,12 @@ export const bulkCreateSessionsSchema = z.object({
   reentryPolicy: z.enum(["single", "multi"]).default("multi"),
   /** Sesi baterai IST + PAPI dalam satu kode akses. */
   includePapi: z.boolean().default(true),
-});
+  includeIst: z.boolean().default(true),
+})
+  .refine((data) => data.includePapi || data.includeIst, {
+    message: "Sesi harus memuat IST, PAPI, atau keduanya.",
+    path: ["includeIst"],
+  });
 
 export type BulkCreatedRow = {
   candidateId: string;
@@ -612,6 +738,7 @@ export async function bulkCreateSessions(
           pinnedTutorialVersions: master.pinnedTutorialVersions,
           reentryPolicy: data.reentryPolicy,
           includesPapi: papiFormVersionId === null ? 0 : 1,
+          includesIst: data.includeIst ? 1 : 0,
           papiFormVersionId,
           createdBy: ctx.userId,
         })

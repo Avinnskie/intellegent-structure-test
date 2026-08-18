@@ -1,5 +1,16 @@
 import { createElement as h, type ReactElement } from "react";
-import { Circle, Line, Page, Polygon, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
+import {
+  Circle,
+  Document,
+  type DocumentProps,
+  Line,
+  Page,
+  Polygon,
+  StyleSheet,
+  Svg,
+  Text,
+  View,
+} from "@react-pdf/renderer";
 import { formatPapiElapsed, papiCategoryLabel } from "../domain/papi-format.ts";
 import { buildPapiRadarLayout } from "../domain/papi-radar-geometry.ts";
 import { PAPI_MAX_FACTOR_SCORE } from "../papi-factors.ts";
@@ -292,5 +303,43 @@ export function buildPapiSkippedPage(stage: PapiStageDto, candidateName: string)
     stage.skippedAt
       ? identityLine("Ditutup pada", new Date(stage.skippedAt).toISOString())
       : h(View, { key: "no-date" }),
+  );
+}
+
+/**
+ * Dokumen PDF berisi PAPI saja, tanpa halaman IST.
+ *
+ * `buildPapiPage` selama ini hanya dipakai sebagai lampiran di belakang halaman
+ * IST. Sesi PAPI-saja tidak punya halaman itu, jadi halaman PAPI perlu berdiri
+ * sendiri sebagai dokumen utuh — lengkap dengan identitas peserta yang biasanya
+ * dibawa halaman pertama laporan IST.
+ */
+export function buildPapiOnlyDocument(
+  papi: PapiResultDto,
+  candidate: { readonly name: string; readonly testPurpose: string | null },
+): ReactElement<DocumentProps> {
+  // `buildPapiPage` SUDAH mengembalikan sebuah <Page>. Membungkusnya lagi di
+  // dalam <Page> membuat @react-pdf/renderer menggantung tanpa pesan galat —
+  // bukan melempar — sehingga uji yang memanggilnya diam sampai kehabisan waktu.
+  return h(
+    Document,
+    { title: `Laporan PAPI Kostick — ${candidate.name}` },
+    buildPapiIdentityPage(candidate),
+    buildPapiPage(papi),
+  );
+}
+
+/** Halaman identitas, peran yang biasanya diambil halaman pertama laporan IST. */
+function buildPapiIdentityPage(candidate: {
+  readonly name: string;
+  readonly testPurpose: string | null;
+}): ReactElement {
+  return h(
+    Page,
+    { size: "A4", style: styles.page, key: "identitas" },
+    h(Text, { style: styles.title }, `Laporan PAPI Kostick — ${candidate.name}`),
+    candidate.testPurpose
+      ? h(Text, { style: styles.subtitle }, `Keperluan: ${candidate.testPurpose}`)
+      : null,
   );
 }

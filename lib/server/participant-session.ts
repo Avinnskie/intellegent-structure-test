@@ -98,7 +98,12 @@ export type SessionStateDto = {
     itemCount: number;
     durationSeconds: number;
   } | null;
-  tutorial: { textContent: string; videoReference: string | null } | null;
+  tutorial: {
+    textContent: string;
+    /** Daftar kata hafalan ME; null bila subtes ini tanpa tahap menghafal. */
+    memorizationText: string | null;
+    videoReference: string | null;
+  } | null;
   attempt: { startedAt: string; expiresAt: string; remainingSeconds: number } | null;
   items: readonly SessionStateItem[];
 };
@@ -424,7 +429,11 @@ async function selectPinnedTutorial(
   db: DbLike,
   session: ParticipantSessionContext,
   code: SubtestCode,
-): Promise<{ textContent: string; videoReference: string | null } | null> {
+): Promise<{
+  textContent: string;
+  memorizationText: string | null;
+  videoReference: string | null;
+} | null> {
   const pinnedId = session.pinnedTutorialVersions[code];
   if (!pinnedId) {
     return null;
@@ -433,6 +442,7 @@ async function selectPinnedTutorial(
   const [row] = await db
     .select({
       textContent: tutorialVersions.textContent,
+      memorizationText: tutorialVersions.memorizationText,
       videoReference: tutorialVersions.videoReference,
     })
     .from(tutorialVersions)

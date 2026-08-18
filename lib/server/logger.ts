@@ -94,11 +94,69 @@ export function logInfo(event: string, fields: LogFields): void {
   emitSafely(process.stdout, "info", event, () => ({ ...fields, ...envelope("info", event) }));
 }
 
+const MAX_MESSAGE_LENGTH = 500;
+
+/**
+ * Pesan galat, dipendekkan dan dibuat satu baris.
+ *
+ * Sebelumnya log hanya memuat nama dan stack. Untuk galat yang namanya sudah
+ * menjelaskan dirinya sendiri itu cukup, tetapi pembungkus seperti
+ * `DrizzleQueryError` menyimpan sebab sebenarnya di dalam pesan — misalnya
+ * kolom yang belum ada setelah migrasi tertinggal. Tanpa pesan, log hanya
+ * memberi tahu bahwa ada yang gagal, bukan apa yang gagal.
+ */
+function safeErrorMessage(error: unknown): string | undefined {
+  if (!(error instanceof Error)) {
+    return undefined;
+  }
+  try {
+    const message = String(error.message).replace(/\s+/g, " ").trim();
+    if (message === "") {
+      return undefined;
+    }
+    return message.length > MAX_MESSAGE_LENGTH
+      ? `${message.slice(0, MAX_MESSAGE_LENGTH)}…`
+      : message;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Rantai `cause`, tempat sebab sesungguhnya biasanya berada.
+ *
+ * Driver basis data membungkus galat aslinya: yang di permukaan hanya
+ * menyebut "query gagal", sedangkan kode Postgres dan nama kolom yang
+ * bermasalah ada satu atau dua lapis di bawahnya. Kedalaman dibatasi agar
+ * rantai yang melingkar tidak membuat log meledak.
+ */
+function safeErrorCauses(error: unknown, maxDepth = 3): string[] | undefined {
+  const causes: string[] = [];
+  let current: unknown = error instanceof Error ? error.cause : undefined;
+
+  for (let depth = 0; depth < maxDepth && current !== undefined && current !== null; depth += 1) {
+    const name = safeErrorName(current);
+    const message = safeErrorMessage(current);
+    // Kode Postgres (mis. 42703 untuk kolom tidak dikenal) sangat menghemat
+    // waktu penelusuran, jadi ikut dicatat bila ada.
+    const code =
+      typeof current === "object" && current !== null && "code" in current
+        ? String((current as { code?: unknown }).code)
+        : undefined;
+    causes.push([name, code, message].filter(Boolean).join(" | "));
+    current = current instanceof Error ? current.cause : undefined;
+  }
+
+  return causes.length > 0 ? causes : undefined;
+}
+
 export function logError(event: string, fields: LogFields, error: unknown): void {
   emitSafely(process.stderr, "error", event, () => ({
     ...fields,
     ...envelope("error", event),
     errorName: safeErrorName(error),
+    errorMessage: safeErrorMessage(error),
+    errorCauses: safeErrorCauses(error),
     errorStack: safeStackFrames(error),
   }));
 }

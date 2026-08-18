@@ -65,6 +65,8 @@ export type TutorialVersionDto = {
   version: number;
   status: string;
   textContent: string;
+  /** Daftar kata hafalan; hanya terisi untuk subtes ME. */
+  memorizationText: string | null;
   videoReference: string | null;
   effectiveDate: string | null;
   createdAt: string;
@@ -110,6 +112,7 @@ export async function listTutorials(db: DbLike): Promise<TutorialSubtestDto[]> {
         version: row.version,
         status: row.status,
         textContent: row.textContent,
+        memorizationText: row.memorizationText,
         videoReference: row.videoReference,
         effectiveDate: row.effectiveDate,
         createdAt: row.createdAt.toISOString(),
@@ -119,6 +122,14 @@ export async function listTutorials(db: DbLike): Promise<TutorialSubtestDto[]> {
 
 export const tutorialContentSchema = z.object({
   textContent: richTextSchema(10_000),
+  /**
+   * Kosong berarti subtes ini tidak punya tahap menghafal.
+   *
+   * Dibedakan dari string kosong: mengosongkan kolom di editor harus benar-benar
+   * menghapus tahap menghafal, bukan menyisakan dialog kosong berdurasi tiga
+   * menit yang membingungkan peserta.
+   */
+  memorizationText: richTextSchema(10_000).nullish(),
   videoReference: z.string().trim().min(1).max(500).optional(),
 });
 
@@ -186,6 +197,7 @@ export async function updateTutorial(
       .update(tutorialVersions)
       .set({
         textContent: data.textContent,
+        memorizationText: data.memorizationText ?? null,
         videoReference: data.videoReference ?? null,
         status: "published",
       })

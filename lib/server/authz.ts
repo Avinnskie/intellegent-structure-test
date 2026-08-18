@@ -34,7 +34,7 @@ function normalizeOrigin(value: string | undefined): string | null {
   }
 }
 
-function getTrustedOrigins(): Set<string> {
+export function getTrustedOrigins(): Set<string> {
   const candidates = [
     process.env.APP_BASE_URL,
     process.env.NEXT_PUBLIC_APP_BASE_URL,
@@ -51,14 +51,39 @@ function getTrustedOrigins(): Set<string> {
   );
 }
 
-function isTrustedOrigin(request: Request, trustedOrigins = getTrustedOrigins()): boolean {
+/**
+ * Di pengembangan, localhost pada port mana pun dipercaya.
+ *
+ * Next berpindah sendiri ke port lain bila 3000 sedang terpakai — dan saat itu
+ * terjadi, SETIAP permintaan tulis ditolak sebagai lintas-asal. Gejalanya
+ * membingungkan: halaman terbuka normal, tetapi semua tombol simpan gagal 403
+ * tanpa sebab yang terlihat dari layar.
+ *
+ * Melonggarkan port di sini tidak melemahkan produksi: pemeriksaannya hanya
+ * berlaku ketika NODE_ENV bukan production. Situs berbahaya pun tidak dapat
+ * memalsukan Origin menjadi localhost — peramban yang menetapkannya, bukan
+ * halaman.
+ */
+function isLocalDevOrigin(origin: string): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  try {
+    const { hostname, protocol } = new URL(origin);
+    return protocol === "http:" && (hostname === "localhost" || hostname === "127.0.0.1");
+  } catch {
+    return false;
+  }
+}
+
+export function isTrustedOrigin(request: Request, trustedOrigins = getTrustedOrigins()): boolean {
   const requestOrigin = normalizeOrigin(request.headers.get("origin") ?? undefined);
 
   if (!requestOrigin) {
     return false;
   }
 
-  return trustedOrigins.has(requestOrigin);
+  return trustedOrigins.has(requestOrigin) || isLocalDevOrigin(requestOrigin);
 }
 
 export async function getAuthUser(): Promise<{ id: string } | null> {
