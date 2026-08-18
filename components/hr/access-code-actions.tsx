@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { formatDateTime } from "@/lib/format-datetime.ts";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -147,7 +148,7 @@ export function AccessCodeActions({
             </button>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Berlaku sampai {new Date(regenerated.accessCodeExpiresAt).toLocaleString("id-ID")}.
+            Berlaku sampai {formatDateTime(regenerated.accessCodeExpiresAt)}.
           </p>
         </div>
       ) : null}
