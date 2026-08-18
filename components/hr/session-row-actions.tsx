@@ -21,6 +21,7 @@ export function SessionRowActions({
   const { push } = useToast();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isSkippingPapi, setIsSkippingPapi] = useState(false);
+  const [isForceDeleting, setIsForceDeleting] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
 
   const isDeletable = status === "code_generated" || status === "code_validated";
@@ -35,6 +36,39 @@ export function SessionRowActions({
       const response = await fetch(`/api/hr/sessions/${sessionId}`, { method: "DELETE" });
       if (response.ok) {
         push("success", `Sesi untuk ${candidateName} dihapus.`);
+        router.refresh();
+        return;
+      }
+      const envelope = (await response.json().catch(() => ({}))) as ErrorEnvelope;
+      push("error", envelope.error?.message ?? "Tidak dapat menghubungi server. Coba lagi.");
+    } catch {
+      push("error", "Tidak dapat menghubungi server. Coba lagi.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  /**
+   * Menghapus sesi beserta seluruh jawaban dan hasilnya.
+   *
+   * Nama peserta wajib diketik ulang. Sesi yang sudah berjalan adalah riwayat
+   * assessment yang tidak dapat dipulihkan, dan tombolnya berada tepat di
+   * sebelah "Detail" — mengetik ulang memaksa HR berhenti sejenak dan membaca
+   * baris mana yang sedang ia hapus.
+   */
+  async function handleForceDelete(typed: string) {
+    if (typed.trim() !== candidateName.trim()) {
+      push("error", "Nama peserta tidak cocok. Sesi tidak dihapus.");
+      return;
+    }
+    setIsForceDeleting(false);
+    setIsBusy(true);
+    try {
+      const response = await fetch(`/api/hr/sessions/${sessionId}/force-delete`, {
+        method: "POST",
+      });
+      if (response.ok) {
+        push("success", `Sesi ${candidateName} dan seluruh datanya dihapus.`);
         router.refresh();
         return;
       }
@@ -85,6 +119,16 @@ export function SessionRowActions({
           Hapus
         </button>
       ) : null}
+      {!isDeletable ? (
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => setIsForceDeleting(true)}
+          className="font-semibold text-destructive hover:underline"
+        >
+          Hapus paksa
+        </button>
+      ) : null}
       {canSkipPapi ? (
         <button
           type="button"
@@ -95,6 +139,17 @@ export function SessionRowActions({
           Tutup tanpa PAPI
         </button>
       ) : null}
+      <ConfirmDialog
+        open={isForceDeleting}
+        title={`Hapus paksa sesi ${candidateName}?`}
+        description={`Seluruh jawaban, skor, hasil, dan laporan sesi ini akan hilang permanen dan tidak dapat dipulihkan.`}
+        confirmLabel="Hapus permanen"
+        tone="danger"
+        input={{ label: "Nama peserta", placeholder: candidateName, required: true }}
+        isBusy={isBusy}
+        onConfirm={(typed) => void handleForceDelete(typed)}
+        onCancel={() => setIsForceDeleting(false)}
+      />
       <ConfirmDialog
         open={isSkippingPapi}
         title={`Tutup sesi ${candidateName} tanpa PAPI?`}
