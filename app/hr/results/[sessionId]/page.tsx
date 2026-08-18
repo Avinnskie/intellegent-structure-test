@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PapiProfile, PapiStageNotice } from "@/components/hr/papi-profile";
+import { PapiOnlyActions } from "@/components/hr/papi-only-actions";
 import { ResultActions } from "@/components/hr/result-actions";
 import { ResultChart } from "@/components/hr/result-chart";
 import { sessionStatusLabel } from "@/components/hr/session-status-label";
@@ -120,29 +121,21 @@ export default async function HrResultPage({ params }: { params: Promise<{ sessi
       }
     >
       <section className="space-y-6 pb-5">
-        <ResultActions
-          sessionId={detail.sessionId}
-          resultId={result?.resultId ?? null}
-          resultStatus={result?.status ?? null}
-          sessionStatus={detail.status}
-        />
+        {papiStage?.includesPapi && !papiStage.includesIst ? (
+          <PapiOnlyActions sessionId={detail.sessionId} isFinal={papiResult?.status === "final"} />
+        ) : (
+          <ResultActions
+            sessionId={detail.sessionId}
+            resultId={result?.resultId ?? null}
+            resultStatus={result?.status ?? null}
+            sessionStatus={detail.status}
+          />
+        )}
 
         {!result ? (
           <article className="rounded-xl border border-dashed border-border bg-card p-8">
-            <p className="text-sm leading-6 text-muted-foreground">
-              Belum ada hasil untuk sesi ini. Status sesi saat ini:{" "}
-              <strong className="text-foreground">{sessionStatusLabel(detail.status)}</strong>
-              {automaticResult?.kind === "ge_key_required" ? (
-                <>
-                  {" "}
-                  — lengkapi{" "}
-                  <Link href="/hr/question-bank" className="font-semibold text-primary">
-                    kunci jawaban GE
-                  </Link>{" "}
-                  agar sistem dapat menghitung otomatis.
-                </>
-              ) : null}
-            </p>
+            peserta hanya menyelesaikan tes PAPI, sehingga tidak ada hasil IST yang dapat
+            ditampilkan.
           </article>
         ) : (
           <>
