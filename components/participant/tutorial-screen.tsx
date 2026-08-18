@@ -1,7 +1,9 @@
 import { CourseRail } from "@/components/participant/course-rail";
+import { MemorizationGate } from "@/components/participant/memorization-gate";
 import { StartSubtestButton } from "@/components/participant/start-subtest-button";
 import { RichText } from "@/components/ui/rich-text";
 import type { SubtestCode } from "@/lib/ist-subtests";
+import { needsMemorization } from "@/lib/memorization.ts";
 
 type TutorialScreenProps = {
   readonly token: string;
@@ -13,6 +15,7 @@ type TutorialScreenProps = {
   };
   readonly tutorial: {
     readonly textContent: string;
+    readonly memorizationText: string | null;
     readonly videoReference: string | null;
   };
   readonly videoUrl?: string | null;
@@ -82,7 +85,23 @@ export function TutorialScreen({ token, subtest, tutorial, videoUrl = null }: Tu
             ) : null}
           </div>
 
-          <StartSubtestButton token={token} code={subtest.code} />
+          {/*
+            ME dimulai dengan tahap menghafal berbatas waktu, bukan langsung ke
+            soal. Subtes lain tidak punya tahap itu.
+
+            Tahap itu hanya muncul bila daftar katanya memang diisi admin. Kalau
+            kolomnya kosong, subtes berjalan seperti subtes biasa — dialog kosong
+            berdurasi tiga menit hanya akan membingungkan peserta.
+          */}
+          {needsMemorization(subtest.code) && tutorial.memorizationText ? (
+            <MemorizationGate
+              token={token}
+              code={subtest.code}
+              content={tutorial.memorizationText}
+            />
+          ) : (
+            <StartSubtestButton token={token} code={subtest.code} />
+          )}
         </article>
       </div>
     </section>
