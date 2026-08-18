@@ -19,10 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-function formatDateTime(value: string | null): string {
-  return value ? new Date(value).toLocaleString("id-ID") : "—";
-}
+import { formatDateTime } from "@/lib/format-datetime.ts";
 
 export default async function HrSessionDetailPage({
   params,
