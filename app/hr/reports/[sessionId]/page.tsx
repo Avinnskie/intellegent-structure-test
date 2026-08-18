@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDateTime } from "@/lib/format-datetime.ts";
 
 export default async function HrReportPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
@@ -141,7 +142,7 @@ export default async function HrReportPage({ params }: { params: Promise<{ sessi
                           {row.fileHash.slice(0, 16)}…
                         </TableCell>
                         <TableCell className="py-4">
-                          {new Date(row.generatedAt).toLocaleString("id-ID")}
+                          {formatDateTime(row.generatedAt)}
                         </TableCell>
                         <TableCell className="py-4">
                           <a
