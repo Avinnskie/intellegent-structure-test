@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDateTime } from "@/lib/format-datetime.ts";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -252,7 +253,7 @@ export function SessionBulkModal() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm font-semibold text-foreground">
                 {result.created.length} peserta + sesi + kode dibuat · berlaku sampai{" "}
-                {new Date(result.accessCodeExpiresAt).toLocaleString("id-ID")} ·{" "}
+                {formatDateTime(result.accessCodeExpiresAt)} ·{" "}
                 {result.reentryPolicy === "multi" ? "boleh masuk berulang" : "sekali pakai"}
               </p>
               <Button size="sm" onClick={copyAll}>
