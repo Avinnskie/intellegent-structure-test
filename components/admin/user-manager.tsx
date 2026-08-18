@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDateTime } from "@/lib/format-datetime.ts";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -390,7 +391,7 @@ export function UserManager({
                   </span>
                 </TableCell>
                 <TableCell className="py-4">
-                  {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString("id-ID") : "—"}
+                  {formatDateTime(user.lastLoginAt)}
                 </TableCell>
                 <TableCell className="py-4">
                   <span className="flex flex-wrap gap-1">
