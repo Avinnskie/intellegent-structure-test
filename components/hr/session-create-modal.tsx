@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { formatDateTime } from "@/lib/format-datetime.ts";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -44,6 +45,7 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
   const [expiresInHours, setExpiresInHours] = useState("48");
   const [reentryPolicy, setReentryPolicy] = useState<"single" | "multi">("single");
   const [includePapi, setIncludePapi] = useState(true);
+  const [includeIst, setIncludeIst] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [created, setCreated] = useState<CreatedSession | null>(null);
   const [hasCopied, setHasCopied] = useState(false);
@@ -70,6 +72,7 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
           expiresInHours: Number(expiresInHours),
           reentryPolicy,
           includePapi,
+          includeIst,
         }),
       });
       if (response.ok) {
@@ -121,8 +124,8 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
               </Button>
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
-              Berlaku sampai {new Date(created.accessCodeExpiresAt).toLocaleString("id-ID")} · kode
-              ini tetap dapat dilihat kembali di daftar sesi
+              Berlaku sampai {formatDateTime(created.accessCodeExpiresAt)} · kode ini tetap dapat
+              dilihat kembali di daftar sesi
             </p>
             <div className="flex flex-wrap gap-3 border-t border-border pt-4">
               <Link
@@ -229,7 +232,7 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
                 masuk lagi.
               </p>
             </div>
-            <div className="grid gap-2 rounded-xl border border-border bg-muted p-4">
+            <div className="grid gap-3 rounded-xl">
               <label className="flex cursor-pointer items-start gap-3">
                 <Checkbox
                   checked={includePapi}
@@ -238,14 +241,26 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
                 />
                 <span>
                   <span className="text-sm font-semibold text-foreground">
-                    Sertakan PAPI Kostick setelah IST
-                  </span>
-                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                    Satu kode akses untuk dua instrumen. Setelah IST selesai, peserta boleh
-                    istirahat dan kembali dengan kode yang sama. PAPI tidak dibatasi waktu.
+                    Sertakan PAPI Kostick
                   </span>
                 </span>
               </label>
+              <label className="flex cursor-pointer items-start gap-3">
+                <Checkbox
+                  checked={includeIst}
+                  onCheckedChange={(checked) => setIncludeIst(checked === true)}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="text-sm font-semibold text-foreground">Sertakan IST</span>
+                </span>
+              </label>
+              {!includePapi && !includeIst ? (
+                <p role="alert" className="text-xs leading-5 text-destructive">
+                  Pilih setidaknya satu instrumen. Sesi tanpa keduanya tidak memuat soal sama
+                  sekali.
+                </p>
+              ) : null}
             </div>
             {candidates.length === 0 ? (
               <p className="rounded-xl border border-dashed border-border bg-background p-4 text-sm leading-6 text-muted-foreground">
@@ -255,7 +270,7 @@ export function SessionCreateModal({ candidates }: { candidates: readonly Candid
             <div className="flex flex-wrap gap-3 border-t border-border pt-4">
               <Button
                 className="h-12 bg-primary hover:bg-primary/90"
-                disabled={isBusy || candidateId === ""}
+                disabled={isBusy || candidateId === "" || (!includePapi && !includeIst)}
                 onClick={handleCreate}
               >
                 {isBusy ? "Membuat sesi…" : "Buat sesi & generate kode"}
