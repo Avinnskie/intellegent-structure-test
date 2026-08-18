@@ -261,16 +261,29 @@ export function buildPapiPage(papi: PapiResultDto): ReactElement {
     ),
     h(Text, { style: styles.sectionTitle, key: "group-title" }, "Ringkasan tujuh kelompok"),
     h(View, { style: styles.groupWrap, key: "groups" }, ...groupCards),
-    h(Text, { style: styles.sectionTitle, key: "table-title" }, "Detail faktor"),
+    /*
+      Judul dan baris header disatukan dalam satu View yang tidak boleh dipecah.
+      Sebelumnya keduanya elemen terpisah, sehingga bisa tertinggal sendirian di
+      ujung halaman sementara barisnya mulai di halaman berikutnya.
+
+      `minPresenceAhead` menuntut ruang tersisa di bawahnya. Tanpa itu, judul dan
+      header tetap muat berdua di sisa halaman lalu barisnya tetap terlempar —
+      persis keadaan yang sedang diperbaiki.
+    */
     h(
       View,
-      { style: styles.headRow, key: "head" },
-      h(Text, { style: styles.cellCode }, "Kode"),
-      h(Text, { style: styles.cellName }, "Faktor"),
-      h(Text, { style: styles.cellKind }, "Tipe"),
-      h(Text, { style: styles.cellNum }, "Skor"),
-      h(Text, { style: styles.cellCat }, "Kategori"),
-      h(Text, { style: styles.cellText }, "Interpretasi"),
+      { key: "table-head", wrap: false, minPresenceAhead: 72 },
+      h(Text, { style: styles.sectionTitle }, "Detail faktor"),
+      h(
+        View,
+        { style: styles.headRow },
+        h(Text, { style: styles.cellCode }, "Kode"),
+        h(Text, { style: styles.cellName }, "Faktor"),
+        h(Text, { style: styles.cellKind }, "Tipe"),
+        h(Text, { style: styles.cellNum }, "Skor"),
+        h(Text, { style: styles.cellCat }, "Kategori"),
+        h(Text, { style: styles.cellText }, "Interpretasi"),
+      ),
     ),
     ...tableRows,
   ];
