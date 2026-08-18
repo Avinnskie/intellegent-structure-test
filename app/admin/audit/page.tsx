@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDateTime } from "@/lib/format-datetime.ts";
 
 const PAGE_SIZE = 50;
 const FORBIDDEN_MESSAGE = "Anda tidak memiliki izin untuk tindakan ini.";
@@ -73,7 +74,7 @@ export default async function AdminAuditPage({
               {rows.map((row) => (
                 <TableRow key={row.id} className="border-t border-border align-top">
                   <TableCell className="py-4 whitespace-nowrap text-muted-foreground">
-                    {row.createdAt.toLocaleString("id-ID")}
+                    {formatDateTime(row.createdAt)}
                   </TableCell>
                   <TableCell className="py-4">
                     <span className="font-semibold">{row.actorType}</span>
