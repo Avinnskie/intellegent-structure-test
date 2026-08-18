@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDateTime } from "@/lib/format-datetime.ts";
 
 const KIND_LABELS: Record<string, string> = {
   role: "Role",
@@ -38,7 +39,7 @@ export function PapiProfile({ result }: { result: PapiResultDto }) {
 
   return (
     <section className="space-y-6">
-      <article className="rounded-xl border border-border bg-card p-6">
+      <article>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold tracking-[-0.02em] text-foreground">
@@ -60,31 +61,10 @@ export function PapiProfile({ result }: { result: PapiResultDto }) {
             </span>
           </div>
         </div>
-
-        <p className="mt-5 rounded-xl border border-border bg-muted p-4 text-sm leading-6 text-muted-foreground">
-          <strong className="font-semibold text-foreground">Skor PAPI bersifat ipsatif.</strong>{" "}
-          Total 20 faktor selalu {result.totalScore}, sehingga skor tinggi pada satu faktor memaksa
-          faktor lain turun. Profil ini hanya bermakna dibandingkan di dalam diri peserta sendiri —
-          <strong className="font-semibold text-foreground">
-            {" "}
-            jangan dipakai memeringkat kandidat
-          </strong>{" "}
-          atau sebagai ambang kelulusan.
-        </p>
-
-        {pendingCount > 0 ? (
-          <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-muted-foreground">
-            <strong className="font-semibold text-foreground">
-              {pendingCount} faktor menunggu narasi psikolog
-            </strong>{" "}
-            ({result.pendingInterpretationFactors.join(", ")}). Rentang skor ini tidak memiliki teks
-            pada workbook sumber, sehingga sengaja dibiarkan kosong alih-alih diisi otomatis.
-          </p>
-        ) : null}
       </article>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <article className="rounded-xl border border-border bg-card p-6">
+        <article>
           <p className="text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Profil 20 faktor
           </p>
@@ -166,8 +146,7 @@ export function PapiProfile({ result }: { result: PapiResultDto }) {
         </div>
 
         <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
-          Engine {result.engineVersion} · dihitung{" "}
-          {new Date(result.calculatedAt).toLocaleString("id-ID")}
+          Engine {result.engineVersion} · dihitung {formatDateTime(result.calculatedAt)}
         </p>
       </details>
     </section>
