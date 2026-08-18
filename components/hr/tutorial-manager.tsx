@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { isRichTextEmpty, toPlainText } from "@/lib/domain/rich-text.ts";
+import { MEMORIZATION_SECONDS, needsMemorization } from "@/lib/memorization.ts";
 import { useToast } from "@/components/ui/toast";
 import type { TutorialSubtestDto, TutorialVersionDto } from "@/lib/server/content.ts";
 import { X } from "lucide-react";
@@ -43,6 +44,7 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
   const [editor, setEditor] = useState<{
     id: string | null;
     textContent: string;
+    memorizationText: string;
     videoReference: string;
     isUploading: boolean;
   } | null>(null);
@@ -106,6 +108,11 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
     }
     const ok = await call(`/api/hr/tutorials/${editor.id}`, "PUT", {
       textContent: editor.textContent,
+      // Kosong dikirim sebagai null, bukan string kosong: itulah cara
+      // menghapus tahap menghafal sepenuhnya.
+      memorizationText: isRichTextEmpty(editor.memorizationText)
+        ? null
+        : editor.memorizationText,
       ...(editor.videoReference.trim() ? { videoReference: editor.videoReference.trim() } : {}),
     });
     if (ok) {
@@ -191,6 +198,25 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                   minHeight="12rem"
                 />
               </div>
+
+              {needsMemorization(selected.code) ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="tutorial-memorization">Daftar kata untuk dihafal</Label>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Teks ini <strong className="font-semibold">tidak</strong> tampil di halaman
+                    tutorial. Ia hanya muncul di dalam dialog berbatas waktu{" "}
+                    {Math.round(MEMORIZATION_SECONDS / 60)} menit, lalu hilang dan tidak dapat
+                    dibuka kembali. Kosongkan bila subtes ini tidak memakai tahap menghafal.
+                  </p>
+                  <RichTextEditor
+                    id="tutorial-memorization"
+                    ariaLabel="Daftar kata untuk dihafal"
+                    value={editor.memorizationText}
+                    onChange={(memorizationText) => setEditor({ ...editor, memorizationText })}
+                    minHeight="10rem"
+                  />
+                </div>
+              ) : null}
 
               <div className="grid gap-2 text-sm font-semibold text-foreground">
                 Media tutorial{" "}
@@ -295,6 +321,7 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
                           setEditor({
                             id: version.id,
                             textContent: version.textContent,
+                            memorizationText: version.memorizationText ?? "",
                             videoReference: version.videoReference ?? "",
                             isUploading: false,
                           })
