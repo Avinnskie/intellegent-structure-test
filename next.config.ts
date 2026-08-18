@@ -51,9 +51,14 @@ const nextConfig: NextConfig = {
    *
    * Dengan nol, setiap navigasi memaksa render ulang di server, sehingga
    * pengalihan status selalu diberlakukan.
+   *
+   * Hanya `dynamic` yang disetel. Next menolak `static` di bawah 30 detik, dan
+   * penolakan itu membatalkan SELURUH blok `experimental` — termasuk `dynamic`
+   * yang sebenarnya kita butuhkan. Halaman peserta memang dinamis seluruhnya
+   * (semuanya membaca sesi dari basis data), jadi `static` tidak relevan.
    */
   experimental: {
-    staleTimes: { dynamic: 0, static: 0 },
+    staleTimes: { dynamic: 0 },
   },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
