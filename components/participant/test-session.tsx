@@ -14,8 +14,13 @@ import {
   isAnsweredStatus,
   type ItemStatusValue,
 } from "@/components/participant/test-session-sidebar";
-import { useAutosave, type AutosaveStatus } from "@/components/participant/use-autosave";
 import type { SubtestCode } from "@/lib/ist-subtests";
+import {
+  clearSubtestSessionResponses,
+  readSubtestSessionResponses,
+  removeSubtestSessionResponse,
+  writeSubtestSessionResponse,
+} from "@/lib/participant-answer-session";
 import {
   moveActiveItem,
   readDraft,
@@ -27,13 +32,7 @@ import {
 } from "@/lib/participant-navigation";
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
-
-const AUTOSAVE_LABELS: Record<AutosaveStatus, string | null> = {
-  idle: null,
-  menyimpan: "Menyimpan…",
-  tersimpan: "Tersimpan",
-  gagal: "Gagal menyimpan — periksa koneksi",
-};
+type SessionSaveStatus = "idle" | "saved" | "failed";
 
 type TestSessionProps = {
   readonly token: string;
@@ -106,6 +105,7 @@ export function TestSession({
   const draft = readDraft(drafts, currentItem.itemVersionId);
 
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [sessionSaveStatus, setSessionSaveStatus] = useState<SessionSaveStatus>("idle");
   const [isConfirmingReview, setIsConfirmingReview] = useState(false);
   // Perpindahan ke halaman periksa dirender di server, jadi ada jeda yang
   // perlu terlihat. Tanpa ini tombol tampak tidak bereaksi dan peserta
@@ -117,13 +117,57 @@ export function TestSession({
     setIsAdvancing(false);
   }
 
-  const {
-    status: autosaveStatus,
-    queueSave,
-    flush,
-  } = useAutosave(
-    `/api/sessions/${encodeURIComponent(token)}/responses/${currentItem.itemVersionId}`,
-  );
+  useEffect(() => {
+    const stored = readSubtestSessionResponses(window.sessionStorage, token, subtestCode);
+    if (stored.length === 0) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      setDrafts((previous) => {
+        let next = previous;
+        for (const response of stored) {
+          next = writeDraft(
+            next,
+            response.itemVersionId,
+            response.status === "answered" ? response.value : "",
+          );
+        }
+        return next;
+      });
+      setLocalStatuses((previous) => {
+        const next = { ...previous };
+        for (const response of stored) {
+          next[response.localNumber] = response.status;
+        }
+        return next;
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [token, subtestCode]);
+
+  const completeExpiredSubtest = useCallback(async () => {
+    const responses = readSubtestSessionResponses(window.sessionStorage, token, subtestCode);
+    try {
+      const response = await fetch(
+        `/api/sessions/${encodeURIComponent(token)}/subtests/${subtestCode}/complete`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ responses }),
+        },
+      );
+      if (response.ok) {
+        clearSubtestSessionResponses(window.sessionStorage, token, subtestCode);
+      }
+    } catch (error) {
+      if (!(error instanceof TypeError)) {
+        throw error;
+      }
+    } finally {
+      router.refresh();
+    }
+  }, [router, token, subtestCode]);
 
   const serverNowMs = Date.parse(serverNow);
   const expiresAtMs = Date.parse(expiresAt);
@@ -147,14 +191,12 @@ export function TestSession({
       if (remaining <= 0 && !hasExpired) {
         hasExpired = true;
         window.clearInterval(tick);
-        void fetch(`/api/sessions/${encodeURIComponent(token)}/heartbeat`, { method: "POST" })
-          .catch(() => null)
-          .finally(() => router.refresh());
+        void completeExpiredSubtest();
       }
     }, 1000);
 
     return () => window.clearInterval(tick);
-  }, [serverNowMs, expiresAtMs, durationSeconds, router, token]);
+  }, [serverNowMs, expiresAtMs, durationSeconds, completeExpiredSubtest]);
   useEffect(() => {
     const beat = window.setInterval(() => {
       void fetch(`/api/sessions/${encodeURIComponent(token)}/heartbeat`, {
@@ -200,47 +242,70 @@ export function TestSession({
     }
     setDrafts((previous) => writeDraft(previous, currentItem.itemVersionId, value));
     if (canSubmitValue(currentItem, value)) {
-      queueSave(value);
+      const saved = writeSubtestSessionResponse(window.sessionStorage, token, subtestCode, {
+        itemVersionId: currentItem.itemVersionId,
+        localNumber: currentItem.localNumber,
+        status: "answered",
+        value,
+      });
+      setSessionSaveStatus(saved ? "saved" : "failed");
+      if (saved) {
+        setLocalStatuses((previous) => ({ ...previous, [activeLocal]: "answered" }));
+      }
+      return;
+    }
+    const removed = removeSubtestSessionResponse(
+      window.sessionStorage,
+      token,
+      subtestCode,
+      currentItem.itemVersionId,
+    );
+    setSessionSaveStatus(removed ? "idle" : "failed");
+    if (removed) {
+      setLocalStatuses((previous) => ({ ...previous, [activeLocal]: "unanswered" }));
     }
   }
 
-  async function handleSubmit() {
+  function handleSubmit() {
     if (isAdvancing || !canSubmitValue(currentItem, draft)) {
       return;
     }
     setIsAdvancing(true);
-    const saved = await flush(draft);
+    const saved = writeSubtestSessionResponse(window.sessionStorage, token, subtestCode, {
+      itemVersionId: currentItem.itemVersionId,
+      localNumber: currentItem.localNumber,
+      status: "answered",
+      value: draft,
+    });
     if (saved) {
+      setSessionSaveStatus("saved");
       setLocalStatuses((previous) => ({ ...previous, [activeLocal]: "answered" }));
       advance();
       return;
     }
+    setSessionSaveStatus("failed");
     setIsAdvancing(false);
-    router.refresh();
   }
 
-  async function handleSkip() {
+  function handleSkip() {
     if (isAdvancing) {
       return;
     }
     setIsAdvancing(true);
-    try {
-      const response = await fetch(
-        `/api/sessions/${encodeURIComponent(token)}/responses/${currentItem.itemVersionId}/skip`,
-        { method: "POST" },
-      );
-      if (response.ok) {
-        setLocalStatuses((previous) =>
-          isAnsweredStatus(previous[activeLocal] ?? "unanswered")
-            ? previous
-            : { ...previous, [activeLocal]: "skipped" },
-        );
-        advance();
-        return;
-      }
-    } catch {}
+    const saved = writeSubtestSessionResponse(window.sessionStorage, token, subtestCode, {
+      itemVersionId: currentItem.itemVersionId,
+      localNumber: currentItem.localNumber,
+      status: "skipped",
+    });
+    if (saved) {
+      setSessionSaveStatus("saved");
+      setDrafts((previous) => writeDraft(previous, currentItem.itemVersionId, ""));
+      setLocalStatuses((previous) => ({ ...previous, [activeLocal]: "skipped" }));
+      advance();
+      return;
+    }
+    setSessionSaveStatus("failed");
     setIsAdvancing(false);
-    router.refresh();
   }
 
   const sidebarItems = useMemo(
@@ -290,7 +355,13 @@ export function TestSession({
                 : "pending",
             value: draft,
           }}
-          autosaveLabel={isAdvancing ? "Menyimpan…" : AUTOSAVE_LABELS[autosaveStatus]}
+          autosaveLabel={
+            sessionSaveStatus === "saved"
+              ? "Tersimpan di sesi ini"
+              : sessionSaveStatus === "failed"
+                ? "Gagal menyimpan di sesi browser"
+                : null
+          }
           mediaUrl={mediaUrls[currentItem.itemVersionId] ?? null}
           disabled={isAdvancing}
           onValueChange={handleValueChange}

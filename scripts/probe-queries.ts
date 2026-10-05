@@ -48,6 +48,6 @@ await count("savePapiAnswer (satu klik)", () => papi.savePapiAnswer(db, f.token,
 await count("papiHeartbeat (tiap 30 detik)", () => papi.papiHeartbeat(db, f.token));
 
 for (let n = 1; n <= 90; n += 1) await papi.savePapiAnswer(db, f.token, n, "A");
-await count("completePapi (tombol kirim)", () => papi.completePapi(db, f.token));
+await count("completePapi (tombol kirim)", () => papi.completePapi(db, f.token, []));
 
 await harness.close();

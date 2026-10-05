@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SubtestCode } from "@/lib/ist-subtests";
+import {
+  clearSubtestSessionResponses,
+  readSubtestSessionResponses,
+} from "@/lib/participant-answer-session";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -29,12 +33,18 @@ export function CompleteSubtestButton({
     setError(null);
 
     try {
+      const responses = readSubtestSessionResponses(window.sessionStorage, token, code);
       const response = await fetch(
         `/api/sessions/${encodeURIComponent(token)}/subtests/${code}/complete`,
-        { method: "POST" },
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ responses }),
+        },
       );
 
       if (response.ok) {
+        clearSubtestSessionResponses(window.sessionStorage, token, code);
         const dto = (await response.json()) as { sessionStatus?: string };
         // `replace`, bukan `push`. Subtes yang sudah ditutup tidak dapat
         // dibuka lagi, jadi halaman soalnya tidak boleh tertinggal di riwayat —
