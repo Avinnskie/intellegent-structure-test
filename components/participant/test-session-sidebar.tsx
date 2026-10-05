@@ -89,13 +89,13 @@ export function TestSessionSidebar({ state, onJump, onComplete }: TestSessionSid
             );
           })}
         </div>
-        <button
+        {/* <button
           type="button"
           onClick={onComplete}
           className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl border border-border px-4 text-sm font-semibold text-foreground hover:bg-muted"
         >
           Selesaikan subtes {state.code}
-        </button>
+        </button> */}
       </article>
     </aside>
   );
