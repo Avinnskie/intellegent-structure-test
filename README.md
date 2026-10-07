@@ -97,16 +97,20 @@ ke Supabase Storage. Semua itu dikerjakan ulang hanya untuk menampilkan soal yan
 sudah ada di browser.
 
 URL media kini ditandatangani sekali untuk seluruh subtes secara paralel, bukan satu per
-soal, sehingga navigasi klien tetap memiliki medianya.
+soal, sehingga navigasi klien tetap memiliki medianya. Pilihan jawaban juga ditulis ke
+`sessionStorage` browser secara sinkron. Tidak ada request database pada saat peserta
+menjawab atau berpindah nomor.
 
 **URL tidak disinkronkan saat berpindah soal.** Next App Router menambal
 `history.pushState`/`replaceState`; karena nomor soal adalah segmen dinamis rute,
 mengubahnya memicu navigasi Next, komponen dipasang ulang, dan peserta terlempar balik ke
 soal semula. Konsekuensinya memuat ulang halaman di tengah subtes mendarat pada nomor yang
-tertulis di URL — jawaban tidak terpengaruh karena sudah tersimpan di server.
+tertulis di URL, lalu jawaban stage aktif dipulihkan dari session browser.
 
-Yang tetap melalui server: masuk subtes, menutup subtes, autosave jawaban, heartbeat, dan
-kedaluwarsa waktu — semuanya tetap server-authoritative.
+Database menyimpan progres pada batas stage. Saat subtes ditutup atau waktunya habis,
+seluruh jawaban stage dikirim sekaligus, divalidasi, disimpan, dikunci, dan baru kemudian
+dipakai untuk skoring dalam satu transaksi. Heartbeat tetap menjaga status dan waktu
+server-authoritative tanpa melacak nomor soal aktif.
 
 ## Baterai IST + PAPI Kostick
 

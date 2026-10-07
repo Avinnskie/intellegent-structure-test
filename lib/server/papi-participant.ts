@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { ApiError } from "../api/errors.ts";
 import type { DbLike } from "../db/client.ts";
 import {
@@ -9,6 +9,7 @@ import {
   participantTokens,
 } from "../db/schema.ts";
 import { SUBTEST_ORDER } from "../domain/session-state.ts";
+import type { SubmittedPapiAnswer } from "../domain/submitted-responses.ts";
 import { findUnansweredPapiItems } from "../domain/papi-scoring.ts";
 import { asPapiOptionCode, PAPI_ITEM_COUNT, type PapiOptionCode } from "../papi-factors.ts";
 import { getServerConfig } from "../config.ts";
@@ -39,6 +40,7 @@ import { selectNow } from "./db-clock.ts";
 
 const ITEM_NOT_FOUND = "Nomor soal tidak dikenal.";
 const OPTION_INVALID = "Pilihan jawaban harus A atau B.";
+const DUPLICATE_ANSWERS = "Jawaban kuesioner berisi nomor yang sama lebih dari sekali.";
 
 export type PapiItemDto = {
   number: number;
@@ -385,7 +387,11 @@ export async function pausePapi(db: DbLike, token: string): Promise<PapiStateDto
   return getPapiState(db, token);
 }
 
-export async function completePapi(db: DbLike, token: string): Promise<PapiCompleteDto> {
+export async function completePapi(
+  db: DbLike,
+  token: string,
+  submitted: readonly SubmittedPapiAnswer[],
+): Promise<PapiCompleteDto> {
   return db.transaction(async (tx) => {
     const session = await resolveParticipantSession(tx, token);
     const now = await selectNow(tx, session.sessionId);
@@ -401,6 +407,37 @@ export async function completePapi(db: DbLike, token: string): Promise<PapiCompl
     const attempt = await selectPapiAttempt(tx, session.sessionId);
     if (!attempt || attempt.status !== "in_progress") {
       throw papiAlreadyClosed();
+    }
+
+    const itemNumbers = submitted.map((answer) => answer.itemNumber);
+    if (new Set(itemNumbers).size !== itemNumbers.length) {
+      throw new ApiError("VALIDATION_ERROR", DUPLICATE_ANSWERS, 422);
+    }
+
+    if (submitted.length > 0) {
+      await tx
+        .insert(papiResponses)
+        .values(
+          submitted.map((answer) => ({
+            sessionId: session.sessionId,
+            papiAttemptId: attempt.id,
+            itemNumber: answer.itemNumber,
+            optionCode: answer.option,
+            responseStatus: "answered" as const,
+            answeredAt: now,
+            updatedAt: now,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [papiResponses.papiAttemptId, papiResponses.itemNumber],
+          set: {
+            optionCode: sql`excluded.option_code`,
+            responseStatus: "answered",
+            answeredAt: now,
+            updatedAt: now,
+            lockedAt: null,
+          },
+        });
     }
 
     // Tidak ada jawaban kosong yang diam-diam dihitung. Wajib 90 dari 90.

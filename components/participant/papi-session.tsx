@@ -1,8 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createElapsedState, reconcileElapsed, type ElapsedState } from "@/lib/papi-elapsed.ts";
+import {
+  clearPapiSessionAnswers,
+  readPapiSessionAnswers,
+  writePapiSessionAnswer,
+} from "@/lib/participant-answer-session.ts";
+import type { SubmittedPapiAnswer } from "@/lib/domain/submitted-responses.ts";
 import { PapiStopwatch } from "./papi-stopwatch";
 
 export type PapiSessionItem = {
@@ -22,8 +28,6 @@ type PapiSessionProps = {
 const HEARTBEAT_MS = 30_000;
 const PAGE_SIZE = 10;
 
-type SaveState = "idle" | "menyimpan" | "tersimpan" | "gagal";
-
 export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: PapiSessionProps) {
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<number, "A" | "B" | null>>(() =>
@@ -32,13 +36,28 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
   const [elapsed, setElapsed] = useState<ElapsedState>(() =>
     createElapsedState(initialElapsedSeconds, Date.now()),
   );
-  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [sessionSaveFailed, setSessionSaveFailed] = useState(false);
   const [page, setPage] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showUnanswered, setShowUnanswered] = useState(false);
-  const pendingSaves = useRef(0);
-  const inFlight = useRef<Map<number, AbortController>>(new Map());
+
+  useEffect(() => {
+    const stored = readPapiSessionAnswers(window.sessionStorage, token);
+    if (stored.length === 0) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      setAnswers((current) => {
+        const next = { ...current };
+        for (const answer of stored) {
+          next[answer.itemNumber] = answer.option;
+        }
+        return next;
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [token]);
 
   const answeredCount = useMemo(
     () => Object.values(answers).filter((value) => value !== null).length,
@@ -68,54 +87,11 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
     return () => window.clearInterval(timer);
   }, [token]);
 
-  const save = useCallback(
-    async (itemNumber: number, option: "A" | "B") => {
-      // Ganti pilihan pada nomor yang sama menggugurkan permintaan sebelumnya.
-      // Tanpa ini, peserta yang berubah pikiran mengirim dua permintaan yang
-      // saling berlomba, dan yang menang belum tentu pilihan terakhirnya.
-      inFlight.current.get(itemNumber)?.abort();
-      const controller = new AbortController();
-      inFlight.current.set(itemNumber, controller);
-
-      pendingSaves.current += 1;
-      setSaveState("menyimpan");
-      try {
-        const response = await fetch(`/api/sessions/${token}/papi/responses/${itemNumber}`, {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ option }),
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          setSaveState("gagal");
-          return;
-        }
-        // Balasan sengaja tidak dibaca: ia tidak lagi memuat waktu maupun
-        // jumlah terjawab, dan keduanya sudah diketahui di layar ini.
-      } catch (error) {
-        // Permintaan yang sengaja digugurkan bukan kegagalan.
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setSaveState("gagal");
-        }
-        return;
-      } finally {
-        if (inFlight.current.get(itemNumber) === controller) {
-          inFlight.current.delete(itemNumber);
-        }
-        pendingSaves.current -= 1;
-      }
-
-      if (pendingSaves.current <= 0) {
-        pendingSaves.current = 0;
-        setSaveState("tersimpan");
-      }
-    },
-    [token],
-  );
-
   function choose(itemNumber: number, option: "A" | "B") {
     setAnswers((current) => ({ ...current, [itemNumber]: option }));
-    void save(itemNumber, option);
+    setSessionSaveFailed(
+      !writePapiSessionAnswer(window.sessionStorage, token, { itemNumber, option }),
+    );
   }
 
   async function submit() {
@@ -130,8 +106,19 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
 
     setSubmitting(true);
     setSubmitError(null);
+    const submitted: SubmittedPapiAnswer[] = [];
+    for (const item of items) {
+      const option = answers[item.number];
+      if (option !== null && option !== undefined) {
+        submitted.push({ itemNumber: item.number, option });
+      }
+    }
     try {
-      const response = await fetch(`/api/sessions/${token}/papi/complete`, { method: "POST" });
+      const response = await fetch(`/api/sessions/${token}/papi/complete`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ answers: submitted }),
+      });
       if (!response.ok) {
         setSubmitError("Kuesioner belum dapat dikirim. Muat ulang halaman lalu coba lagi.");
         setSubmitting(false);
@@ -139,6 +126,7 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
       }
 
       const dto = (await response.json()) as { sessionStatus?: string };
+      clearPapiSessionAnswers(window.sessionStorage, token);
       router.replace(
         dto.sessionStatus === "finished" ? `/test/${token}/complete` : `/test/${token}/papi`,
       );
@@ -185,13 +173,7 @@ export function PapiSession({ token, items, itemCount, initialElapsedSeconds }: 
         </div>
 
         <p className="mt-2 text-right text-xs text-muted-foreground">
-          {saveState === "menyimpan"
-            ? "Menyimpan…"
-            : saveState === "tersimpan"
-              ? "Tersimpan"
-              : saveState === "gagal"
-                ? "Gagal menyimpan — periksa koneksi"
-                : " "}
+          {sessionSaveFailed ? "Gagal menyimpan di sesi browser" : "Tersimpan di sesi ini"}
         </p>
       </header>
 

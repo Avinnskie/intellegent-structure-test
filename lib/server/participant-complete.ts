@@ -1,7 +1,15 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { ApiError } from "../api/errors.ts";
 import type { DbLike } from "../db/client.ts";
-import { accessCodes, assessmentSessions, responses, subtestAttempts } from "../db/schema.ts";
+import {
+  accessCodes,
+  assessmentSessions,
+  itemOptions,
+  itemVersions,
+  responses,
+  subtestAttempts,
+} from "../db/schema.ts";
+import type { SubmittedSubtestResponse } from "../domain/submitted-responses.ts";
 import {
   assertSessionTransition,
   isPapiStageStatus,
@@ -24,6 +32,8 @@ const SUBTEST_LOCKED_MESSAGE = "Subtes ini sudah ditutup dan tidak dapat dibuka 
 const TIME_EXPIRED_MESSAGE = "Waktu subtes ini sudah habis. Subtes ditutup otomatis.";
 const WRONG_SUBTEST_MESSAGE = "Subtes ini tidak sedang berjalan. Lanjutkan dari subtes yang aktif.";
 const SESSION_NOT_ACTIVE_MESSAGE = "Sesi tes ini belum dapat diselesaikan. Hubungi HR.";
+const INVALID_RESPONSES_MESSAGE = "Ada jawaban yang tidak valid untuk subtes aktif.";
+const SUBMISSION_GRACE_MS = 5_000;
 
 export type CompleteSubtestDto = {
   sessionStatus: ParticipantSessionStatus;
@@ -69,6 +79,10 @@ function sessionNotActive(): ApiError {
   return new ApiError("SESSION_NOT_ACTIVE", SESSION_NOT_ACTIVE_MESSAGE, 409);
 }
 
+function invalidResponses(): ApiError {
+  return new ApiError("INVALID_RESPONSE_VALUE", INVALID_RESPONSES_MESSAGE, 422);
+}
+
 function asSubtestCode(value: string | null): SubtestCode | null {
   return SUBTEST_CODES.includes(value as SubtestCode) ? (value as SubtestCode) : null;
 }
@@ -106,6 +120,7 @@ async function lockSession(tx: DbLike, sessionId: string): Promise<LockedSession
 type AttemptRow = {
   id: string;
   status: (typeof subtestAttempts.$inferSelect)["status"];
+  subtestVersionId: string;
   expiresAt: Date;
 };
 
@@ -118,6 +133,7 @@ async function selectAttempt(
     .select({
       id: subtestAttempts.id,
       status: subtestAttempts.status,
+      subtestVersionId: subtestAttempts.subtestVersionId,
       expiresAt: subtestAttempts.expiresAt,
     })
     .from(subtestAttempts)
@@ -125,6 +141,92 @@ async function selectAttempt(
     .limit(1);
 
   return row ?? null;
+}
+
+async function saveSubmittedResponses(
+  tx: DbLike,
+  sessionId: string,
+  attempt: AttemptRow,
+  submitted: readonly SubmittedSubtestResponse[],
+  now: Date,
+): Promise<Outcome<void>> {
+  if (submitted.length === 0) {
+    return ok(undefined);
+  }
+
+  const submittedIds = submitted.map((response) => response.itemVersionId);
+  if (new Set(submittedIds).size !== submittedIds.length) {
+    return fail(invalidResponses());
+  }
+
+  const items = await tx
+    .select({ id: itemVersions.id, itemType: itemVersions.itemType })
+    .from(itemVersions)
+    .where(
+      and(
+        eq(itemVersions.subtestVersionId, attempt.subtestVersionId),
+        inArray(itemVersions.id, submittedIds),
+      ),
+    );
+
+  if (items.length !== submitted.length) {
+    return fail(invalidResponses());
+  }
+
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const choiceItemIds = items
+    .filter((item) => item.itemType === "choice")
+    .map((item) => item.id);
+  const optionRows =
+    choiceItemIds.length === 0
+      ? []
+      : await tx
+          .select({ itemVersionId: itemOptions.itemVersionId, optionCode: itemOptions.optionCode })
+          .from(itemOptions)
+          .where(inArray(itemOptions.itemVersionId, choiceItemIds));
+  const optionKeys = new Set(
+    optionRows.map((option) => `${option.itemVersionId}:${option.optionCode}`),
+  );
+
+  for (const response of submitted) {
+    const item = itemById.get(response.itemVersionId);
+    if (!item) {
+      return fail(invalidResponses());
+    }
+    if (
+      response.status === "answered" &&
+      item.itemType === "choice" &&
+      !optionKeys.has(`${response.itemVersionId}:${response.value}`)
+    ) {
+      return fail(invalidResponses());
+    }
+  }
+
+  await tx
+    .insert(responses)
+    .values(
+      submitted.map((response) => ({
+        sessionId,
+        subtestAttemptId: attempt.id,
+        itemVersionId: response.itemVersionId,
+        responseValue: response.status === "answered" ? { value: response.value } : null,
+        responseStatus: response.status,
+        answeredAt: response.status === "answered" ? now : null,
+        updatedAt: now,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [responses.subtestAttemptId, responses.itemVersionId],
+      set: {
+        responseValue: sql`excluded.response_value`,
+        responseStatus: sql`excluded.response_status`,
+        answeredAt: sql`excluded.answered_at`,
+        updatedAt: now,
+        lockedAt: null,
+      },
+    });
+
+  return ok(undefined);
 }
 
 type ClosingChain = {
@@ -166,6 +268,7 @@ async function completeWithin(
   session: ParticipantSessionContext,
   code: SubtestCode,
   now: Date,
+  submitted: readonly SubmittedSubtestResponse[],
 ): Promise<Outcome<CompleteSubtestDto>> {
   const locked = await lockSession(tx, session.sessionId);
   const attempt = await selectAttempt(tx, session.sessionId, code);
@@ -174,9 +277,6 @@ async function completeWithin(
     return fail(wrongSubtest());
   }
 
-  if (attempt.expiresAt.getTime() <= now.getTime()) {
-    return fail(timeExpired());
-  }
   if (attempt.status !== "in_progress") {
     return fail(subtestLocked());
   }
@@ -188,9 +288,21 @@ async function completeWithin(
     return fail(wrongSubtest());
   }
 
+  const overdueMs = now.getTime() - attempt.expiresAt.getTime();
+  if (overdueMs > SUBMISSION_GRACE_MS) {
+    return fail(timeExpired());
+  }
+
+  const saved = await saveSubmittedResponses(tx, session.sessionId, attempt, submitted, now);
+  if (!saved.ok) {
+    return saved;
+  }
+
+  const completionReason = attempt.expiresAt.getTime() <= now.getTime() ? "timeout" : "manual";
+
   const closed = await tx
     .update(subtestAttempts)
-    .set({ status: "completed", completionReason: "manual", completedAt: now })
+    .set({ status: "completed", completionReason, completedAt: now })
     .where(and(eq(subtestAttempts.id, attempt.id), eq(subtestAttempts.status, "in_progress")))
     .returning({ id: subtestAttempts.id });
 
@@ -243,7 +355,7 @@ async function completeWithin(
       subtestCode: code,
       fromStatus: locked.status,
       toStatus: advanced.status,
-      completionReason: "manual",
+      completionReason,
     },
   });
 
@@ -287,18 +399,18 @@ export async function completeSubtest(
   db: DbLike,
   token: string,
   code: string,
+  submitted: readonly SubmittedSubtestResponse[],
 ): Promise<CompleteSubtestDto> {
   const outcome = await db.transaction(async (tx) => {
-    const resolved = await resolveParticipantSession(tx, token);
-    const now = await selectNow(tx, resolved.sessionId);
-    const session = await sweepExpiredAttempt(tx, resolved, now);
+    const session = await resolveParticipantSession(tx, token);
+    const now = await selectNow(tx, session.sessionId);
 
     const subtestCode = asSubtestCode(code);
     if (!subtestCode) {
       return fail<CompleteSubtestDto>(wrongSubtest());
     }
 
-    return completeWithin(tx, session, subtestCode, now);
+    return completeWithin(tx, session, subtestCode, now, submitted);
   });
 
   return unwrap(outcome);
