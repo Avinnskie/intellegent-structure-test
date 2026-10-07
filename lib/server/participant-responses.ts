@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { z } from "zod";
 import { ApiError } from "../api/errors.ts";
 import { getServerConfig } from "../config.ts";
 import type { DbLike } from "../db/client.ts";
@@ -416,11 +417,16 @@ async function saveResponseWithDetailedValidation(
   );
 }
 
-type FastSaveRow = {
-  readonly status: ResponseStatusValue;
-  readonly savedAt: Date;
-  readonly remainingSeconds: number;
-};
+const FAST_SAVE_ROW_SCHEMA = z.object({
+  status: z.enum(responses.responseStatus.enumValues),
+  savedAt: z.coerce.date(),
+  remainingSeconds: z.number(),
+});
+
+const FAST_SAVE_ROWS_SCHEMA = z.union([
+  z.array(FAST_SAVE_ROW_SCHEMA),
+  z.object({ rows: z.array(FAST_SAVE_ROW_SCHEMA) }).transform(({ rows }) => rows),
+]);
 
 /**
  * Menyimpan satu jawaban IST melalui satu perjalanan ke basis data.
@@ -451,7 +457,7 @@ export async function saveResponse(
   }
 
   const tokenHash = hashSessionToken(token, getServerConfig().SESSION_TOKEN_SECRET);
-  const rows = await db.execute<FastSaveRow>(sql`
+  const rawRows = await db.execute(sql`
     with eligible as (
       select
         ${assessmentSessions.id} as session_id,
@@ -530,6 +536,7 @@ export async function saveResponse(
     inner join eligible on eligible.attempt_id = saved.subtest_attempt_id
   `);
 
+  const rows = FAST_SAVE_ROWS_SCHEMA.parse(rawRows);
   const row = rows[0];
   if (!row) {
     return saveResponseWithDetailedValidation(db, token, itemVersionId, value);
