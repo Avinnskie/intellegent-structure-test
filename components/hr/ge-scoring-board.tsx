@@ -2,21 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { GeItemDto, SaveGeScoresDto } from "@/lib/server/ge-scoring.ts";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  GeScoringDataTable,
+  type GeScoreDraft,
+} from "@/components/hr/ge-scoring-data-table";
+import type { GeItemDto, SaveGeScoresDto } from "@/lib/server/ge-scoring.ts";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
 const NETWORK_ERROR_MESSAGE = "Tidak dapat menghubungi server. Coba lagi.";
-
-type Draft = { score: 0 | 1 | 2; note: string; overrideReason: string };
 
 type GeScoringBoardProps = {
   readonly sessionId: string;
@@ -26,7 +20,7 @@ type GeScoringBoardProps = {
 
 export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScoringBoardProps) {
   const router = useRouter();
-  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [drafts, setDrafts] = useState<Record<string, GeScoreDraft>>({});
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -37,15 +31,16 @@ export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScorin
   const displayScored = Math.min(answered.length, scoredOnServer + pendingCount);
 
   function setDraft(item: GeItemDto, score: 0 | 1 | 2) {
-    if (!item.responseId) {
+    const responseId = item.responseId;
+    if (!responseId) {
       return;
     }
     setDrafts((current) => ({
       ...current,
-      [item.responseId as string]: {
+      [responseId]: {
         score,
-        note: current[item.responseId as string]?.note ?? "",
-        overrideReason: current[item.responseId as string]?.overrideReason ?? "",
+        note: current[responseId]?.note ?? "",
+        overrideReason: current[responseId]?.overrideReason ?? "",
       },
     }));
   }
@@ -141,113 +136,13 @@ export function GeScoringBoard({ sessionId, items, isSessionScorable }: GeScorin
         </p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card p-6">
-        <Table className="min-w-full text-left">
-          <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-            <TableRow>
-              <TableHead className="pb-3">No</TableHead>
-              <TableHead className="pb-3">Soal</TableHead>
-              <TableHead className="pb-3">Jawaban peserta</TableHead>
-              <TableHead className="pb-3">Rubrik</TableHead>
-              <TableHead className="pb-3">Skor</TableHead>
-              <TableHead className="pb-3">Catatan / alasan override</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="text-sm text-foreground">
-            {items.map((item) => {
-              const draft = item.responseId ? drafts[item.responseId] : undefined;
-              const effectiveScore = draft?.score ?? item.score;
-              const isOverriding =
-                draft !== undefined && item.score !== null && draft.score !== item.score;
-
-              return (
-                <TableRow key={item.itemVersionId} className="border-t border-border align-top">
-                  <TableCell className="py-4 font-mono">{item.localNumber}</TableCell>
-                  <TableCell className="max-w-56 py-4 text-muted-foreground">
-                    {item.prompt}
-                  </TableCell>
-                  <TableCell className="max-w-64 py-4">
-                    {item.responseValue !== null ? (
-                      <span className="whitespace-pre-wrap">{item.responseValue}</span>
-                    ) : (
-                      <span className="italic text-muted-foreground">
-                        {item.responseStatus === "skipped" ? "Dilewati" : "Tidak dijawab"}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-56 py-4 text-xs leading-5 text-muted-foreground">
-                    {item.rubric ?? "—"}
-                  </TableCell>
-                  <TableCell className="py-4">
-                    {item.responseId ? (
-                      <div
-                        className="flex gap-2"
-                        role="group"
-                        aria-label={`Skor butir ${item.localNumber}`}
-                      >
-                        {([0, 1, 2] as const).map((value) => (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => setDraft(item, value)}
-                            disabled={!isSessionScorable}
-                            aria-pressed={effectiveScore === value}
-                            className={`inline-flex size-10 items-center justify-center rounded-xl border text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50 ${
-                              effectiveScore === value
-                                ? "border-primary bg-primary text-white"
-                                : "border-border text-foreground hover:bg-muted"
-                            }`}
-                          >
-                            {value}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-4">
-                    {item.responseId && draft ? (
-                      <div className="grid w-56 gap-2">
-                        <input
-                          type="text"
-                          value={draft.note}
-                          onChange={(event) =>
-                            setDraftField(item.responseId as string, "note", event.target.value)
-                          }
-                          placeholder="Catatan (opsional)"
-                          maxLength={500}
-                          className="h-9 rounded-lg border border-border bg-background px-3 text-xs"
-                        />
-                        {isOverriding ? (
-                          <input
-                            type="text"
-                            value={draft.overrideReason}
-                            onChange={(event) =>
-                              setDraftField(
-                                item.responseId as string,
-                                "overrideReason",
-                                event.target.value,
-                              )
-                            }
-                            placeholder="WAJIB: alasan mengubah skor tercatat"
-                            maxLength={500}
-                            className="h-9 rounded-lg border border-[var(--color-amber-500, #f59e0b)] bg-background px-3 text-xs"
-                          />
-                        ) : null}
-                      </div>
-                    ) : item.scoreNote ? (
-                      <span className="text-xs text-muted-foreground">{item.scoreNote}</span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+      <GeScoringDataTable
+        items={items}
+        drafts={drafts}
+        isSessionScorable={isSessionScorable}
+        onScoreChange={setDraft}
+        onDraftFieldChange={setDraftField}
+      />
     </div>
   );
 }

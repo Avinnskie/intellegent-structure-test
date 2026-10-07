@@ -1,18 +1,13 @@
-"use server";
-
 import { eq } from "drizzle-orm";
-import { redirect } from "next/navigation";
 import { z } from "zod";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError, withApiHandler } from "@/lib/api/errors";
 import { getDb } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { createSupabaseServerClient } from "@/lib/providers/supabase-server";
 import { writeAudit } from "@/lib/server/audit";
-import { resolveHrUser } from "@/lib/server/authz";
-import { safeNextPath } from "@/lib/server/safe-redirect";
+import { assertSameOrigin, resolveHrUser } from "@/lib/server/authz";
 import { logError, logInfo } from "@/lib/server/logger";
-
-export type LoginState = { readonly message: string | null };
+import { safeNextPath } from "@/lib/server/safe-redirect";
 
 const INVALID_CREDENTIALS_MESSAGE = "Email atau kata sandi salah.";
 const INVALID_INPUT_MESSAGE = "Email dan kata sandi wajib diisi.";
@@ -23,24 +18,27 @@ const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
-export async function signIn(_previous: LoginState, formData: FormData): Promise<LoginState> {
+function loginError(message: string, status: number): Response {
+  return Response.json({ error: { message } }, { status });
+}
+
+export const POST = withApiHandler(async (request: Request) => {
+  assertSameOrigin(request);
+
+  const formData = await request.formData();
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
 
   if (!parsed.success) {
-    return { message: INVALID_INPUT_MESSAGE };
+    return loginError(INVALID_INPUT_MESSAGE, 422);
   }
 
   const destination = safeNextPath(formData.get("next")?.toString());
   const db = getDb();
   const supabase = await createSupabaseServerClient();
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
-    password: parsed.data.password,
-  });
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error || !data.user) {
     await writeAudit(db, {
@@ -50,7 +48,7 @@ export async function signIn(_previous: LoginState, formData: FormData): Promise
       metadata: { reason: "invalid_credentials" },
     });
     logInfo("auth_login_failed", { reason: "invalid_credentials" });
-    return { message: INVALID_CREDENTIALS_MESSAGE };
+    return loginError(INVALID_CREDENTIALS_MESSAGE, 401);
   }
 
   const authUserId = data.user.id;
@@ -70,17 +68,19 @@ export async function signIn(_previous: LoginState, formData: FormData): Promise
         metadata: { reason: caught.code },
       });
       logInfo("auth_login_denied", { userId: authUserId, code: caught.code });
-      return { message: caught.message };
+      return loginError(caught.message, caught.status);
     }
-    return { message: UNEXPECTED_MESSAGE };
+
+    logError("auth_login_failed", { userId: authUserId }, caught);
+    return loginError(UNEXPECTED_MESSAGE, 500);
   }
 
   await db
     .update(users)
     .set({ lastLoginAt: new Date() })
     .where(eq(users.id, context.userId))
-    .catch((error: unknown) => {
-      logError("auth_login_touch_failed", { userId: context.userId }, error);
+    .catch((caught: unknown) => {
+      logError("auth_login_touch_failed", { userId: context.userId }, caught);
     });
   await writeAudit(db, {
     organizationId: context.organizationId,
@@ -90,35 +90,10 @@ export async function signIn(_previous: LoginState, formData: FormData): Promise
     objectType: "user",
     objectId: context.userId,
     metadata: { role: context.role },
-  }).catch((error: unknown) => {
-    logError("auth_login_audit_failed", { userId: context.userId }, error);
+  }).catch((caught: unknown) => {
+    logError("auth_login_audit_failed", { userId: context.userId }, caught);
   });
   logInfo("auth_login", { userId: context.userId, role: context.role });
 
-  redirect(destination);
-}
-
-export async function signOut(): Promise<void> {
-  const db = getDb();
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getUser();
-
-  if (data.user) {
-    const userId = data.user.id;
-    const context = await resolveHrUser(db, userId).catch(() => null);
-    await writeAudit(db, {
-      organizationId: context?.organizationId ?? null,
-      actorType: "user",
-      actorId: userId,
-      action: "auth.logout",
-      objectType: "user",
-      objectId: userId,
-    }).catch((error: unknown) => {
-      logError("auth_logout_audit_failed", { userId }, error);
-    });
-    logInfo("auth_logout", { userId });
-  }
-
-  await supabase.auth.signOut();
-  redirect("/login");
-}
+  return Response.json({ redirectTo: destination });
+});

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ParticipantDataTable } from "@/components/hr/participant-data-table";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -15,20 +16,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { calculateExactAge } from "@/lib/domain/age";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
 const NETWORK_ERROR_MESSAGE = "Tidak dapat menghubungi server. Coba lagi.";
-const TEST_PURPOSES = ["Rekrutmen", "Pemetaan internal", "Pengembangan"];
+const DEFAULT_TEST_PURPOSE = "Rekrutmen";
+const TEST_PURPOSES = [DEFAULT_TEST_PURPOSE, "Pemetaan internal", "Pengembangan"];
 const NONE = "__none__";
 
 export type CandidateRow = {
@@ -54,7 +47,7 @@ const EMPTY_DRAFT: Draft = {
   id: null,
   fullName: "",
   birthDate: "",
-  testPurpose: TEST_PURPOSES[0] as string,
+  testPurpose: DEFAULT_TEST_PURPOSE,
   gender: NONE,
   education: "",
 };
@@ -238,7 +231,7 @@ export function ParticipantManager({ candidates }: { candidates: readonly Candid
         ) : null}
       </Modal>
 
-      <article className="overflow-x-auto rounded-xl border border-border bg-card p-6">
+      <article className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">
             Peserta terdaftar
@@ -258,62 +251,22 @@ export function ParticipantManager({ candidates }: { candidates: readonly Candid
             Belum ada peserta. Tambahkan peserta lalu buat sesi tes untuknya.
           </p>
         ) : (
-          <Table className="mt-6 min-w-full text-left">
-            <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-              <TableRow>
-                <TableHead className="pb-3">Nama</TableHead>
-                <TableHead className="pb-3">Tanggal lahir</TableHead>
-                <TableHead className="pb-3">Usia saat ini</TableHead>
-                <TableHead className="pb-3">Tujuan</TableHead>
-                <TableHead className="pb-3">Terdaftar</TableHead>
-                <TableHead className="pb-3">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="text-sm text-foreground">
-              {candidates.map((row) => (
-                <TableRow key={row.id} className="border-t border-border">
-                  <TableCell className="py-4 font-semibold">{row.fullName}</TableCell>
-                  <TableCell className="py-4">{row.birthDate}</TableCell>
-                  <TableCell className="py-4">
-                    {calculateExactAge(row.birthDate, today)} tahun
-                  </TableCell>
-                  <TableCell className="py-4">{row.testPurpose}</TableCell>
-                  <TableCell className="py-4">{row.createdAt.slice(0, 10)}</TableCell>
-                  <TableCell className="py-4">
-                    <span className="flex flex-wrap gap-1">
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto p-0"
-                        disabled={isBusy}
-                        onClick={() =>
-                          setDraft({
-                            id: row.id,
-                            fullName: row.fullName,
-                            birthDate: row.birthDate,
-                            testPurpose: row.testPurpose,
-                            gender: row.gender ?? NONE,
-                            education: row.education ?? "",
-                          })
-                        }
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto p-0 text-destructive underline"
-                        disabled={isBusy}
-                        onClick={() => setPendingDelete(row)}
-                      >
-                        Hapus
-                      </Button>
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ParticipantDataTable
+            candidates={candidates}
+            today={today}
+            isBusy={isBusy}
+            onEdit={(candidate) =>
+              setDraft({
+                id: candidate.id,
+                fullName: candidate.fullName,
+                birthDate: candidate.birthDate,
+                testPurpose: candidate.testPurpose,
+                gender: candidate.gender ?? NONE,
+                education: candidate.education ?? "",
+              })
+            }
+            onDelete={setPendingDelete}
+          />
         )}
       </article>
     </section>

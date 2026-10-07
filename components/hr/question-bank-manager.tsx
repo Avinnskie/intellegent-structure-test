@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { QuestionBankDataTable } from "@/components/hr/question-bank-data-table";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -10,18 +11,10 @@ import { Modal } from "@/components/ui/modal";
 import { TagsInput } from "@/components/ui/tags-input";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Textarea } from "@/components/ui/textarea";
-import { isRichTextEmpty, toPlainText } from "@/lib/domain/rich-text.ts";
+import { isRichTextEmpty } from "@/lib/domain/rich-text.ts";
 import { useToast } from "@/components/ui/toast";
 import type { QuestionBankItemDto, QuestionBankSubtestDto } from "@/lib/server/content.ts";
 import { X } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -551,7 +544,7 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
         ) : null}
       </Modal>
 
-      <article className="overflow-x-auto rounded-xl border border-border bg-card p-6">
+      <article className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">
@@ -570,68 +563,13 @@ export function QuestionBankManager({ subtests }: { subtests: readonly QuestionB
             Tambah soal
           </Button>
         </div>
-        <Table className="mt-6 min-w-full text-left">
-          <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-            <TableRow>
-              <TableHead className="pb-3">No</TableHead>
-              <TableHead className="pb-3">Tipe</TableHead>
-              <TableHead className="pb-3">Pertanyaan</TableHead>
-              <TableHead className="pb-3">Media</TableHead>
-              <TableHead className="pb-3">Status</TableHead>
-              <TableHead className="pb-3">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="align-top text-sm text-foreground">
-            {selected.items.map((item) => (
-              <TableRow key={item.itemVersionId} className="border-t border-border">
-                <TableCell className="py-4 font-mono">
-                  {item.localNumber}
-                  <span className="block text-xs text-muted-foreground">#{item.itemNumber}</span>
-                </TableCell>
-                <TableCell className="py-4">{item.itemType}</TableCell>
-                <TableCell className="max-w-md py-4 text-muted-foreground">
-                  <span className="line-clamp-2">{toPlainText(item.prompt)}</span>
-                </TableCell>
-                <TableCell className="py-4">
-                  <div className="max-w-[200px] truncate" title={item.mediaReference ?? undefined}>
-                    {item.mediaReference ?? "—"}
-                  </div>
-                </TableCell>
-                <TableCell className="py-4">
-                  <span
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] ${
-                      item.status === "active"
-                        ? "bg-accent text-primary"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {item.status === "active" ? "Aktif" : "Nonaktif"}
-                  </span>
-                </TableCell>
-                <TableCell className="py-4">
-                  <span className="flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={() => void openEditor(item)}
-                      className="font-semibold text-primary hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={() => handleToggleStatus(item)}
-                      className="font-semibold text-muted-foreground hover:underline"
-                    >
-                      {item.status === "active" ? "Nonaktifkan" : "Aktifkan"}
-                    </button>
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <QuestionBankDataTable
+          key={selected.code}
+          items={selected.items}
+          isBusy={isBusy}
+          onEdit={(item) => void openEditor(item)}
+          onToggleStatus={handleToggleStatus}
+        />
       </article>
     </section>
   );

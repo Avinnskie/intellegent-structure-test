@@ -1,22 +1,53 @@
 "use client";
 
-import { useActionState } from "react";
-import { signIn, type LoginState } from "@/app/login/actions";
+import { useState, type FormEvent } from "react";
 
 type LoginFormProps = {
   readonly next: string;
   readonly denied: boolean;
 };
 
-const initialState: LoginState = { message: null };
+type LoginResponse = {
+  readonly redirectTo?: string;
+  readonly error?: { readonly message?: string };
+};
+
+const CONNECTION_ERROR_MESSAGE = "Tidak dapat menghubungi server. Coba lagi.";
 
 export function LoginForm({ next, denied }: LoginFormProps) {
-  const [state, formAction, isPending] = useActionState(signIn, initialState);
-  const message =
-    state.message ?? (denied ? "Akun Anda tidak memiliki akses ke portal ini." : null);
+  const [isPending, setIsPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(
+    denied ? "Akun Anda tidak memiliki akses ke portal ini." : null,
+  );
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsPending(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { accept: "application/json" },
+        body: new FormData(event.currentTarget),
+      });
+      const payload = (await response.json().catch(() => ({}))) as LoginResponse;
+
+      if (!response.ok) {
+        setMessage(payload.error?.message ?? CONNECTION_ERROR_MESSAGE);
+        setIsPending(false);
+        return;
+      }
+
+      window.location.assign(payload.redirectTo ?? "/hr");
+    } catch {
+      setMessage(CONNECTION_ERROR_MESSAGE);
+      setIsPending(false);
+    }
+  }
 
   return (
-    <form className="min-w-0 space-y-4" action={formAction}>
+    <form className="min-w-0 space-y-4" onSubmit={handleSubmit}>
       <input type="hidden" name="next" value={next} />
 
       <label className="block space-y-2">

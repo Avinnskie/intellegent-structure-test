@@ -4,6 +4,7 @@ import { PapiProfile, PapiStageNotice } from "@/components/hr/papi-profile";
 import { PapiOnlyActions } from "@/components/hr/papi-only-actions";
 import { ResultActions } from "@/components/hr/result-actions";
 import { ResultChart } from "@/components/hr/result-chart";
+import { ResultSubtestsDataTable } from "@/components/hr/result-subtests-data-table";
 import { sessionStatusLabel } from "@/components/hr/session-status-label";
 import { AppShell } from "@/components/ui/app-shell";
 import { ApiError } from "@/lib/api/errors.ts";
@@ -23,14 +24,6 @@ import {
   type PapiResultDto,
   type PapiStageDto,
 } from "@/lib/server/papi-result-read.ts";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 const RESULT_STATUS_LABELS: Record<string, string> = {
   waiting_ge: "Menunggu GE",
@@ -183,33 +176,7 @@ export default async function HrResultPage({ params }: { params: Promise<{ sessi
               </article>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-border bg-card p-6">
-              <Table className="min-w-full text-left">
-                <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-                  <TableRow>
-                    <TableHead className="pb-3">Subtes</TableHead>
-                    <TableHead className="pb-3">RW</TableHead>
-                    <TableHead className="pb-3">SW</TableHead>
-                    <TableHead className="pb-3">Kategori</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="text-sm text-foreground">
-                  {result.subtests.map((subtest) => (
-                    <TableRow key={subtest.code} className="border-t border-border">
-                      <TableCell className="py-4 font-semibold">
-                        {subtest.code}
-                        <span className="ml-2 text-xs font-normal text-muted-foreground">
-                          {subtest.title}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-4">{subtest.rawScore}</TableCell>
-                      <TableCell className="py-4">{subtest.standardScore}</TableCell>
-                      <TableCell className="py-4">{subtest.category}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <ResultSubtestsDataTable rows={result.subtests} />
           </>
         )}
 

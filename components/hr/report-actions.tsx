@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FileText, LoaderCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -32,14 +34,36 @@ export function GenerateReportButton({ resultId }: { resultId: string }) {
 
   return (
     <div className="space-y-3">
-      <button
+      <Button
         type="button"
         onClick={handleGenerate}
         disabled={isBusy}
-        className="inline-flex h-12 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+        aria-busy={isBusy}
+        size="lg"
+        className="h-11 px-4"
       >
+        {isBusy ? (
+          <LoaderCircle className="animate-spin" data-icon="inline-start" />
+        ) : (
+          <FileText data-icon="inline-start" />
+        )}
         {isBusy ? "Membuat PDF…" : "Generate laporan PDF"}
-      </button>
+      </Button>
+      {isBusy ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3"
+        >
+          <LoaderCircle className="mt-0.5 size-4 shrink-0 animate-spin text-primary" aria-hidden />
+          <div>
+            <p className="text-sm font-semibold text-foreground">Laporan sedang disiapkan</p>
+            <p className="mt-0.5 text-sm leading-5 text-muted-foreground">
+              Data hasil sedang dirangkum dan dirender menjadi PDF. Jangan tutup halaman ini.
+            </p>
+          </div>
+        </div>
+      ) : null}
       {error ? (
         <p
           role="alert"

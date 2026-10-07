@@ -13,7 +13,6 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
-import { signOut } from "@/app/login/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -190,7 +189,7 @@ export function PortalShell({ displayName, role, children }: PortalShellProps) {
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <span className="text-sm font-medium text-muted-foreground">{roleLabels[role]}</span>
-          <form action={signOut} className="ml-auto">
+          <form action="/api/auth/logout" method="post" className="ml-auto">
             <Button type="submit" variant="outline" size="sm">
               <LogOut className="size-4" />
               Keluar

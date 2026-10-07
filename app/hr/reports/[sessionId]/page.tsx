@@ -1,29 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GenerateReportButton } from "@/components/hr/report-actions";
+import { ReportHistoryDataTable } from "@/components/hr/report-history-data-table";
 import { ResultChart } from "@/components/hr/result-chart";
 import { sessionStatusLabel } from "@/components/hr/session-status-label";
 import { AppShell } from "@/components/ui/app-shell";
 import { ApiError } from "@/lib/api/errors.ts";
 import { getDb } from "@/lib/db/client.ts";
-import { requireHrUser } from "@/lib/server/authz.ts";
 import { getResult, type ResultDto } from "@/lib/server/calculate.ts";
 import { getSessionDetail } from "@/lib/server/hr.ts";
+import { requirePortalUser } from "@/lib/server/portal-guard.ts";
 import { listReports } from "@/lib/server/reports.ts";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { formatDateTime } from "@/lib/format-datetime.ts";
 
 export default async function HrReportPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
   const db = getDb();
-  const ctx = await requireHrUser(db);
+  const ctx = await requirePortalUser();
 
   let detail;
   try {
@@ -116,7 +108,7 @@ export default async function HrReportPage({ params }: { params: Promise<{ sessi
               </article>
             </div>
 
-            <article className="overflow-x-auto rounded-xl border border-border bg-card p-6">
+            <article className="rounded-xl border border-border bg-card p-6">
               <h2 className="text-lg font-bold tracking-[-0.02em] text-foreground">
                 Riwayat laporan
               </h2>
@@ -125,37 +117,7 @@ export default async function HrReportPage({ params }: { params: Promise<{ sessi
                   Belum ada PDF yang dibuat untuk hasil ini.
                 </p>
               ) : (
-                <Table className="mt-4 min-w-full text-left">
-                  <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-                    <TableRow>
-                      <TableHead className="pb-3">Versi</TableHead>
-                      <TableHead className="pb-3">SHA-256</TableHead>
-                      <TableHead className="pb-3">Dibuat</TableHead>
-                      <TableHead className="pb-3">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="text-sm text-foreground">
-                    {history.map((row) => (
-                      <TableRow key={row.reportId} className="border-t border-border">
-                        <TableCell className="py-4 font-semibold">v{row.reportVersion}</TableCell>
-                        <TableCell className="py-4 font-mono text-xs">
-                          {row.fileHash.slice(0, 16)}…
-                        </TableCell>
-                        <TableCell className="py-4">
-                          {formatDateTime(row.generatedAt)}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <a
-                            href={`/api/hr/results/${row.reportId}/report`}
-                            className="font-semibold text-primary hover:underline"
-                          >
-                            Unduh
-                          </a>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <ReportHistoryDataTable rows={history} />
               )}
             </article>
           </>

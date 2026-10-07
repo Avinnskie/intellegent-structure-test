@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, inArray, isNull } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "../api/errors.ts";
 import { getServerConfig } from "../config.ts";
@@ -926,31 +926,42 @@ export async function listSessions(
   }
   const sessionIds = base.map((row) => row.sessionId);
 
-  const codeRows = await db
-    .select({
-      sessionId: accessCodes.sessionId,
-      codeMasked: accessCodes.codeMasked,
-      status: accessCodes.status,
-      expiresAt: accessCodes.expiresAt,
-      createdAt: accessCodes.createdAt,
-    })
-    .from(accessCodes)
-    .where(inArray(accessCodes.sessionId, sessionIds));
+  const [codeRows, attemptRows, responseRows] = await Promise.all([
+    db
+      .select({
+        sessionId: accessCodes.sessionId,
+        codeMasked: accessCodes.codeMasked,
+        status: accessCodes.status,
+        expiresAt: accessCodes.expiresAt,
+        createdAt: accessCodes.createdAt,
+      })
+      .from(accessCodes)
+      .where(inArray(accessCodes.sessionId, sessionIds)),
+    db
+      .select({ sessionId: subtestAttempts.sessionId, subtestsCompleted: count() })
+      .from(subtestAttempts)
+      .where(
+        and(
+          inArray(subtestAttempts.sessionId, sessionIds),
+          eq(subtestAttempts.status, "completed"),
+        ),
+      )
+      .groupBy(subtestAttempts.sessionId),
+    db
+      .select({
+        sessionId: responses.sessionId,
+        answered: sql<number>`count(*) filter (
+          where ${responses.responseStatus} in ('answered', 'changed')
+        )::integer`,
+        skipped: sql<number>`count(*) filter (
+          where ${responses.responseStatus} = 'skipped'
+        )::integer`,
+      })
+      .from(responses)
+      .where(inArray(responses.sessionId, sessionIds))
+      .groupBy(responses.sessionId),
+  ]);
   const codeBySession = latestCodePerSession(codeRows);
-
-  const attemptRows = await db
-    .select({ sessionId: subtestAttempts.sessionId, status: subtestAttempts.status })
-    .from(subtestAttempts)
-    .where(inArray(subtestAttempts.sessionId, sessionIds));
-
-  const responseRows = await db
-    .select({
-      sessionId: subtestAttempts.sessionId,
-      responseStatus: responses.responseStatus,
-    })
-    .from(responses)
-    .innerJoin(subtestAttempts, eq(responses.subtestAttemptId, subtestAttempts.id))
-    .where(inArray(subtestAttempts.sessionId, sessionIds));
 
   const progressBySession = new Map<
     string,
@@ -965,16 +976,12 @@ export async function listSessions(
     return entry;
   };
   for (const row of attemptRows) {
-    if (row.status === "completed") {
-      progressFor(row.sessionId).subtestsCompleted += 1;
-    }
+    progressFor(row.sessionId).subtestsCompleted = row.subtestsCompleted;
   }
   for (const row of responseRows) {
-    if (row.responseStatus === "answered" || row.responseStatus === "changed") {
-      progressFor(row.sessionId).answered += 1;
-    } else if (row.responseStatus === "skipped") {
-      progressFor(row.sessionId).skipped += 1;
-    }
+    const progress = progressFor(row.sessionId);
+    progress.answered = row.answered;
+    progress.skipped = row.skipped;
   }
 
   return base.map((row) => ({

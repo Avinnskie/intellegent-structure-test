@@ -56,11 +56,22 @@ const serverConfigSchema = serverEnvSchema.superRefine((env, ctx) => {
 
 export type ServerConfig = z.infer<typeof serverConfigSchema>;
 
+export class ServerConfigError extends Error {
+  readonly name = "ServerConfigError";
+
+  constructor(readonly invalidKeys: readonly string[]) {
+    super(
+      `Konfigurasi environment tidak lengkap/invalid: ${invalidKeys.join(", ")}. ` +
+        "Untuk development, salin .env.example menjadi .env.local lalu isi kredensial Supabase.",
+    );
+  }
+}
+
 function parseServerConfig(): ServerConfig {
   const parsed = serverConfigSchema.safeParse(process.env);
   if (!parsed.success) {
-    const invalidPaths = parsed.error.issues.map((issue) => issue.path.join(".")).join(", ");
-    throw new Error(`Konfigurasi environment tidak lengkap/invalid: ${invalidPaths}`);
+    const invalidKeys = parsed.error.issues.map((issue) => issue.path.join("."));
+    throw new ServerConfigError(invalidKeys);
   }
   return parsed.data;
 }

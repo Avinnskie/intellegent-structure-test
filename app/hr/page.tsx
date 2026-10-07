@@ -1,25 +1,17 @@
 import Link from "next/link";
-import { sessionStatusLabel } from "@/components/hr/session-status-label";
+import { ArrowRight, Plus } from "lucide-react";
+import { SessionDataTable } from "@/components/hr/session-data-table";
 import { AppShell } from "@/components/ui/app-shell";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { getDb } from "@/lib/db/client.ts";
-import type { SessionStatus } from "@/lib/domain/session-state.ts";
-import { requireHrUser } from "@/lib/server/authz.ts";
 import { getDashboardMetrics } from "@/lib/server/metrics.ts";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ArrowRight } from "lucide-react";
+import { requirePortalUser } from "@/lib/server/portal-guard.ts";
 
 export default async function HrDashboardPage() {
   const db = getDb();
-  const ctx = await requireHrUser(db);
-  const metrics = await getDashboardMetrics(db, ctx);
+  const context = await requirePortalUser();
+  const metrics = await getDashboardMetrics(db, context);
 
   const cards = [
     {
@@ -30,7 +22,7 @@ export default async function HrDashboardPage() {
     {
       label: "Sedang berlangsung",
       value: String(metrics.active),
-      detail: "Tutorial s.d. subtes terakhir",
+      detail: "Tutorial hingga subtes terakhir",
     },
     { label: "Hasil final", value: String(metrics.finalized), detail: "Siap diekspor" },
   ];
@@ -39,16 +31,19 @@ export default async function HrDashboardPage() {
     <AppShell
       title="Selamat datang di Dashboard"
       actions={
-        <Link
-          href="/hr/sessions/new"
-          className="inline-flex h-12 items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90"
+        <Button
+          nativeButton={false}
+          size="lg"
+          className="h-11 px-4"
+          render={<Link href="/hr/sessions/new" />}
         >
+          <Plus data-icon="inline-start" />
           Buat sesi baru
-        </Link>
+        </Button>
       }
     >
       <section className="space-y-8">
-        <div className="grid gap-4 grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {cards.map((metric) => (
             <StatCard
               key={metric.label}
@@ -59,67 +54,31 @@ export default async function HrDashboardPage() {
           ))}
         </div>
 
-        <div>
-          <article className="rounded-xl border border-border bg-card p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  Sesi terbaru
-                </p>
-                <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-foreground">
-                  Aktivitas assessment terbaru
-                </h2>
-              </div>
-              <Link
-                href="/hr/sessions"
-                className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
-              >
-                Semua sesi <ArrowRight size={14} />
-              </Link>
-            </div>
-            {metrics.recentSessions.length === 0 ? (
-              <p className="mt-6 rounded-xl border border-dashed border-border bg-background p-6 text-sm leading-6 text-muted-foreground">
-                Belum ada sesi. Mulai dengan menambahkan peserta lalu membuat sesi tes.
+        <article className="rounded-xl border border-border bg-card p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Sesi terbaru
               </p>
-            ) : (
-              <div className="mt-6 overflow-x-auto">
-                <Table className="min-w-full text-left">
-                  <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-                    <TableRow>
-                      <TableHead className="pb-3">Peserta</TableHead>
-                      <TableHead className="pb-3">Status</TableHead>
-                      <TableHead className="pb-3">Subtes</TableHead>
-                      <TableHead className="pb-3">Progres</TableHead>
-                      <TableHead className="pb-3">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="text-sm text-foreground">
-                    {metrics.recentSessions.map((row) => (
-                      <TableRow key={row.sessionId} className="border-t border-border">
-                        <TableCell className="py-4 font-semibold">{row.candidateName}</TableCell>
-                        <TableCell className="py-4">
-                          {sessionStatusLabel(row.status as SessionStatus)}
-                        </TableCell>
-                        <TableCell className="py-4">{row.currentSubtestCode ?? "—"}</TableCell>
-                        <TableCell className="py-4">
-                          {row.progress.subtestsCompleted}/9 · {row.progress.answered} jawaban
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <Link
-                            href={`/hr/sessions/${row.sessionId}`}
-                            className="underline font-semibold text-primary"
-                          >
-                            Detail
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </article>
-        </div>
+              <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-foreground">
+                Aktivitas assessment terbaru
+              </h2>
+            </div>
+            <Button
+              nativeButton={false}
+              variant="link"
+              className="w-fit px-0"
+              render={<Link href="/hr/sessions" />}
+            >
+              Semua sesi
+              <ArrowRight data-icon="inline-end" />
+            </Button>
+          </div>
+
+          <div className="mt-6">
+            <SessionDataTable initialRows={metrics.recentSessions} />
+          </div>
+        </article>
       </section>
     </AppShell>
   );

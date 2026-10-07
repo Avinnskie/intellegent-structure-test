@@ -14,7 +14,9 @@ dengan engine sesi peserta, workflow HR, pipeline skoring ber-versi, dan laporan
 ```bash
 npm install
 
-# 1. Env — buat .env.local dan isi (Supabase URL/keys, DATABASE_URL, secrets >= 32 char):
+# 1. Env — salin template lalu isi Supabase URL/keys, DATABASE_URL, dan secrets:
+cp .env.example .env.local
+
 #    APP_BASE_URL, DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL,
 #    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY,
 #    SUPABASE_MEDIA_BUCKET, SUPABASE_REPORT_BUCKET,

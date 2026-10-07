@@ -2,37 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { TutorialVersionsDataTable } from "@/components/hr/tutorial-versions-data-table";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { isRichTextEmpty, toPlainText } from "@/lib/domain/rich-text.ts";
+import { isRichTextEmpty } from "@/lib/domain/rich-text.ts";
 import { MEMORIZATION_SECONDS, needsMemorization } from "@/lib/memorization.ts";
 import { useToast } from "@/components/ui/toast";
 import type { TutorialSubtestDto, TutorialVersionDto } from "@/lib/server/content.ts";
 import { X } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
 const NETWORK_ERROR_MESSAGE = "Tidak dapat menghubungi server. Coba lagi.";
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  published: "Terbit",
-  archived: "Arsip",
-  in_review: "Direview",
-  approved: "Disetujui",
-  rejected: "Ditolak",
-};
 
 export function TutorialManager({ subtests }: { subtests: readonly TutorialSubtestDto[] }) {
   const router = useRouter();
@@ -273,78 +257,21 @@ export function TutorialManager({ subtests }: { subtests: readonly TutorialSubte
           ) : null}
         </Modal>
 
-        <div className="mt-6 overflow-x-auto">
-          <Table className="min-w-full text-left">
-            <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-              <TableRow>
-                <TableHead className="pb-3">Versi</TableHead>
-                <TableHead className="pb-3">Status</TableHead>
-                <TableHead className="pb-3">Konten</TableHead>
-                <TableHead className="pb-3">Efektif</TableHead>
-                <TableHead className="pb-3">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="text-sm text-foreground align-top">
-              {selected.versions.map((version) => (
-                <TableRow key={version.id} className="border-t border-border">
-                  <TableCell className="py-4 font-mono">v{version.version}</TableCell>
-                  <TableCell className="py-4">
-                    <span
-                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] ${
-                        version.status === "published"
-                          ? "bg-accent text-primary"
-                          : version.status === "draft"
-                            ? "bg-accent text-foreground"
-                            : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {STATUS_LABELS[version.status] ?? version.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="max-w-md py-4">
-                    <span className="line-clamp-2 text-muted-foreground">
-                      {toPlainText(version.textContent)}
-                    </span>
-                    {version.videoReference ? (
-                      <span className="mt-1 block font-mono text-xs text-muted-foreground">
-                        video: {version.videoReference}
-                      </span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="py-4">{version.effectiveDate ?? "—"}</TableCell>
-                  <TableCell className="py-4">
-                    <span className="flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() =>
-                          setEditor({
-                            id: version.id,
-                            textContent: version.textContent,
-                            memorizationText: version.memorizationText ?? "",
-                            videoReference: version.videoReference ?? "",
-                            isUploading: false,
-                          })
-                        }
-                        className="font-semibold text-primary hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => setPending(version)}
-                        className="font-semibold text-destructive hover:underline"
-                      >
-                        Hapus
-                      </button>
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <TutorialVersionsDataTable
+          key={selected.code}
+          versions={selected.versions}
+          isBusy={isBusy}
+          onEdit={(version) =>
+            setEditor({
+              id: version.id,
+              textContent: version.textContent,
+              memorizationText: version.memorizationText ?? "",
+              videoReference: version.videoReference ?? "",
+              isUploading: false,
+            })
+          }
+          onDelete={setPending}
+        />
       </article>
     </section>
   );

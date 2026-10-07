@@ -1,13 +1,17 @@
-import { and, asc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { ApiError } from "../api/errors.ts";
+import { getServerConfig } from "../config.ts";
 import type { DbLike } from "../db/client.ts";
 import {
+  assessmentSessions,
   itemOptions,
   itemVersions,
+  participantTokens,
   responses,
   subtestAttempts,
   subtestVersions,
 } from "../db/schema.ts";
+import { hashSessionToken } from "../domain/session-token.ts";
 import { getAttemptRemainingSeconds } from "../domain/timer.ts";
 import { asSubtestCode, type SubtestCode } from "../ist-subtests.ts";
 import { selectNow } from "./db-clock.ts";
@@ -395,7 +399,7 @@ async function writeWithin(
   });
 }
 
-export async function saveResponse(
+async function saveResponseWithDetailedValidation(
   db: DbLike,
   token: string,
   itemVersionId: string,
@@ -410,6 +414,132 @@ export async function saveResponse(
       return ok(await applyAnswer(tx, session.sessionId, attempt, item, normalized.value, now));
     }),
   );
+}
+
+type FastSaveRow = {
+  readonly status: ResponseStatusValue;
+  readonly savedAt: Date;
+  readonly remainingSeconds: number;
+};
+
+/**
+ * Menyimpan satu jawaban IST melalui satu perjalanan ke basis data.
+ *
+ * Jalur lama memvalidasi token, membaca jam server, menyapu timeout, membaca
+ * soal, mengunci attempt, memvalidasi opsi, membaca jawaban lama, lalu menulis
+ * jawaban secara berurutan. Pada basis data jarak jauh, biaya utama berasal
+ * dari round-trip tersebut dan kunci attempt juga membuat dua autosave saling
+ * menunggu.
+ *
+ * Query ini memindahkan seluruh syarat jalur normal ke satu CTE dan upsert
+ * atomik. Jalur validasi lama tetap dipakai hanya ketika tidak ada baris yang
+ * dapat ditulis agar peserta tetap menerima alasan penolakan yang tepat.
+ */
+export async function saveResponse(
+  db: DbLike,
+  token: string,
+  itemVersionId: string,
+  rawValue: string,
+): Promise<SaveResponseDto> {
+  if (!UUID_PATTERN.test(itemVersionId)) {
+    throw itemNotInActiveSubtest();
+  }
+
+  const value = rawValue.trim();
+  if (value.length === 0 || value.length > MAX_VALUE_LENGTH) {
+    throw invalidValue();
+  }
+
+  const tokenHash = hashSessionToken(token, getServerConfig().SESSION_TOKEN_SECRET);
+  const rows = await db.execute<FastSaveRow>(sql`
+    with eligible as (
+      select
+        ${assessmentSessions.id} as session_id,
+        ${subtestAttempts.id} as attempt_id,
+        ${itemVersions.id} as item_id,
+        ${subtestAttempts.expiresAt} as expires_at,
+        ${subtestAttempts.durationSeconds} as duration_seconds
+      from ${participantTokens}
+      inner join ${assessmentSessions}
+        on ${assessmentSessions.id} = ${participantTokens.sessionId}
+      inner join ${subtestAttempts}
+        on ${subtestAttempts.sessionId} = ${assessmentSessions.id}
+      inner join ${itemVersions}
+        on ${itemVersions.subtestVersionId} = ${subtestAttempts.subtestVersionId}
+      where ${participantTokens.tokenHash} = ${tokenHash}
+        and ${participantTokens.revokedAt} is null
+        and ${assessmentSessions.status} = 'subtest_in_progress'
+        and ${assessmentSessions.currentSubtestCode} = ${subtestAttempts.subtestCode}
+        and ${subtestAttempts.status} = 'in_progress'
+        and ${subtestAttempts.expiresAt} > now()
+        and ${itemVersions.id} = ${itemVersionId}
+        and (
+          ${itemVersions.itemType} <> 'choice'
+          or exists (
+            select 1
+            from ${itemOptions}
+            where ${itemOptions.itemVersionId} = ${itemVersions.id}
+              and ${itemOptions.optionCode} = ${value}
+          )
+        )
+      limit 1
+    ), saved as (
+      insert into responses (
+        session_id,
+        subtest_attempt_id,
+        item_version_id,
+        response_value,
+        response_status,
+        answered_at,
+        updated_at
+      )
+      select
+        session_id,
+        attempt_id,
+        item_id,
+        jsonb_build_object('value', ${value}::text),
+        'answered',
+        now(),
+        now()
+      from eligible
+      on conflict (subtest_attempt_id, item_version_id) do update set
+        response_value = excluded.response_value,
+        response_status = case
+          when responses.response_value is null then 'answered'
+          when responses.response_value = excluded.response_value then responses.response_status
+          else 'changed'
+        end,
+        answered_at = coalesce(responses.answered_at, excluded.answered_at),
+        updated_at = case
+          when responses.response_value = excluded.response_value then responses.updated_at
+          else excluded.updated_at
+        end
+      returning subtest_attempt_id, response_status, updated_at
+    )
+    select
+      saved.response_status as "status",
+      saved.updated_at as "savedAt",
+      greatest(
+        0,
+        least(
+          eligible.duration_seconds,
+          ceil(extract(epoch from (eligible.expires_at - now())))::integer
+        )
+      )::integer as "remainingSeconds"
+    from saved
+    inner join eligible on eligible.attempt_id = saved.subtest_attempt_id
+  `);
+
+  const row = rows[0];
+  if (!row) {
+    return saveResponseWithDetailedValidation(db, token, itemVersionId, value);
+  }
+
+  return {
+    status: row.status,
+    savedAt: row.savedAt.toISOString(),
+    remainingSeconds: row.remainingSeconds,
+  };
 }
 
 export async function skipResponse(

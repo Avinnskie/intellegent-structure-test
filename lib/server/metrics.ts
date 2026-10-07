@@ -28,11 +28,23 @@ export async function getDashboardMetrics(
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
-  const grouped = await db
-    .select({ status: assessmentSessions.status, total: count() })
-    .from(assessmentSessions)
-    .where(eq(assessmentSessions.organizationId, ctx.organizationId))
-    .groupBy(assessmentSessions.status);
+  const [grouped, createdRows, recentSessions] = await Promise.all([
+    db
+      .select({ status: assessmentSessions.status, total: count() })
+      .from(assessmentSessions)
+      .where(eq(assessmentSessions.organizationId, ctx.organizationId))
+      .groupBy(assessmentSessions.status),
+    db
+      .select({ total: count() })
+      .from(assessmentSessions)
+      .where(
+        and(
+          eq(assessmentSessions.organizationId, ctx.organizationId),
+          gte(assessmentSessions.createdAt, monthStart),
+        ),
+      ),
+    listSessions(db, ctx),
+  ]);
 
   let active = 0;
   let waitingGeScoring = 0;
@@ -49,23 +61,13 @@ export async function getDashboardMetrics(
     }
   }
 
-  const [createdRow] = await db
-    .select({ total: count() })
-    .from(assessmentSessions)
-    .where(
-      and(
-        eq(assessmentSessions.organizationId, ctx.organizationId),
-        gte(assessmentSessions.createdAt, monthStart),
-      ),
-    );
-
-  const recentSessions = (await listSessions(db, ctx)).slice(0, 10);
+  const createdRow = createdRows[0];
 
   return {
     createdThisMonth: createdRow?.total ?? 0,
     active,
     waitingGeScoring,
     finalized,
-    recentSessions,
+    recentSessions: recentSessions.slice(0, 10),
   };
 }

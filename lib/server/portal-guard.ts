@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { ApiError } from "../api/errors.ts";
 import { getDb } from "../db/client.ts";
 import { requireHrUser, type AuthContext, type UserRole } from "./authz.ts";
 
-export async function requirePortalUser(requiredRole?: UserRole): Promise<AuthContext> {
+const requirePortalContext = cache(async (): Promise<AuthContext> => {
   let context: AuthContext;
 
   try {
@@ -17,6 +18,12 @@ export async function requirePortalUser(requiredRole?: UserRole): Promise<AuthCo
     }
     throw error;
   }
+
+  return context;
+});
+
+export async function requirePortalUser(requiredRole?: UserRole): Promise<AuthContext> {
+  const context = await requirePortalContext();
 
   if (requiredRole && context.role !== requiredRole) {
     redirect("/hr");

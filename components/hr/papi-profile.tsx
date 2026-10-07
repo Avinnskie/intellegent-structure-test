@@ -1,24 +1,12 @@
 import { PapiRadar } from "@/components/hr/papi-radar";
+import { PapiFactorsDataTable } from "@/components/hr/papi-factors-data-table";
 import type { PapiResultDto } from "@/lib/server/papi-result-read.ts";
 import {
   formatPapiElapsed,
   papiCategoryLabel,
   papiScoreBarPercent,
 } from "@/lib/domain/papi-format.ts";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format-datetime.ts";
-
-const KIND_LABELS: Record<string, string> = {
-  role: "Role",
-  need: "Need",
-};
 
 function ScoreBar({ score }: { score: number }) {
   return (
@@ -107,42 +95,8 @@ export function PapiProfile({ result }: { result: PapiResultDto }) {
           Tabel detail 20 faktor
         </summary>
 
-        <div className="mt-5 overflow-x-auto">
-          <Table className="min-w-full text-left">
-            <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-              <TableRow>
-                <TableHead className="pb-3">Faktor</TableHead>
-                <TableHead className="pb-3">Tipe</TableHead>
-                <TableHead className="pb-3">Skor</TableHead>
-                <TableHead className="pb-3">Kategori</TableHead>
-                <TableHead className="pb-3">Interpretasi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="text-sm text-foreground">
-              {result.factors.map((factor) => (
-                <TableRow key={factor.code} className="border-t border-border align-top">
-                  <TableCell className="py-4 font-semibold">
-                    {factor.code}
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">
-                      {factor.name}
-                    </span>
-                  </TableCell>
-                  <TableCell className="py-4 text-xs text-muted-foreground">
-                    {KIND_LABELS[factor.kind] ?? factor.kind}
-                  </TableCell>
-                  <TableCell className="py-4 tabular-nums">{factor.score}</TableCell>
-                  <TableCell className="py-4">{papiCategoryLabel(factor.category)}</TableCell>
-                  <TableCell className="py-4 text-sm leading-6 text-muted-foreground">
-                    {factor.interpretation ?? (
-                      <em className="text-muted-foreground">
-                        Belum tersedia — menunggu narasi psikolog
-                      </em>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="mt-5">
+          <PapiFactorsDataTable factors={result.factors} />
         </div>
 
         <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">

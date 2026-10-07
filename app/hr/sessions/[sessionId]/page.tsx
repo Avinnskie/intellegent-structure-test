@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AccessCodeActions } from "@/components/hr/access-code-actions";
 import { PapiAnswerSheet } from "@/components/hr/papi-answer-sheet";
+import { SessionSubtestsDataTable } from "@/components/hr/session-subtests-data-table";
 import { accessCodeStatusLabel, sessionStatusLabel } from "@/components/hr/session-status-label";
 import { AppShell } from "@/components/ui/app-shell";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -11,14 +12,6 @@ import { requireHrUser } from "@/lib/server/authz.ts";
 import { getSessionDetail } from "@/lib/server/hr.ts";
 import { logError } from "@/lib/server/logger.ts";
 import { getPapiAnswerSheet, type PapiAnswerSheetDto } from "@/lib/server/papi-result-read.ts";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format-datetime.ts";
 
 export default async function HrSessionDetailPage({
@@ -163,55 +156,7 @@ export default async function HrSessionDetailPage({
             ))}
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-border bg-card p-4">
-            <Table className="min-w-full text-left text-sm">
-              <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-                <TableRow>
-                  <TableHead className="pb-2">Subtes</TableHead>
-                  <TableHead className="pb-2">Status</TableHead>
-                  <TableHead className="pb-2">Terjawab</TableHead>
-                  <TableHead className="pb-2">Dilewati</TableHead>
-                  <TableHead className="pb-2">Mulai</TableHead>
-                  <TableHead className="pb-2">Selesai</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="text-foreground">
-                {detail.subtests.map((subtest) => (
-                  <TableRow key={subtest.code} className="border-t border-border">
-                    <TableCell className="py-3 font-semibold">
-                      {subtest.code}
-                      <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        {subtest.title}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-3">
-                      {subtest.attempt
-                        ? subtest.attempt.status === "completed"
-                          ? subtest.attempt.completionReason === "timeout"
-                            ? "Selesai (waktu habis)"
-                            : "Selesai"
-                          : "Berjalan"
-                        : "Belum dibuka"}
-                    </TableCell>
-                    <TableCell className="py-3">
-                      {subtest.attempt ? `${subtest.attempt.answered}/${subtest.itemCount}` : "—"}
-                    </TableCell>
-                    <TableCell className="py-3">{subtest.attempt?.skipped ?? "—"}</TableCell>
-                    <TableCell className="py-3">
-                      {subtest.attempt
-                        ? formatDateTime(subtest.attempt.startedAt).slice(0, 17)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="py-3">
-                      {subtest.attempt?.completedAt
-                        ? formatDateTime(subtest.attempt.completedAt).slice(0, 17)
-                        : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <SessionSubtestsDataTable rows={detail.subtests} />
 
           {papiSheet ? <PapiAnswerSheet sheet={papiSheet} /> : null}
 

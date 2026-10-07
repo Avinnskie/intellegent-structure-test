@@ -2,6 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  SessionBulkCreatedDataTable,
+  type BulkCreatedRow,
+} from "@/components/hr/session-bulk-created-data-table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -15,14 +19,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format-datetime.ts";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
@@ -143,13 +139,6 @@ function parsePaste(text: string): ParseResult {
   return { rows, errors };
 }
 
-type BulkCreatedRow = {
-  fullName: string;
-  birthDate: string;
-  accessCode: string;
-  accessCodeMasked: string;
-};
-
 type BulkResult = {
   created: BulkCreatedRow[];
   accessCodeExpiresAt: string;
@@ -260,35 +249,7 @@ export function SessionBulkModal() {
                 {hasCopiedAll ? "Tersalin ✓" : "Salin semua (nama + kode)"}
               </Button>
             </div>
-            <div className="max-h-80 overflow-x-hidden overflow-y-auto rounded-xl border border-border">
-              <Table className="w-full table-fixed text-left text-sm">
-                <TableHeader className="sticky top-0 bg-muted text-xs uppercase tracking-[0.08em] text-muted-foreground">
-                  <TableRow>
-                    <TableHead className="px-4 py-2">Nama</TableHead>
-                    <TableHead className="px-4 py-2">Tanggal lahir</TableHead>
-                    <TableHead className="px-4 py-2">Kode akses</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="text-foreground">
-                  {result.created.map((row) => (
-                    <TableRow
-                      key={row.accessCodeMasked + row.fullName}
-                      className="border-t border-border"
-                    >
-                      <TableCell className="break-words px-4 py-2 font-semibold [overflow-wrap:anywhere]">
-                        {row.fullName}
-                      </TableCell>
-                      <TableCell className="break-words px-4 py-2 [overflow-wrap:anywhere]">
-                        {row.birthDate}
-                      </TableCell>
-                      <TableCell className="break-words px-4 py-2 font-mono font-bold [overflow-wrap:anywhere]">
-                        {row.accessCode}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <SessionBulkCreatedDataTable rows={result.created} />
             <div className="flex justify-end border-t border-border pt-4">
               <Button variant="outline" onClick={close}>
                 Selesai

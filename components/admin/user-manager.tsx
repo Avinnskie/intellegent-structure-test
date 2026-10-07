@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { UserDataTable } from "@/components/admin/user-data-table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -17,15 +18,6 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import type { PortalUserDto } from "@/lib/server/users.ts";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { formatDateTime } from "@/lib/format-datetime.ts";
 
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
@@ -342,106 +334,30 @@ export function UserManager({
         onCancel={() => setPendingDeactivate(null)}
       />
 
-      <article className="overflow-x-auto rounded-xl border border-border bg-card p-6">
+      <article className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">
             Akun HR &amp; Super Admin
           </h2>
           <p className="text-sm text-muted-foreground">{users.length} akun</p>
         </div>
-        <Table className="mt-6 min-w-full text-left">
-          <TableHeader className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-            <TableRow>
-              <TableHead className="pb-3">Nama</TableHead>
-              <TableHead className="pb-3">Email</TableHead>
-              <TableHead className="pb-3">Role</TableHead>
-              <TableHead className="pb-3">view_results</TableHead>
-              <TableHead className="pb-3">Status</TableHead>
-              <TableHead className="pb-3">Login terakhir</TableHead>
-              <TableHead className="pb-3">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="text-sm text-foreground">
-            {users.map((user) => (
-              <TableRow key={user.id} className="border-t border-border">
-                <TableCell className="py-4 font-semibold">
-                  {user.displayName}
-                  {user.id === selfId ? (
-                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
-                      Anda
-                    </span>
-                  ) : null}
-                </TableCell>
-                <TableCell className="py-4">{user.email}</TableCell>
-                <TableCell className="py-4">
-                  {user.role === "super_admin" ? "Super Admin" : "HR Admin"}
-                </TableCell>
-                <TableCell className="py-4">
-                  {user.permissions.includes("view_results") ? "✓" : "—"}
-                </TableCell>
-                <TableCell className="py-4">
-                  <span
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] ${
-                      user.status === "active"
-                        ? "bg-accent text-primary"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {user.status === "active" ? "Aktif" : "Nonaktif"}
-                  </span>
-                </TableCell>
-                <TableCell className="py-4">
-                  {formatDateTime(user.lastLoginAt)}
-                </TableCell>
-                <TableCell className="py-4">
-                  <span className="flex flex-wrap gap-1">
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0"
-                      disabled={isBusy}
-                      onClick={() =>
-                        setEdit({
-                          userId: user.id,
-                          email: user.email,
-                          displayName: user.displayName,
-                          role: user.role,
-                          viewResults: user.permissions.includes("view_results"),
-                          newPassword: "",
-                        })
-                      }
-                    >
-                      Edit
-                    </Button>
-                    {user.id !== selfId ? (
-                      user.status === "active" ? (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="h-auto p-0 text-destructive"
-                          disabled={isBusy}
-                          onClick={() => setPendingDeactivate(user)}
-                        >
-                          Nonaktifkan
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="h-auto p-0 text-muted-foreground"
-                          disabled={isBusy}
-                          onClick={() => void handleSetStatus(user, "active")}
-                        >
-                          Aktifkan
-                        </Button>
-                      )
-                    ) : null}
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <UserDataTable
+          users={users}
+          selfId={selfId}
+          isBusy={isBusy}
+          onEdit={(user) =>
+            setEdit({
+              userId: user.id,
+              email: user.email,
+              displayName: user.displayName,
+              role: user.role,
+              viewResults: user.permissions.includes("view_results"),
+              newPassword: "",
+            })
+          }
+          onDeactivate={setPendingDeactivate}
+          onActivate={(user) => void handleSetStatus(user, "active")}
+        />
       </article>
     </section>
   );
